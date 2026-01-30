@@ -21,11 +21,13 @@ export interface Campaign {
   clientId: string;
   name: string;
   budget: number;
-  status: 'planning' | 'active' | 'paused' | 'completed' | 'archived';
+  status: 'planning' | 'draft' | 'active' | 'paused' | 'completed' | 'archived';
   startDate?: string;
   endDate?: string;
-  platform?: 'meta' | 'google';
+  platform?: 'meta' | 'google' | 'linkedin' | 'tiktok' | 'other';
   externalId?: string;
+  objective?: string;
+  targetAudience?: string;
   spent?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -91,3 +93,5 @@ export interface HealthStatus {
   version: string;
   error?: string;
 }
+
+export * from './metrics';

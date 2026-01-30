@@ -10,6 +10,11 @@ import type {
   Task,
   DashboardStats,
   HealthStatus,
+  DailyMetric,
+  PerformanceSummary,
+  ClientPerformanceSummary,
+  BPMNProgress,
+  MetricsPeriod,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -82,6 +87,55 @@ export const deleteClient = async (id: string): Promise<void> => {
 // Campaigns
 export const getCampaigns = async (): Promise<Campaign[]> => {
   const { data } = await apiClient.get<Campaign[]>('/api/campaigns');
+  return data;
+};
+
+export const getCampaignMetrics = async (
+  campaignId: string,
+  period: MetricsPeriod = '30d'
+): Promise<DailyMetric[]> => {
+  const { data } = await apiClient.get<DailyMetric[]>(
+    `/api/campaigns/${campaignId}/metrics`,
+    { params: { period } }
+  );
+  return data;
+};
+
+export const getCampaignPerformanceSummary = async (
+  campaignId: string
+): Promise<PerformanceSummary> => {
+  const { data } = await apiClient.get<PerformanceSummary>(
+    `/api/campaigns/${campaignId}/performance-summary`
+  );
+  return data;
+};
+
+export const getClientPerformanceSummary = async (
+  clientId: string
+): Promise<ClientPerformanceSummary> => {
+  const { data } = await apiClient.get<ClientPerformanceSummary>(
+    `/api/clients/${clientId}/performance-summary`
+  );
+  return data;
+};
+
+export const getClientBpmnProgress = async (
+  clientId: string
+): Promise<BPMNProgress> => {
+  const { data } = await apiClient.get<BPMNProgress>(
+    `/api/clients/${clientId}/bpmn-progress`
+  );
+  return data;
+};
+
+export const updateClientBpmnProgress = async (
+  clientId: string,
+  payload: Partial<BPMNProgress>
+): Promise<BPMNProgress> => {
+  const { data } = await apiClient.put<BPMNProgress>(
+    `/api/clients/${clientId}/bpmn-progress`,
+    payload
+  );
   return data;
 };
 
