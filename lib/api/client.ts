@@ -15,6 +15,7 @@ import type {
   ClientPerformanceSummary,
   BPMNProgress,
   MetricsPeriod,
+  MonthlyReport,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -92,11 +93,11 @@ export const getCampaigns = async (): Promise<Campaign[]> => {
 
 export const getCampaignMetrics = async (
   campaignId: string,
-  period: MetricsPeriod = '30d'
+  period?: MetricsPeriod
 ): Promise<DailyMetric[]> => {
   const { data } = await apiClient.get<DailyMetric[]>(
     `/api/campaigns/${campaignId}/metrics`,
-    { params: { period } }
+    { params: period ? { period } : undefined }
   );
   return data;
 };
@@ -137,6 +138,49 @@ export const updateClientBpmnProgress = async (
     payload
   );
   return data;
+};
+
+export const getPerformanceSummary = async (campaignId: string): Promise<PerformanceSummary> => {
+  return getCampaignPerformanceSummary(campaignId);
+};
+
+export const getClientPerformance = async (
+  clientId: string
+): Promise<ClientPerformanceSummary> => {
+  return getClientPerformanceSummary(clientId);
+};
+
+export const getBPMNProgress = async (clientId: string): Promise<BPMNProgress> => {
+  return getClientBpmnProgress(clientId);
+};
+
+export const updateBPMNProgress = async (
+  clientId: string,
+  updates: Partial<BPMNProgress>
+): Promise<BPMNProgress> => {
+  return updateClientBpmnProgress(clientId, updates);
+};
+
+export const generateReport = async (
+  clientId: string,
+  payload: { month: number; year: number }
+): Promise<MonthlyReport> => {
+  const { data } = await apiClient.post<MonthlyReport>(
+    `/api/reports/generate/${clientId}`,
+    payload
+  );
+  return data;
+};
+
+export const getReportsHistory = async (clientId: string): Promise<MonthlyReport[]> => {
+  const { data } = await apiClient.get<MonthlyReport[]>(
+    `/api/reports/${clientId}/history`
+  );
+  return data;
+};
+
+export const getReportDownloadUrl = (reportId: string): string => {
+  return `${API_BASE_URL}/api/reports/${reportId}/download`;
 };
 
 // Processes

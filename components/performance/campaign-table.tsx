@@ -21,11 +21,6 @@ const statusColors: Record<string, string> = {
   poor: 'bg-rose-500',
 };
 
-const formatCurrency = (value: number) => {
-  if (!Number.isFinite(value)) return '-';
-  return `$${value.toLocaleString()}`;
-};
-
 const formatNumber = (value: number) => {
   if (!Number.isFinite(value)) return '-';
   return value.toLocaleString();
@@ -44,18 +39,17 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
               <TableRow>
                 <TableHead>Campaign</TableHead>
                 <TableHead>Platform</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Spend</TableHead>
+                <TableHead className="text-right">Impressions</TableHead>
+                <TableHead className="text-right">Clicks</TableHead>
                 <TableHead className="text-right">Conversions</TableHead>
-                <TableHead className="text-right">CPL</TableHead>
-                <TableHead className="text-right">CPA</TableHead>
                 <TableHead className="text-right">ROAS</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {campaigns.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     No campaigns found
                   </TableCell>
                 </TableRow>
@@ -66,16 +60,19 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
                     <TableCell className="text-sm text-muted-foreground">
                       {campaign.platform}
                     </TableCell>
+                    <TableCell className="text-right">
+                      {formatNumber(campaign.totalImpressions)}
+                    </TableCell>
+                    <TableCell className="text-right">{formatNumber(campaign.totalClicks)}</TableCell>
+                    <TableCell className="text-right">
+                      {formatNumber(campaign.totalConversions)}
+                    </TableCell>
+                    <TableCell className="text-right">{campaign.roas.toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge className={statusColors[campaign.status] ?? 'bg-slate-500'}>
                         {campaign.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">{formatCurrency(campaign.totalSpend)}</TableCell>
-                    <TableCell className="text-right">{formatNumber(campaign.totalConversions)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(campaign.avgCpl)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(campaign.avgCpa)}</TableCell>
-                    <TableCell className="text-right">{campaign.roas.toFixed(2)}</TableCell>
                   </TableRow>
                 ))
               )}

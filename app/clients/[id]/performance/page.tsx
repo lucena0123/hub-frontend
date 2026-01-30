@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Activity, BarChart3, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Activity, BarChart3, TrendingUp, FileText } from 'lucide-react';
 import {
   getCampaignMetrics,
   getClientBpmnProgress,
@@ -14,6 +14,7 @@ import { MetricsCard } from '@/components/performance/metrics-card';
 import { PerformanceChart } from '@/components/performance/performance-chart';
 import { BpmnProgressTracker } from '@/components/performance/bpmn-progress-tracker';
 import { CampaignTable } from '@/components/performance/campaign-table';
+import { ReportGenerator } from '@/components/reports/report-generator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -58,6 +59,7 @@ export default function ClientPerformancePage() {
   const [loading, setLoading] = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [openReportGenerator, setOpenReportGenerator] = useState(false);
 
   useEffect(() => {
     const loadSummary = async () => {
@@ -150,6 +152,25 @@ export default function ClientPerformancePage() {
     ? summary.totalSpend / summary.totalConversions
     : 0;
 
+  const trend = summary.vsLastPeriod;
+  const toFactor = (value?: number) => (value === undefined ? undefined : 1 + value / 100);
+
+  const cpaTrend = (() => {
+    if (trend?.spend === undefined || trend?.conversions === undefined) return undefined;
+    const spendFactor = toFactor(trend.spend);
+    const conversionsFactor = toFactor(trend.conversions);
+    if (!spendFactor || !conversionsFactor || conversionsFactor === 0) return undefined;
+    return ((spendFactor / conversionsFactor) - 1) * 100;
+  })();
+
+  const ctrTrend = (() => {
+    if (trend?.clicks === undefined || trend?.impressions === undefined) return undefined;
+    const clicksFactor = toFactor(trend.clicks);
+    const impressionsFactor = toFactor(trend.impressions);
+    if (!clicksFactor || !impressionsFactor || impressionsFactor === 0) return undefined;
+    return ((clicksFactor / impressionsFactor) - 1) * 100;
+  })();
+
   const cards = [
     {
       title: 'CPL',
@@ -160,28 +181,33 @@ export default function ClientPerformancePage() {
       title: 'CPA',
       value: formatCurrency(cpa),
       icon: TrendingUp,
+      trend: cpaTrend !== undefined ? { value: cpaTrend, label: 'vs last' } : undefined,
     },
     {
       title: 'ROAS',
       value: summary.avgRoas.toFixed(2) + 'x',
       icon: BarChart3,
+      trend: trend?.roas !== undefined ? { value: trend.roas, label: 'vs last' } : undefined,
     },
     {
       title: 'CTR',
       value: formatPercent(summary.avgCtr),
       icon: Activity,
+      trend: ctrTrend !== undefined ? { value: ctrTrend, label: 'vs last' } : undefined,
     },
     {
-      title: 'Spend',
+      title: 'Gastos total',
       value: formatCurrency(summary.totalSpend),
       subtitle: `Revenue: ${formatCurrency(summary.totalRevenue)}`,
       icon: TrendingUp,
+      trend: trend?.spend !== undefined ? { value: trend.spend, label: 'vs last' } : undefined,
     },
     {
-      title: 'Conversions',
+      title: 'Conversoes',
       value: formatNumber(summary.totalConversions),
       subtitle: `Clicks: ${formatNumber(summary.totalClicks)}`,
       icon: TrendingUp,
+      trend: trend?.conversions !== undefined ? { value: trend.conversions, label: 'vs last' } : undefined,
     },
   ];
 
@@ -213,6 +239,14 @@ export default function ClientPerformancePage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setOpenReportGenerator(true)}
+            >
+              <FileText className="h-4 w-4" />
+              Gerar Relatorio Mensal
+            </Button>
           </div>
         </div>
 
@@ -265,6 +299,13 @@ export default function ClientPerformancePage() {
 
         <CampaignTable campaigns={summary.campaigns} />
       </div>
+
+      <ReportGenerator
+        open={openReportGenerator}
+        onClose={() => setOpenReportGenerator(false)}
+        clientId={summary.clientId}
+        clientName={summary.clientName}
+      />
     </div>
   );
 }

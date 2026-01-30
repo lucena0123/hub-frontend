@@ -38,12 +38,13 @@ export function BpmnProgressTracker({ progress }: BpmnProgressTrackerProps) {
 
   const percent = progress?.progressPercentage ?? 0;
   const status = progress?.status ?? 'not_started';
+  const pendingTasks = progress?.pendingTasks ?? [];
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between">
         <div>
-          <CardTitle> BPMN progress </CardTitle>
+          <CardTitle>BPMN progress</CardTitle>
           <p className="text-sm text-muted-foreground">Subprocess 4.x to 5.x</p>
         </div>
         <Badge className={cn('capitalize', statusColors[status])}>
@@ -62,6 +63,9 @@ export function BpmnProgressTracker({ progress }: BpmnProgressTrackerProps) {
               style={{ width: `${Math.min(percent, 100)}%` }}
             />
           </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Current subprocess: {progress?.currentSubprocess ?? 'N/A'}
+          </p>
         </div>
 
         <div className="grid gap-3">
@@ -90,6 +94,19 @@ export function BpmnProgressTracker({ progress }: BpmnProgressTrackerProps) {
               </div>
             );
           })}
+        </div>
+
+        <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+          <p className="font-semibold">Pending tasks</p>
+          {pendingTasks.length === 0 ? (
+            <p className="mt-2 text-xs text-muted-foreground">No pending tasks.</p>
+          ) : (
+            <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+              {pendingTasks.slice(0, 6).map((task) => (
+                <li key={task}>- {task}</li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {progress?.blockers && progress.blockers.length > 0 && (
