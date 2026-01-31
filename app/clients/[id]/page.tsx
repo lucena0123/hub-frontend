@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Building2, ClipboardList, UserCog } from 'lucide-react';
+import { ArrowLeft, Building2, ClipboardList, UserCog, BarChart3, FileText, Bell } from 'lucide-react';
 import { getClientById, updateClient } from '@/lib/api/client';
 import type { Client } from '@/types';
 import { ClientForm, type ClientFormValues } from '@/components/client-form';
@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils';
 
 const tierColors = {
   basic: 'bg-gray-500',
@@ -65,13 +65,6 @@ type ClientDetails = Client & {
     campaigns?: number;
     metrics?: number;
   };
-};
-
-const formatDate = (value?: string | null) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return format(date, 'MMM dd, yyyy');
 };
 
 const toDateInput = (value?: string | null) => {
@@ -190,9 +183,31 @@ export default function ClientDetailsPage() {
               <p className="text-muted-foreground">Client profile and activity overview</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge className={tierColors[client.tier] || 'bg-gray-500'}>{client.tier}</Badge>
-            <Badge className={statusColors[client.status] || 'bg-gray-500'}>{client.status}</Badge>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <Badge className={tierColors[client.tier] || 'bg-gray-500'}>{client.tier}</Badge>
+              <Badge className={statusColors[client.status] || 'bg-gray-500'}>{client.status}</Badge>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button asChild variant="secondary" size="sm">
+                <Link href={`/clients/${client.id}/performance`} className="gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Performance
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/clients/${client.id}/reports`} className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Reports
+                </Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/alerts" className="gap-2">
+                  <Bell className="h-4 w-4" />
+                  Alertas
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
 

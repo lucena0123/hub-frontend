@@ -45,6 +45,11 @@ export interface DailyMetric {
   cpc: number;
   cpl: number;
   roas: number;
+  // Lead Generation fields (optional for backward compatibility)
+  messagingConversations?: number;
+  messagingFirstReply?: number;
+  linkClicks?: number;
+  landingPageViews?: number;
 }
 
 export interface CampaignAd {
@@ -85,6 +90,11 @@ export interface PerformanceSummary {
   totalConversions: number;
   totalSpend: number;
   totalRevenue: number;
+  // Lead Generation Metrics
+  totalMessagingConversations: number;
+  totalMessagingFirstReply: number;
+  totalLinkClicks: number;
+  totalLandingPageViews: number;
   avgCtr: number;
   avgCpc: number;
   avgCpl: number;
@@ -124,6 +134,11 @@ export interface ClientPerformanceSummary {
   totalConversions: number;
   totalSpend: number;
   totalRevenue: number;
+  // Lead Generation Metrics (aggregated)
+  totalMessagingConversations: number;
+  totalMessagingFirstReply: number;
+  totalLinkClicks: number;
+  totalLandingPageViews: number;
   avgCtr: number;
   avgCpl: number;
   avgRoas: number;
@@ -194,4 +209,51 @@ export interface MetricsQuery {
   endDate?: string;
   platform?: string;
   campaignId?: string;
+}
+
+// Lead Generation Metrics (for service businesses like law firms)
+export interface LeadGenMetrics extends DailyMetric {
+  messagingConversations: number; // Conversations started (WhatsApp/Messenger)
+  messagingFirstReply: number; // Leads that replied
+  linkClicks: number; // Link clicks
+  landingPageViews: number; // Landing page views
+}
+
+export interface LeadTrackingData {
+  id: string;
+  campaignId: string;
+  date: string;
+  // Manual input fields
+  qualifiedLeads: number; // Leads with real potential
+  contractsClosed: number; // Contracts closed
+  averageTicket: number; // Average contract value
+  revenueGenerated: number; // Total revenue from closed contracts
+  leadsResponded: number; // Leads that responded to first message
+  responseTimeHours: number | null; // Average response time
+  notes: string | null; // Additional observations
+  // Calculated fields
+  leadQualificationRate: number | null; // % of leads that are qualified
+  closingRate: number | null; // % of qualified leads that close
+  roi: number | null; // ROI based on revenue vs spend
+  costPerContract: number | null; // Spend / contracts closed
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadGenPerformanceSummary extends PerformanceSummary {
+  // Additional lead gen specific metrics
+  totalMessagingConversations: number;
+  totalMessagingFirstReply: number;
+  totalLinkClicks: number;
+  totalLandingPageViews: number;
+  // Manual tracking data
+  leadTracking?: {
+    totalQualifiedLeads: number;
+    totalContractsClosed: number;
+    totalRevenue: number;
+    avgQualificationRate: number;
+    avgClosingRate: number;
+    avgROI: number;
+    avgCostPerContract: number;
+  };
 }

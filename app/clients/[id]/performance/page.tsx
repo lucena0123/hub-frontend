@@ -3,20 +3,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Activity, BarChart3, TrendingUp, FileText } from 'lucide-react';
+import { ArrowLeft, Activity, BarChart3, TrendingUp, FileText, PlusCircle } from 'lucide-react';
 import {
   getCampaignMetrics,
   getClientBpmnProgress,
   getClientPerformanceSummary,
+  getLeadTracking,
 } from '@/lib/api/client';
-import type { ClientPerformanceSummary, DailyMetric, MetricsPeriod, BPMNProgress } from '@/types';
+import type { ClientPerformanceSummary, DailyMetric, MetricsPeriod, BPMNProgress, LeadTrackingData } from '@/types';
 import { MetricsCard } from '@/components/performance/metrics-card';
 import { PerformanceChart } from '@/components/performance/performance-chart';
 import { BpmnProgressTracker } from '@/components/performance/bpmn-progress-tracker';
 import { CampaignTable } from '@/components/performance/campaign-table';
+import { LeadGenMetricsCard } from '@/components/performance/lead-gen-metrics-card';
+import { LeadTrackingForm } from '@/components/performance/lead-tracking-form';
 import { ReportGenerator } from '@/components/reports/report-generator';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -26,14 +29,14 @@ import {
 } from '@/components/ui/select';
 
 const periodOptions: Array<{ value: MetricsPeriod; label: string }> = [
-  { value: '7d', label: 'Last 7 days' },
-  { value: '14d', label: 'Last 14 days' },
-  { value: '30d', label: 'Last 30 days' },
+  { value: '7d', label: 'Últimos 7 dias' },
+  { value: '14d', label: 'Últimos 14 dias' },
+  { value: '30d', label: 'Últimos 30 dias' },
 ];
 
 const formatCurrency = (value: number) => {
   if (!Number.isFinite(value)) return '-';
-  return `$${value.toLocaleString()}`;
+  return `R$ ${value.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
 };
 
 const formatPercent = (value: number) => {
@@ -54,12 +57,14 @@ export default function ClientPerformancePage() {
   const [summary, setSummary] = useState<ClientPerformanceSummary | null>(null);
   const [bpmnProgress, setBpmnProgress] = useState<BPMNProgress | null>(null);
   const [dailyMetrics, setDailyMetrics] = useState<DailyMetric[]>([]);
+  const [leadTrackingData, setLeadTrackingData] = useState<LeadTrackingData[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [period, setPeriod] = useState<MetricsPeriod>('30d');
   const [loading, setLoading] = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [openReportGenerator, setOpenReportGenerator] = useState(false);
+  const [showTrackingForm, setShowTrackingForm] = useState(false);
 
   useEffect(() => {
     const loadSummary = async () => {
@@ -113,9 +118,65 @@ export default function ClientPerformancePage() {
     loadMetrics();
   }, [selectedCampaignId, period]);
 
+  useEffect(() => {
+    if (!selectedCampaignId) return;
+    loadLeadTracking(selectedCampaignId);
+  }, [selectedCampaignId, period]);
+
+  const loadLeadTracking = async (campaignId: string) => {
+    try {
+      const days = period === '7d' ? 7 : period === '14d' ? 14 : 30;
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const data = await getLeadTracking(campaignId, { startDate, endDate });
+      setLeadTrackingData(data);
+    } catch (err) {
+      console.error('Error loading lead tracking:', err);
+      setLeadTrackingData([]);
+    }
+  };
+
   const selectedCampaign = useMemo(() => {
     return summary?.campaigns.find((campaign) => campaign.campaignId === selectedCampaignId);
   }, [summary, selectedCampaignId]);
+
+  // Calculate aggregated lead tracking data
+  const aggregatedLeadData = useMemo(() => {
+    return leadTrackingData.reduce(
+      (acc, curr) => ({
+        qualifiedLeads: acc.qualifiedLeads + (curr.qualifiedLeads || 0),
+        contractsClosed: acc.contractsClosed + (curr.contractsClosed || 0),
+        totalRevenue: acc.totalRevenue + (curr.revenueGenerated || 0),
+        roi: curr.roi || acc.roi,
+      }),
+      { qualifiedLeads: 0, contractsClosed: 0, totalRevenue: 0, roi: 0 }
+    );
+  }, [leadTrackingData]);
+
+  // Get messaging metrics from selected campaign or summary
+  const messagingMetrics = useMemo(() => {
+    if (selectedCampaign && selectedCampaignId) {
+      // Get from the selected campaign's performance summary
+      const campaignData = summary?.campaigns.find(c => c.campaignId === selectedCampaignId);
+      if (campaignData) {
+        return {
+          totalMessagingConversations: campaignData.totalMessagingConversations || 0,
+          totalMessagingFirstReply: campaignData.totalMessagingFirstReply || 0,
+          totalLinkClicks: campaignData.totalLinkClicks || 0,
+          totalSpend: campaignData.totalSpend || 0,
+        };
+      }
+    }
+
+    // Fallback to summary totals
+    return {
+      totalMessagingConversations: summary?.totalMessagingConversations || 0,
+      totalMessagingFirstReply: summary?.totalMessagingFirstReply || 0,
+      totalLinkClicks: summary?.totalLinkClicks || 0,
+      totalSpend: summary?.totalSpend || 0,
+    };
+  }, [selectedCampaign, selectedCampaignId, summary]);
 
   if (loading) {
     return (
@@ -148,69 +209,6 @@ export default function ClientPerformancePage() {
     );
   }
 
-  const cpa = summary.totalConversions > 0
-    ? summary.totalSpend / summary.totalConversions
-    : 0;
-
-  const trend = summary.vsLastPeriod;
-  const toFactor = (value?: number) => (value === undefined ? undefined : 1 + value / 100);
-
-  const cpaTrend = (() => {
-    if (trend?.spend === undefined || trend?.conversions === undefined) return undefined;
-    const spendFactor = toFactor(trend.spend);
-    const conversionsFactor = toFactor(trend.conversions);
-    if (!spendFactor || !conversionsFactor || conversionsFactor === 0) return undefined;
-    return ((spendFactor / conversionsFactor) - 1) * 100;
-  })();
-
-  const ctrTrend = (() => {
-    if (trend?.clicks === undefined || trend?.impressions === undefined) return undefined;
-    const clicksFactor = toFactor(trend.clicks);
-    const impressionsFactor = toFactor(trend.impressions);
-    if (!clicksFactor || !impressionsFactor || impressionsFactor === 0) return undefined;
-    return ((clicksFactor / impressionsFactor) - 1) * 100;
-  })();
-
-  const cards = [
-    {
-      title: 'CPL',
-      value: formatCurrency(summary.avgCpl),
-      icon: TrendingUp,
-    },
-    {
-      title: 'CPA',
-      value: formatCurrency(cpa),
-      icon: TrendingUp,
-      trend: cpaTrend !== undefined ? { value: cpaTrend, label: 'vs last' } : undefined,
-    },
-    {
-      title: 'ROAS',
-      value: summary.avgRoas.toFixed(2) + 'x',
-      icon: BarChart3,
-      trend: trend?.roas !== undefined ? { value: trend.roas, label: 'vs last' } : undefined,
-    },
-    {
-      title: 'CTR',
-      value: formatPercent(summary.avgCtr),
-      icon: Activity,
-      trend: ctrTrend !== undefined ? { value: ctrTrend, label: 'vs last' } : undefined,
-    },
-    {
-      title: 'Gastos total',
-      value: formatCurrency(summary.totalSpend),
-      subtitle: `Revenue: ${formatCurrency(summary.totalRevenue)}`,
-      icon: TrendingUp,
-      trend: trend?.spend !== undefined ? { value: trend.spend, label: 'vs last' } : undefined,
-    },
-    {
-      title: 'Conversoes',
-      value: formatNumber(summary.totalConversions),
-      subtitle: `Clicks: ${formatNumber(summary.totalClicks)}`,
-      icon: TrendingUp,
-      trend: trend?.conversions !== undefined ? { value: trend.conversions, label: 'vs last' } : undefined,
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -222,7 +220,7 @@ export default function ClientPerformancePage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Performance dashboard</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Performance Dashboard</h1>
               <p className="text-muted-foreground">{summary.clientName}</p>
             </div>
           </div>
@@ -239,36 +237,60 @@ export default function ClientPerformancePage() {
                 ))}
               </SelectContent>
             </Select>
+            {selectedCampaignId && (
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => setShowTrackingForm(!showTrackingForm)}
+              >
+                <PlusCircle className="h-4 w-4" />
+                {showTrackingForm ? 'Ocultar' : 'Adicionar'} Dados do Funil
+              </Button>
+            )}
             <Button
               variant="outline"
               className="gap-2"
               onClick={() => setOpenReportGenerator(true)}
             >
               <FileText className="h-4 w-4" />
-              Gerar Relatorio Mensal
+              Gerar Relatório Mensal
             </Button>
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.map((card) => (
-            <MetricsCard
-              key={card.title}
-              title={card.title}
-              value={card.value}
-              subtitle={card.subtitle}
-              icon={card.icon}
-            />
-          ))}
-        </div>
+        {/* Lead Generation Metrics Card */}
+        {selectedCampaignId && (
+          <LeadGenMetricsCard
+            totalMessagingConversations={messagingMetrics.totalMessagingConversations}
+            totalMessagingFirstReply={messagingMetrics.totalMessagingFirstReply}
+            totalLinkClicks={messagingMetrics.totalLinkClicks}
+            totalSpend={messagingMetrics.totalSpend}
+            qualifiedLeads={aggregatedLeadData.qualifiedLeads}
+            contractsClosed={aggregatedLeadData.contractsClosed}
+            totalRevenue={aggregatedLeadData.totalRevenue}
+            roi={aggregatedLeadData.roi}
+          />
+        )}
+
+        {/* Lead Tracking Form */}
+        {showTrackingForm && selectedCampaignId && selectedCampaign && (
+          <LeadTrackingForm
+            campaignId={selectedCampaignId}
+            campaignName={selectedCampaign.campaignName}
+            onSuccess={() => {
+              setShowTrackingForm(false);
+              loadLeadTracking(selectedCampaignId);
+            }}
+          />
+        )}
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold">Campaign trend</h2>
+                <h2 className="text-lg font-semibold">Tendência da Campanha</h2>
                 <p className="text-sm text-muted-foreground">
-                  {selectedCampaign ? selectedCampaign.campaignName : 'No campaign selected'}
+                  {selectedCampaign ? selectedCampaign.campaignName : 'Nenhuma campanha selecionada'}
                 </p>
               </div>
               {summary.campaigns.length > 1 && (
@@ -277,7 +299,7 @@ export default function ClientPerformancePage() {
                   onValueChange={(value) => setSelectedCampaignId(value)}
                 >
                   <SelectTrigger className="w-[220px]">
-                    <SelectValue placeholder="Select campaign" />
+                    <SelectValue placeholder="Selecione campanha" />
                   </SelectTrigger>
                   <SelectContent>
                     {summary.campaigns.map((campaign) => (
@@ -292,23 +314,66 @@ export default function ClientPerformancePage() {
             {metricsLoading ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>Loading metrics...</CardTitle>
+                  <CardTitle>Carregando métricas...</CardTitle>
                 </CardHeader>
                 <CardContent className="flex h-[320px] items-center justify-center">
                   <Activity className="h-6 w-6 animate-spin text-muted-foreground" />
                 </CardContent>
               </Card>
             ) : (
-              <PerformanceChart data={dailyMetrics} title="Performance trend" />
+              <PerformanceChart data={dailyMetrics} title="Tendência de Performance" />
             )}
           </div>
           <BpmnProgressTracker progress={bpmnProgress} />
         </div>
 
+        {/* Lead Tracking History */}
+        {selectedCampaignId && leadTrackingData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Histórico de Funil Manual</CardTitle>
+              <CardDescription>Dados de qualificação e fechamento inseridos manualmente</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {leadTrackingData.map((record) => (
+                  <div key={record.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex gap-6">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Data</p>
+                        <p className="font-medium">{new Date(record.date).toLocaleDateString('pt-BR')}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Leads Qualificados</p>
+                        <p className="font-medium">{record.qualifiedLeads}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Contratos Fechados</p>
+                        <p className="font-medium">{record.contractsClosed}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Receita</p>
+                        <p className="font-medium">R$ {record.revenueGenerated.toLocaleString('pt-BR', {maximumFractionDigits: 0})}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">ROI</p>
+                        <p className="font-medium text-green-600">{record.roi ? `${record.roi.toFixed(0)}%` : '—'}</p>
+                      </div>
+                    </div>
+                    {record.notes && (
+                      <p className="text-sm text-muted-foreground max-w-xs truncate">{record.notes}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {metricsLoading ? (
           <Card>
             <CardHeader>
-              <CardTitle>Loading campaigns...</CardTitle>
+              <CardTitle>Carregando campanhas...</CardTitle>
             </CardHeader>
             <CardContent className="flex items-center justify-center py-10">
               <Activity className="h-6 w-6 animate-spin text-muted-foreground" />

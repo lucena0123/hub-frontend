@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Activity, Plus, Trash2, Pencil, Users } from 'lucide-react';
+import { Activity, Plus, Trash2, Pencil, Users, BarChart3, FileText } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 const tierColors = {
@@ -181,7 +181,19 @@ export default function ClientsPage() {
                         <TableCell>{formatDate(client.contractStart)}</TableCell>
                         <TableCell>{formatDate(client.contractEnd)}</TableCell>
                         <TableCell>
-                          <div className="flex justify-end gap-2">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button asChild variant="secondary" size="xs">
+                              <Link href={`/clients/${client.id}/performance`}>
+                                <BarChart3 className="h-3.5 w-3.5" />
+                                Performance
+                              </Link>
+                            </Button>
+                            <Button asChild variant="outline" size="xs">
+                              <Link href={`/clients/${client.id}/reports`}>
+                                <FileText className="h-3.5 w-3.5" />
+                                Reports
+                              </Link>
+                            </Button>
                             <Button asChild variant="outline" size="xs">
                               <Link href={`/clients/${client.id}?tab=edit`}>
                                 <Pencil className="h-3.5 w-3.5" />
