@@ -161,9 +161,21 @@ export default function ProcessesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <span className={priorityColors[getPriorityLabel(process.priority).toLowerCase() as keyof typeof priorityColors]}>
-                            {getPriorityLabel(process.priority)}
-                          </span>
+                          {(() => {
+                            const priorityValue = process.priority ?? 5;
+                            const priorityLabel = getPriorityLabel(priorityValue);
+                            return (
+                              <span
+                                className={
+                                  priorityColors[
+                                    priorityLabel.toLowerCase() as keyof typeof priorityColors
+                                  ]
+                                }
+                              >
+                                {priorityLabel}
+                              </span>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">

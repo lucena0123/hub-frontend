@@ -289,15 +289,34 @@ export default function ClientPerformancePage() {
                 </Select>
               )}
             </div>
-            <PerformanceChart
-              data={dailyMetrics}
-              title={metricsLoading ? 'Loading metrics...' : 'Performance trend'}
-            />
+            {metricsLoading ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Loading metrics...</CardTitle>
+                </CardHeader>
+                <CardContent className="flex h-[320px] items-center justify-center">
+                  <Activity className="h-6 w-6 animate-spin text-muted-foreground" />
+                </CardContent>
+              </Card>
+            ) : (
+              <PerformanceChart data={dailyMetrics} title="Performance trend" />
+            )}
           </div>
           <BpmnProgressTracker progress={bpmnProgress} />
         </div>
 
-        <CampaignTable campaigns={summary.campaigns} />
+        {metricsLoading ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Loading campaigns...</CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center py-10">
+              <Activity className="h-6 w-6 animate-spin text-muted-foreground" />
+            </CardContent>
+          </Card>
+        ) : (
+          <CampaignTable campaigns={summary.campaigns} />
+        )}
       </div>
 
       <ReportGenerator

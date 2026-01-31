@@ -16,7 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Activity, Plus, Trash2, Pencil, Users } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils';
 
 const tierColors = {
   basic: 'bg-gray-500',
@@ -31,13 +31,6 @@ const statusColors = {
   pending: 'bg-yellow-500',
   suspended: 'bg-orange-500',
   churned: 'bg-zinc-500',
-};
-
-const formatDate = (value?: string | null) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return format(date, 'MMM dd, yyyy');
 };
 
 export default function ClientsPage() {

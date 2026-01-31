@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Users, PlayCircle } from 'lucide-react';
+import { LayoutDashboard, Users, PlayCircle, Bell } from 'lucide-react';
+import { AlertBadge } from '@/components/alerts/alert-badge';
 
 const navItems = [
   {
@@ -20,6 +21,12 @@ const navItems = [
     href: '/processes',
     label: 'Processes',
     icon: PlayCircle,
+  },
+  {
+    href: '/alerts',
+    label: 'Alertas',
+    icon: Bell,
+    showBadge: true,
   },
 ];
 
@@ -51,6 +58,7 @@ export function Navigation() {
                   >
                     <Icon className="h-4 w-4" />
                     {item.label}
+                    {item.showBadge && <AlertBadge />}
                   </Link>
                 );
               })}

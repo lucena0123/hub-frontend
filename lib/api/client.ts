@@ -9,6 +9,8 @@ import type {
   ProcessInstance,
   Task,
   DashboardStats,
+  DashboardOverview,
+  AlertsResponse,
   HealthStatus,
   DailyMetric,
   PerformanceSummary,
@@ -48,18 +50,19 @@ export const getClientById = async (id: string): Promise<Client> => {
 type ClientPayload = {
   name: string;
   email: string;
+  cpfCnpj?: string;
   tier: string;
   budget: number;
   contractStart: string;
   contractEnd?: string | null;
-  cpfCnpj?: string;
 };
 
 export const createClient = async (payload: ClientPayload): Promise<Client> => {
-  const { name, email, tier, budget, contractStart, contractEnd } = payload;
+  const { name, email, cpfCnpj, tier, budget, contractStart, contractEnd } = payload;
   const response = await apiClient.post<Client>('/api/clients', {
     name,
     email,
+    cpfCnpj,
     tier,
     budget,
     contractStart,
@@ -69,10 +72,11 @@ export const createClient = async (payload: ClientPayload): Promise<Client> => {
 };
 
 export const updateClient = async (id: string, payload: ClientPayload): Promise<Client> => {
-  const { name, email, tier, budget, contractStart, contractEnd } = payload;
+  const { name, email, cpfCnpj, tier, budget, contractStart, contractEnd } = payload;
   const response = await apiClient.put<Client>(`/api/clients/${id}`, {
     name,
     email,
+    cpfCnpj,
     tier,
     budget,
     contractStart,
@@ -136,6 +140,26 @@ export const updateClientBpmnProgress = async (
   const { data } = await apiClient.put<BPMNProgress>(
     `/api/clients/${clientId}/bpmn-progress`,
     payload
+  );
+  return data;
+};
+
+export const initializeBpmnProgress = async (
+  clientId: string,
+  payload: { startingSubprocess?: string }
+): Promise<BPMNProgress> => {
+  const { data } = await apiClient.post<BPMNProgress>(
+    `/api/clients/${clientId}/bpmn-progress`,
+    payload
+  );
+  return data;
+};
+
+export const getBpmnSubprocessClients = async (
+  subprocessId: string
+): Promise<BPMNProgress[]> => {
+  const { data } = await apiClient.get<BPMNProgress[]>(
+    `/api/bpmn/subprocess/${subprocessId}/clients`
   );
   return data;
 };
@@ -204,6 +228,17 @@ export const getTasks = async (status?: string): Promise<Task[]> => {
 // Dashboard Stats
 export const getDashboardStats = async (): Promise<DashboardStats> => {
   const { data } = await apiClient.get<DashboardStats>('/api/dashboard/stats');
+  return data;
+};
+
+// Dashboard Overview + Alerts
+export const getDashboardOverview = async (): Promise<DashboardOverview> => {
+  const { data } = await apiClient.get<DashboardOverview>('/api/dashboard/overview');
+  return data;
+};
+
+export const getAlerts = async (): Promise<AlertsResponse> => {
+  const { data } = await apiClient.get<AlertsResponse>('/api/alerts');
   return data;
 };
 

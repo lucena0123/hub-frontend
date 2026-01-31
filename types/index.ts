@@ -82,6 +82,65 @@ export interface DashboardStats {
   timestamp: string;
 }
 
+export interface DashboardOverview {
+  clients: {
+    total: number;
+    active: number;
+    byTier: Record<string, number>;
+  };
+  campaigns: {
+    total: number;
+    active: number;
+    byPlatform: Record<string, number>;
+  };
+  performance: {
+    totalSpend: number;
+    totalRevenue: number;
+    totalConversions: number;
+    totalLeads: number;
+    avgRoas: number;
+    avgCtr: number;
+    avgCpl: number;
+  };
+  bpmn: {
+    clientsInExecution: number;
+    clientsInMonitoring: number;
+    avgProgress: number;
+    blockedClients: number;
+  };
+  reports: {
+    totalGenerated: number;
+    lastGenerated: string | null;
+  };
+  recentActivity: Array<{
+    type: string;
+    description: string;
+    timestamp: string;
+  }>;
+}
+
+export interface PerformanceAlert {
+  id: string;
+  clientId: string;
+  clientName: string;
+  campaignId?: string;
+  campaignName?: string;
+  type: 'warning' | 'critical' | 'info';
+  category: string;
+  message: string;
+  metric: string;
+  currentValue: number;
+  threshold: number;
+  createdAt: string;
+}
+
+export interface AlertsResponse {
+  total: number;
+  critical: number;
+  warning: number;
+  alerts: PerformanceAlert[];
+}
+
 export interface HealthStatus {
   status: 'healthy' | 'unhealthy';
   timestamp: string;

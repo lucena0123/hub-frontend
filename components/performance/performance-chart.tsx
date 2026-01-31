@@ -3,18 +3,14 @@
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DailyMetric } from '@/types';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils';
 
 interface PerformanceChartProps {
   title?: string;
   data: DailyMetric[];
 }
 
-const formatDate = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return format(date, 'MMM dd');
-};
+const formatChartDate = (value: string) => formatDate(value, 'MMM dd', value);
 
 const formatCurrency = (value: number) => {
   if (!Number.isFinite(value)) return '-';
@@ -37,7 +33,7 @@ export function PerformanceChart({ title = 'Performance trend (30d)', data }: Pe
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 10, right: 24, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="date" tickFormatter={formatDate} />
+              <XAxis dataKey="date" tickFormatter={formatChartDate} />
               <YAxis
                 yAxisId="left"
                 tickFormatter={(value) => formatCurrency(Number(value))}
@@ -54,7 +50,7 @@ export function PerformanceChart({ title = 'Performance trend (30d)', data }: Pe
                   if (name === 'conversions') return [formatNumber(value), 'Conversions'];
                   return [value, name];
                 }}
-                labelFormatter={(label) => `Date: ${formatDate(label)}`}
+                labelFormatter={(label) => `Date: ${formatChartDate(label)}`}
               />
               <Legend />
               <Line
