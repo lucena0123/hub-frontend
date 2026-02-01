@@ -3,12 +3,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Activity, BarChart3, TrendingUp, FileText, PlusCircle } from 'lucide-react';
+import { ArrowLeft, Activity, BarChart3, TrendingUp, FileText, PlusCircle, RefreshCw } from 'lucide-react';
 import {
   getCampaignMetrics,
   getClientBpmnProgress,
   getClientPerformanceSummary,
   getLeadTracking,
+  getAdSetMetrics,
+  getAdMetrics,
+  getBreakdowns,
+  getTemporalAnalysis,
+  getBusinessMetrics,
 } from '@/lib/api/client';
 import type { ClientPerformanceSummary, DailyMetric, MetricsPeriod, BPMNProgress, LeadTrackingData } from '@/types';
 import { MetricsCard } from '@/components/performance/metrics-card';
@@ -16,6 +21,12 @@ import { PerformanceChart } from '@/components/performance/performance-chart';
 import { BpmnProgressTracker } from '@/components/performance/bpmn-progress-tracker';
 import { CampaignTable } from '@/components/performance/campaign-table';
 import { LeadGenMetricsCard } from '@/components/performance/lead-gen-metrics-card';
+import { CampaignHealthCard } from '@/components/performance/campaign-health-card';
+import { AdSetTable } from '@/components/performance/adset-table';
+import { CreativePerformanceTable } from '@/components/performance/creative-performance-table';
+import { DemographicsChart } from '@/components/performance/demographics-chart';
+import { TemporalAnalysis } from '@/components/performance/temporal-analysis';
+import { BusinessMetricsCard } from '@/components/performance/business-metrics-card';
 import { LeadTrackingForm } from '@/components/performance/lead-tracking-form';
 import { ReportGenerator } from '@/components/reports/report-generator';
 import { Button } from '@/components/ui/button';
@@ -65,6 +76,18 @@ export default function ClientPerformancePage() {
   const [error, setError] = useState<string | null>(null);
   const [openReportGenerator, setOpenReportGenerator] = useState(false);
   const [showTrackingForm, setShowTrackingForm] = useState(false);
+  const [adsetData, setAdsetData] = useState<any[]>([]);
+  const [adsetLoading, setAdsetLoading] = useState(false);
+  const [adCreativeData, setAdCreativeData] = useState<any[]>([]);
+  const [adCreativeLoading, setAdCreativeLoading] = useState(false);
+  const [ageGenderData, setAgeGenderData] = useState<any[]>([]);
+  const [placementData, setPlacementData] = useState<any[]>([]);
+  const [breakdownLoading, setBreakdownLoading] = useState(false);
+  const [temporalData, setTemporalData] = useState<any>(null);
+  const [temporalLoading, setTemporalLoading] = useState(false);
+  const [businessData, setBusinessData] = useState<any>(null);
+  const [businessLoading, setBusinessLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const loadSummary = async () => {
@@ -123,6 +146,100 @@ export default function ClientPerformancePage() {
     loadLeadTracking(selectedCampaignId);
   }, [selectedCampaignId, period]);
 
+  useEffect(() => {
+    if (!selectedCampaignId) return;
+    const loadAdSets = async () => {
+      try {
+        setAdsetLoading(true);
+        const result = await getAdSetMetrics(selectedCampaignId, period);
+        setAdsetData(result.adsets || []);
+      } catch (err) {
+        console.error('Error loading ad set metrics:', err);
+        setAdsetData([]);
+      } finally {
+        setAdsetLoading(false);
+      }
+    };
+    loadAdSets();
+  }, [selectedCampaignId, period]);
+
+  // Load ad creative metrics
+  useEffect(() => {
+    if (!selectedCampaignId) return;
+    const loadAdCreatives = async () => {
+      try {
+        setAdCreativeLoading(true);
+        const result = await getAdMetrics(selectedCampaignId, period);
+        setAdCreativeData(result.ads || []);
+      } catch (err) {
+        console.error('Error loading ad creative metrics:', err);
+        setAdCreativeData([]);
+      } finally {
+        setAdCreativeLoading(false);
+      }
+    };
+    loadAdCreatives();
+  }, [selectedCampaignId, period]);
+
+  // Load breakdown data (demographics + placements)
+  useEffect(() => {
+    if (!selectedCampaignId) return;
+    const loadBreakdowns = async () => {
+      try {
+        setBreakdownLoading(true);
+        const [ageGender, placements] = await Promise.allSettled([
+          getBreakdowns(selectedCampaignId, 'age_gender', period),
+          getBreakdowns(selectedCampaignId, 'platform_position', period),
+        ]);
+        setAgeGenderData(ageGender.status === 'fulfilled' ? ageGender.value.segments : []);
+        setPlacementData(placements.status === 'fulfilled' ? placements.value.segments : []);
+      } catch (err) {
+        console.error('Error loading breakdowns:', err);
+        setAgeGenderData([]);
+        setPlacementData([]);
+      } finally {
+        setBreakdownLoading(false);
+      }
+    };
+    loadBreakdowns();
+  }, [selectedCampaignId, period]);
+
+  // Load temporal analysis
+  useEffect(() => {
+    if (!selectedCampaignId) return;
+    const loadTemporal = async () => {
+      try {
+        setTemporalLoading(true);
+        const result = await getTemporalAnalysis(selectedCampaignId, period);
+        setTemporalData(result);
+      } catch (err) {
+        console.error('Error loading temporal analysis:', err);
+        setTemporalData(null);
+      } finally {
+        setTemporalLoading(false);
+      }
+    };
+    loadTemporal();
+  }, [selectedCampaignId, period]);
+
+  // Load business metrics (CAC, LTV)
+  useEffect(() => {
+    if (!selectedCampaignId) return;
+    const loadBusiness = async () => {
+      try {
+        setBusinessLoading(true);
+        const result = await getBusinessMetrics(selectedCampaignId, period);
+        setBusinessData(result);
+      } catch (err) {
+        console.error('Error loading business metrics:', err);
+        setBusinessData(null);
+      } finally {
+        setBusinessLoading(false);
+      }
+    };
+    loadBusiness();
+  }, [selectedCampaignId, period]);
+
   const loadLeadTracking = async (campaignId: string) => {
     try {
       const days = period === '7d' ? 7 : period === '14d' ? 14 : 30;
@@ -134,6 +251,45 @@ export default function ClientPerformancePage() {
     } catch (err) {
       console.error('Error loading lead tracking:', err);
       setLeadTrackingData([]);
+    }
+  };
+
+  const refreshAll = async () => {
+    if (!clientId || refreshing) return;
+    try {
+      setRefreshing(true);
+      const [summaryData, progressData] = await Promise.all([
+        getClientPerformanceSummary(String(clientId)),
+        getClientBpmnProgress(String(clientId)),
+      ]);
+      setSummary(summaryData);
+      setBpmnProgress(progressData);
+
+      if (selectedCampaignId) {
+        const [metrics, adsets, ads, agBreak, plBreak, temporal, business] = await Promise.allSettled([
+          getCampaignMetrics(selectedCampaignId, period),
+          getAdSetMetrics(selectedCampaignId, period),
+          getAdMetrics(selectedCampaignId, period),
+          getBreakdowns(selectedCampaignId, 'age_gender', period),
+          getBreakdowns(selectedCampaignId, 'platform_position', period),
+          getTemporalAnalysis(selectedCampaignId, period),
+          getBusinessMetrics(selectedCampaignId, period),
+        ]);
+
+        if (metrics.status === 'fulfilled') setDailyMetrics(metrics.value);
+        if (adsets.status === 'fulfilled') setAdsetData(adsets.value.adsets || []);
+        if (ads.status === 'fulfilled') setAdCreativeData(ads.value.ads || []);
+        setAgeGenderData(agBreak.status === 'fulfilled' ? agBreak.value.segments : []);
+        setPlacementData(plBreak.status === 'fulfilled' ? plBreak.value.segments : []);
+        if (temporal.status === 'fulfilled') setTemporalData(temporal.value);
+        if (business.status === 'fulfilled') setBusinessData(business.value);
+
+        loadLeadTracking(selectedCampaignId);
+      }
+    } catch (err) {
+      console.error('Error refreshing dashboard:', err);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -153,6 +309,35 @@ export default function ClientPerformancePage() {
       { qualifiedLeads: 0, contractsClosed: 0, totalRevenue: 0, roi: 0 }
     );
   }, [leadTrackingData]);
+
+  // Get campaign health metrics from selected campaign or summary
+  const healthMetrics = useMemo(() => {
+    if (selectedCampaign && selectedCampaignId) {
+      const campaignData = summary?.campaigns.find(c => c.campaignId === selectedCampaignId);
+      if (campaignData) {
+        return {
+          totalReach: campaignData.totalReach || 0,
+          avgFrequency: campaignData.avgFrequency || 0,
+          avgCpm: campaignData.avgCpm || 0,
+          totalImpressions: campaignData.totalImpressions || 0,
+          totalSpend: campaignData.totalSpend || 0,
+          qualityRanking: campaignData.qualityRanking,
+          engagementRateRanking: campaignData.engagementRateRanking,
+          conversionRateRanking: campaignData.conversionRateRanking,
+        };
+      }
+    }
+    return {
+      totalReach: summary?.totalReach || 0,
+      avgFrequency: summary?.avgFrequency || 0,
+      avgCpm: summary?.avgCpm || 0,
+      totalImpressions: summary?.totalImpressions || 0,
+      totalSpend: summary?.totalSpend || 0,
+      qualityRanking: null,
+      engagementRateRanking: null,
+      conversionRateRanking: null,
+    };
+  }, [selectedCampaign, selectedCampaignId, summary]);
 
   // Get messaging metrics from selected campaign or summary
   const messagingMetrics = useMemo(() => {
@@ -237,6 +422,15 @@ export default function ClientPerformancePage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={refreshAll}
+              disabled={refreshing}
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Atualizando...' : 'Atualizar Dados'}
+            </Button>
             {selectedCampaignId && (
               <Button
                 variant="outline"
@@ -269,6 +463,20 @@ export default function ClientPerformancePage() {
             contractsClosed={aggregatedLeadData.contractsClosed}
             totalRevenue={aggregatedLeadData.totalRevenue}
             roi={aggregatedLeadData.roi}
+          />
+        )}
+
+        {/* Campaign Health Card */}
+        {selectedCampaignId && (
+          <CampaignHealthCard
+            totalReach={healthMetrics.totalReach}
+            avgFrequency={healthMetrics.avgFrequency}
+            avgCpm={healthMetrics.avgCpm}
+            totalImpressions={healthMetrics.totalImpressions}
+            totalSpend={healthMetrics.totalSpend}
+            qualityRanking={healthMetrics.qualityRanking}
+            engagementRateRanking={healthMetrics.engagementRateRanking}
+            conversionRateRanking={healthMetrics.conversionRateRanking}
           />
         )}
 
@@ -368,6 +576,42 @@ export default function ClientPerformancePage() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Ad Set Performance */}
+        {selectedCampaignId && (
+          <AdSetTable adsets={adsetData} loading={adsetLoading} />
+        )}
+
+        {/* Creative Performance */}
+        {selectedCampaignId && (
+          <CreativePerformanceTable ads={adCreativeData} loading={adCreativeLoading} />
+        )}
+
+        {/* Demographics & Placements */}
+        {selectedCampaignId && (
+          <DemographicsChart
+            ageGenderData={ageGenderData}
+            placementData={placementData}
+            loading={breakdownLoading}
+          />
+        )}
+
+        {/* Temporal Analysis */}
+        {selectedCampaignId && (
+          <TemporalAnalysis
+            data={temporalData?.byDayOfWeek || []}
+            bestDay={temporalData?.bestDay || null}
+            worstDay={temporalData?.worstDay || null}
+            cheapestDay={temporalData?.cheapestDay || null}
+            mostExpensiveDay={temporalData?.mostExpensiveDay || null}
+            loading={temporalLoading}
+          />
+        )}
+
+        {/* Business Metrics (CAC, LTV) */}
+        {selectedCampaignId && (
+          <BusinessMetricsCard data={businessData} loading={businessLoading} />
         )}
 
         {metricsLoading ? (

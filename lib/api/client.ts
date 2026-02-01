@@ -294,4 +294,87 @@ export const deleteLeadTracking = async (campaignId: string, date: string): Prom
   });
 };
 
+// Ad Set Metrics
+export const getAdSetMetrics = async (
+  campaignId: string,
+  period?: string
+): Promise<{ campaignId: string; total: number; adsets: any[] }> => {
+  const { data } = await apiClient.get(
+    `/api/campaigns/${campaignId}/adset-metrics`,
+    { params: { period } }
+  );
+  return data;
+};
+
+// Ad Creative Metrics
+export const getAdMetrics = async (
+  campaignId: string,
+  period?: string
+): Promise<{ campaignId: string; total: number; ads: any[] }> => {
+  const { data } = await apiClient.get(
+    `/api/campaigns/${campaignId}/ad-metrics`,
+    { params: { period } }
+  );
+  return data;
+};
+
+// Breakdowns (demographics, placements, device)
+export const getBreakdowns = async (
+  campaignId: string,
+  type: 'age_gender' | 'platform_position' | 'device',
+  period?: string
+): Promise<{ campaignId: string; breakdownType: string; total: number; segments: any[] }> => {
+  const { data } = await apiClient.get(
+    `/api/campaigns/${campaignId}/breakdowns/${type}`,
+    { params: { period } }
+  );
+  return data;
+};
+
+// Temporal Analysis
+export const getTemporalAnalysis = async (
+  campaignId: string,
+  period?: string
+): Promise<{
+  campaignId: string;
+  byDayOfWeek: any[];
+  bestDay: string | null;
+  worstDay: string | null;
+  cheapestDay: string | null;
+  mostExpensiveDay: string | null;
+}> => {
+  const { data } = await apiClient.get(
+    `/api/campaigns/${campaignId}/temporal-analysis`,
+    { params: { period } }
+  );
+  return data;
+};
+
+// Business Metrics (CAC, LTV)
+export const getBusinessMetrics = async (
+  campaignId: string,
+  period?: string
+): Promise<{
+  campaignId: string;
+  totalSpend: number;
+  totalConversations: number;
+  totalContracts: number;
+  totalRevenue: number;
+  avgTicket: number;
+  cac: number;
+  costPerLead: number;
+  conversionRate: number;
+  ltv: number;
+  ltvCacRatio: number;
+  ltvCacHealth: string;
+  roi: number;
+  config: { lifetimeMonths: number; monthlyRevenue: number };
+}> => {
+  const { data } = await apiClient.get(
+    `/api/campaigns/${campaignId}/business-metrics`,
+    { params: { period } }
+  );
+  return data;
+};
+
 export default apiClient;
