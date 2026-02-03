@@ -17,8 +17,9 @@ import {
 import { cn } from '@/lib/utils';
 
 const tierOptions = [
-  { value: 'basic', label: 'Basic', helper: 'Ate R$ 5.000' },
-  { value: 'premium', label: 'Premium', helper: 'R$ 5.000 - 15.000' },
+  { value: 'basic', label: 'Basic', helper: 'Até R$ 5.000' },
+  { value: 'standard', label: 'Standard', helper: 'R$ 5.000 - 10.000' },
+  { value: 'premium', label: 'Premium', helper: 'R$ 10.000 - 15.000' },
   { value: 'enterprise', label: 'Enterprise', helper: 'Acima de R$ 15.000' },
 ] as const;
 
@@ -38,11 +39,8 @@ export const clientFormSchema = z
         const digits = normalizeCpfCnpj(value);
         return digits.length === 11 || digits.length === 14;
       }, 'CPF/CNPJ invalido'),
-    tier: z.enum(['basic', 'premium', 'enterprise']),
-    budget: z
-      .coerce
-      .number()
-      .min(1, 'Informe um budget valido'),
+    tier: z.enum(['basic', 'standard', 'premium', 'enterprise']),
+    budget: z.number().min(1, 'Informe um budget valido'),
     contractStart: z.string().min(1, 'Informe a data de inicio'),
     contractEnd: z.string().optional().or(z.literal('')),
   })
@@ -58,7 +56,8 @@ export type ClientFormValues = z.infer<typeof clientFormSchema>;
 
 const getTierPreview = (budget: number) => {
   if (!budget || Number.isNaN(budget)) return tierOptions[0];
-  if (budget >= 15000) return tierOptions[2];
+  if (budget >= 15000) return tierOptions[3];
+  if (budget >= 10000) return tierOptions[2];
   if (budget >= 5000) return tierOptions[1];
   return tierOptions[0];
 };

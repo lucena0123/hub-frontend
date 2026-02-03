@@ -17,6 +17,7 @@ import type {
   ClientPerformanceSummary,
   BPMNProgress,
   MetricsPeriod,
+  MetricsQuery,
   MonthlyReport,
 } from '@/types';
 
@@ -29,6 +30,40 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+const looksLikeHtmlDocument = (value: string) => {
+  const trimmed = value.trimStart().toLowerCase();
+  return trimmed.startsWith('<!doctype') || trimmed.startsWith('<html') || trimmed.includes('<html');
+};
+
+apiClient.interceptors.response.use(
+  (response) => {
+    if (typeof response.data === 'string' && looksLikeHtmlDocument(response.data)) {
+      throw new Error(
+        `API returned HTML instead of JSON. Check NEXT_PUBLIC_API_URL (currently: ${API_BASE_URL}) and ensure the Fastify backend is running.`
+      );
+    }
+
+    return response;
+  },
+  (error) => Promise.reject(error)
+);
+
+type MetricsQueryInput = MetricsQuery | MetricsPeriod | undefined;
+
+const normalizeMetricsQuery = (query: MetricsQueryInput): MetricsQuery | undefined => {
+  if (!query) return undefined;
+  if (typeof query === 'string') return { period: query };
+
+  const params: MetricsQuery = {};
+  if (query.period) params.period = query.period;
+  if (query.startDate) params.startDate = query.startDate;
+  if (query.endDate) params.endDate = query.endDate;
+  if (query.platform) params.platform = query.platform;
+  if (query.campaignId) params.campaignId = query.campaignId;
+
+  return params;
+};
 
 // Health Check
 export const getHealth = async (): Promise<HealthStatus> => {
@@ -97,29 +132,36 @@ export const getCampaigns = async (): Promise<Campaign[]> => {
 
 export const getCampaignMetrics = async (
   campaignId: string,
-  period?: MetricsPeriod
+  query?: MetricsQueryInput
 ): Promise<DailyMetric[]> => {
+  const params = normalizeMetricsQuery(query);
   const { data } = await apiClient.get<DailyMetric[]>(
     `/api/campaigns/${campaignId}/metrics`,
-    { params: period ? { period } : undefined }
+    params ? { params } : undefined
   );
   return data;
 };
 
 export const getCampaignPerformanceSummary = async (
-  campaignId: string
+  campaignId: string,
+  query?: MetricsQueryInput
 ): Promise<PerformanceSummary> => {
+  const params = normalizeMetricsQuery(query);
   const { data } = await apiClient.get<PerformanceSummary>(
-    `/api/campaigns/${campaignId}/performance-summary`
+    `/api/campaigns/${campaignId}/performance-summary`,
+    params ? { params } : undefined
   );
   return data;
 };
 
 export const getClientPerformanceSummary = async (
-  clientId: string
+  clientId: string,
+  query?: MetricsQueryInput
 ): Promise<ClientPerformanceSummary> => {
+  const params = normalizeMetricsQuery(query);
   const { data } = await apiClient.get<ClientPerformanceSummary>(
-    `/api/clients/${clientId}/performance-summary`
+    `/api/clients/${clientId}/performance-summary`,
+    params ? { params } : undefined
   );
   return data;
 };
@@ -238,7 +280,7 @@ export const getDashboardOverview = async (): Promise<DashboardOverview> => {
 };
 
 export const getAlerts = async (): Promise<AlertsResponse> => {
-  const { data} = await apiClient.get<AlertsResponse>('/api/alerts');
+  const { data } = await apiClient.get<AlertsResponse>('/api/alerts');
   return data;
 };
 
@@ -297,11 +339,12 @@ export const deleteLeadTracking = async (campaignId: string, date: string): Prom
 // Ad Set Metrics
 export const getAdSetMetrics = async (
   campaignId: string,
-  period?: string
+  query?: MetricsQueryInput
 ): Promise<{ campaignId: string; total: number; adsets: any[] }> => {
+  const params = normalizeMetricsQuery(query);
   const { data } = await apiClient.get(
     `/api/campaigns/${campaignId}/adset-metrics`,
-    { params: { period } }
+    params ? { params } : undefined
   );
   return data;
 };
@@ -309,11 +352,12 @@ export const getAdSetMetrics = async (
 // Ad Creative Metrics
 export const getAdMetrics = async (
   campaignId: string,
-  period?: string
+  query?: MetricsQueryInput
 ): Promise<{ campaignId: string; total: number; ads: any[] }> => {
+  const params = normalizeMetricsQuery(query);
   const { data } = await apiClient.get(
     `/api/campaigns/${campaignId}/ad-metrics`,
-    { params: { period } }
+    params ? { params } : undefined
   );
   return data;
 };
@@ -322,11 +366,12 @@ export const getAdMetrics = async (
 export const getBreakdowns = async (
   campaignId: string,
   type: 'age_gender' | 'platform_position' | 'device',
-  period?: string
+  query?: MetricsQueryInput
 ): Promise<{ campaignId: string; breakdownType: string; total: number; segments: any[] }> => {
+  const params = normalizeMetricsQuery(query);
   const { data } = await apiClient.get(
     `/api/campaigns/${campaignId}/breakdowns/${type}`,
-    { params: { period } }
+    params ? { params } : undefined
   );
   return data;
 };
@@ -334,7 +379,7 @@ export const getBreakdowns = async (
 // Temporal Analysis
 export const getTemporalAnalysis = async (
   campaignId: string,
-  period?: string
+  query?: MetricsQueryInput
 ): Promise<{
   campaignId: string;
   byDayOfWeek: any[];
@@ -343,9 +388,10 @@ export const getTemporalAnalysis = async (
   cheapestDay: string | null;
   mostExpensiveDay: string | null;
 }> => {
+  const params = normalizeMetricsQuery(query);
   const { data } = await apiClient.get(
     `/api/campaigns/${campaignId}/temporal-analysis`,
-    { params: { period } }
+    params ? { params } : undefined
   );
   return data;
 };
@@ -353,7 +399,7 @@ export const getTemporalAnalysis = async (
 // Business Metrics (CAC, LTV)
 export const getBusinessMetrics = async (
   campaignId: string,
-  period?: string
+  query?: MetricsQueryInput
 ): Promise<{
   campaignId: string;
   totalSpend: number;
@@ -370,10 +416,36 @@ export const getBusinessMetrics = async (
   roi: number;
   config: { lifetimeMonths: number; monthlyRevenue: number };
 }> => {
+  const params = normalizeMetricsQuery(query);
   const { data } = await apiClient.get(
     `/api/campaigns/${campaignId}/business-metrics`,
-    { params: { period } }
+    params ? { params } : undefined
   );
+  return data;
+};
+
+// Sync Meta Ads
+export const syncMetaAds = async (
+  options: {
+    accountId?: string;
+    clientId?: string;
+    since?: string;
+    until?: string;
+    syncLevel?: 'campaign' | 'adset' | 'ad' | 'full';
+    dryRun?: boolean;
+  }
+): Promise<{
+  success: boolean;
+  syncId?: string;
+  totalInsights: number;
+  mapped: number;
+  duration?: number;
+  message?: string;
+}> => {
+  // Sync can legitimately take minutes for large date ranges, so override the default 10s timeout.
+  const { data } = await apiClient.post('/api/metrics/sync/meta', options, {
+    timeout: 0, // no timeout
+  });
   return data;
 };
 

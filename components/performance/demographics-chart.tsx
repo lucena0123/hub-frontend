@@ -90,10 +90,11 @@ function BreakdownBarChart({ data, title, description }: { data: BreakdownSegmen
             <XAxis type="number" tickFormatter={(v) => `R$ ${v}`} />
             <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 12 }} />
             <Tooltip
-              formatter={(value: number, name: string) => {
-                if (name === 'spend') return [formatCurrency(value), 'Investimento'];
-                if (name === 'conversions') return [formatNumber(value), 'Conversões'];
-                return [value, name];
+              formatter={(value: number | undefined, name: string | undefined) => {
+                const safeValue = value ?? 0;
+                if (name === 'spend') return [formatCurrency(safeValue), 'Investimento'];
+                if (name === 'conversions') return [formatNumber(safeValue), 'Conversões'];
+                return [safeValue, name || ''];
               }}
             />
             <Legend formatter={(value) => value === 'spend' ? 'Investimento' : 'Conversões'} />

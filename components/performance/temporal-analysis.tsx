@@ -35,6 +35,9 @@ interface TemporalAnalysisProps {
   cheapestDay: string | null;
   mostExpensiveDay: string | null;
   loading?: boolean;
+  title?: string;
+  badgeLabel?: string;
+  description?: string;
 }
 
 const formatCurrency = (value: number) => {
@@ -50,12 +53,26 @@ const COLORS_BY_PERFORMANCE = {
   worst: '#ef4444',
 };
 
-export function TemporalAnalysis({ data, bestDay, worstDay, cheapestDay, mostExpensiveDay, loading }: TemporalAnalysisProps) {
+export function TemporalAnalysis({
+  data,
+  bestDay,
+  worstDay,
+  cheapestDay,
+  mostExpensiveDay,
+  loading,
+  title: titleProp,
+  badgeLabel: badgeLabelProp,
+  description: descriptionProp,
+}: TemporalAnalysisProps) {
+  const title = titleProp ?? 'Análise Temporal';
+  const badgeLabel = badgeLabelProp ?? 'Por dia da semana';
+  const description = descriptionProp ?? 'Identifique os melhores dias para investir em anúncios';
+
   if (loading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Análise Temporal</CardTitle>
+          <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-10">
           <p className="text-muted-foreground">Carregando...</p>
@@ -94,7 +111,7 @@ export function TemporalAnalysis({ data, bestDay, worstDay, cheapestDay, mostExp
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Análise Temporal</CardTitle>
+          <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground text-center py-8">
           Sem dados suficientes para análise temporal.
@@ -107,11 +124,11 @@ export function TemporalAnalysis({ data, bestDay, worstDay, cheapestDay, mostExp
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          Análise Temporal
-          <Badge variant="outline">Por dia da semana</Badge>
+          {title}
+          <Badge variant="outline">{badgeLabel}</Badge>
         </CardTitle>
         <CardDescription>
-          Identifique os melhores dias para investir em anúncios
+          {description}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -142,11 +159,12 @@ export function TemporalAnalysis({ data, bestDay, worstDay, cheapestDay, mostExp
             <XAxis dataKey="name" />
             <YAxis />
             <Tooltip
-              formatter={(value: number, name: string) => {
-                if (name === 'conversations') return [value, 'Conversas'];
-                if (name === 'spend') return [formatCurrency(value), 'Investimento'];
-                if (name === 'cpl') return [formatCurrency(value), 'CPL'];
-                return [value, name];
+              formatter={(value: number | undefined, name: string | undefined) => {
+                const safeValue = value ?? 0;
+                if (name === 'conversations') return [safeValue, 'Conversas'];
+                if (name === 'spend') return [formatCurrency(safeValue), 'Investimento'];
+                if (name === 'cpl') return [formatCurrency(safeValue), 'CPL'];
+                return [safeValue, name || ''];
               }}
               labelFormatter={(label) => {
                 const item = chartData.find(d => d.name === label);

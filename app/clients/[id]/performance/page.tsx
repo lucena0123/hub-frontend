@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Activity, BarChart3, TrendingUp, FileText, PlusCircle, RefreshCw } from 'lucide-react';
@@ -14,8 +15,16 @@ import {
   getBreakdowns,
   getTemporalAnalysis,
   getBusinessMetrics,
+  syncMetaAds,
 } from '@/lib/api/client';
-import type { ClientPerformanceSummary, DailyMetric, MetricsPeriod, BPMNProgress, LeadTrackingData } from '@/types';
+import type {
+  ClientPerformanceSummary,
+  DailyMetric,
+  MetricsPeriod,
+  MetricsQuery,
+  BPMNProgress,
+  LeadTrackingData,
+} from '@/types';
 import { MetricsCard } from '@/components/performance/metrics-card';
 import { PerformanceChart } from '@/components/performance/performance-chart';
 import { BpmnProgressTracker } from '@/components/performance/bpmn-progress-tracker';
@@ -31,6 +40,7 @@ import { LeadTrackingForm } from '@/components/performance/lead-tracking-form';
 import { ReportGenerator } from '@/components/reports/report-generator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -43,7 +53,15 @@ const periodOptions: Array<{ value: MetricsPeriod; label: string }> = [
   { value: '7d', label: 'Últimos 7 dias' },
   { value: '14d', label: 'Últimos 14 dias' },
   { value: '30d', label: 'Últimos 30 dias' },
+  { value: '60d', label: 'Últimos 60 dias' },
+  { value: '90d', label: 'Últimos 90 dias' },
+  { value: 'custom', label: 'Personalizado' },
 ];
+
+const CLIENT_AD_ACCOUNTS: Record<string, string> = {
+  '1436ab1e-69c1-460c-81a5-ce36862cfe71': '1146164314175749', // Costa & Lucena
+  '39301f7c-fc8a-4562-8b59-1acda4a72feb': '3781226838794313', // Brito & Silveira
+};
 
 const formatCurrency = (value: number) => {
   if (!Number.isFinite(value)) return '-';
@@ -61,6 +79,83 @@ const formatNumber = (value: number) => {
   return value.toLocaleString();
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const getApiErrorMessage = (err: unknown, fallback: string) => {
+  if (axios.isAxiosError(err)) {
+    const data = err.response?.data;
+    if (isRecord(data) && typeof data.message === 'string') return data.message;
+    if (typeof data === 'string' && data.toLowerCase().includes('<html')) {
+      return 'API retornou HTML em vez de JSON. Verifique NEXT_PUBLIC_API_URL e se o backend Fastify está rodando.';
+    }
+  }
+
+  if (err instanceof Error) return err.message;
+  return fallback;
+};
+
+const toIsoDate = (value: Date) => value.toISOString().split('T')[0];
+
+const getDateRangeFromPeriod = (value: MetricsPeriod): { startDate: string; endDate: string } => {
+  const end = new Date();
+  const start = new Date();
+
+  switch (value) {
+    case '7d':
+      start.setDate(end.getDate() - 7);
+      break;
+    case '14d':
+      start.setDate(end.getDate() - 14);
+      break;
+    case '30d':
+      start.setDate(end.getDate() - 30);
+      break;
+    case '60d':
+      start.setDate(end.getDate() - 60);
+      break;
+    case '90d':
+      start.setDate(end.getDate() - 90);
+      break;
+    default:
+      start.setDate(end.getDate() - 30);
+  }
+
+  return { startDate: toIsoDate(start), endDate: toIsoDate(end) };
+};
+
+const shiftIsoDateUtc = (isoDate: string, days: number) => {
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return toIsoDate(date);
+};
+
+const resolveMetricsRange = (
+  query: MetricsQuery,
+  fallbackPeriod: MetricsPeriod
+): { startDate: string; endDate: string } => {
+  if (query.startDate && query.endDate) {
+    return { startDate: query.startDate, endDate: query.endDate };
+  }
+
+  const resolvedPeriod: MetricsPeriod =
+    query.period && query.period !== 'custom' ? query.period : fallbackPeriod;
+
+  if (resolvedPeriod !== 'custom') return getDateRangeFromPeriod(resolvedPeriod);
+  return getDateRangeFromPeriod('30d');
+};
+
+const getLastWeekRange = (
+  query: MetricsQuery,
+  fallbackPeriod: MetricsPeriod
+): { startDate: string; endDate: string } => {
+  const range = resolveMetricsRange(query, fallbackPeriod);
+  const endDate = range.endDate;
+  const startDateBase = shiftIsoDateUtc(endDate, -6);
+  const startDate = startDateBase < range.startDate ? range.startDate : startDateBase;
+  return { startDate, endDate };
+};
+
 export default function ClientPerformancePage() {
   const params = useParams();
   const clientId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -71,9 +166,13 @@ export default function ClientPerformancePage() {
   const [leadTrackingData, setLeadTrackingData] = useState<LeadTrackingData[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [period, setPeriod] = useState<MetricsPeriod>('30d');
+  const [customStartDate, setCustomStartDate] = useState(() => getDateRangeFromPeriod('30d').startDate);
+  const [customEndDate, setCustomEndDate] = useState(() => getDateRangeFromPeriod('30d').endDate);
+  const [metricsQuery, setMetricsQuery] = useState<MetricsQuery>({ period: '30d' });
   const [loading, setLoading] = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [openReportGenerator, setOpenReportGenerator] = useState(false);
   const [showTrackingForm, setShowTrackingForm] = useState(false);
   const [adsetData, setAdsetData] = useState<any[]>([]);
@@ -85,32 +184,37 @@ export default function ClientPerformancePage() {
   const [breakdownLoading, setBreakdownLoading] = useState(false);
   const [temporalData, setTemporalData] = useState<any>(null);
   const [temporalLoading, setTemporalLoading] = useState(false);
+  const [temporalLastWeekData, setTemporalLastWeekData] = useState<any>(null);
+  const [temporalLastWeekLoading, setTemporalLastWeekLoading] = useState(false);
   const [businessData, setBusinessData] = useState<any>(null);
   const [businessLoading, setBusinessLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     const loadSummary = async () => {
       if (!clientId) return;
 
       try {
-        setLoading(true);
+        setRefreshing(true);
         const [summaryData, progressData] = await Promise.all([
-          getClientPerformanceSummary(String(clientId)),
+          getClientPerformanceSummary(String(clientId), metricsQuery),
           getClientBpmnProgress(String(clientId)),
         ]);
         setSummary(summaryData);
         setBpmnProgress(progressData);
         setError(null);
+        setLastUpdatedAt(new Date().toISOString());
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load performance data');
+        setError(getApiErrorMessage(err, 'Failed to load performance data'));
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
     };
 
     loadSummary();
-  }, [clientId]);
+  }, [clientId, metricsQuery]);
 
   useEffect(() => {
     if (!summary || summary.campaigns.length === 0) {
@@ -129,29 +233,29 @@ export default function ClientPerformancePage() {
 
       try {
         setMetricsLoading(true);
-        const metrics = await getCampaignMetrics(selectedCampaignId, period);
+        const metrics = await getCampaignMetrics(selectedCampaignId, metricsQuery);
         setDailyMetrics(metrics);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load campaign metrics');
+        setError(getApiErrorMessage(err, 'Failed to load campaign metrics'));
       } finally {
         setMetricsLoading(false);
       }
     };
 
     loadMetrics();
-  }, [selectedCampaignId, period]);
+  }, [selectedCampaignId, metricsQuery]);
 
   useEffect(() => {
     if (!selectedCampaignId) return;
-    loadLeadTracking(selectedCampaignId);
-  }, [selectedCampaignId, period]);
+    loadLeadTracking(selectedCampaignId, metricsQuery);
+  }, [selectedCampaignId, metricsQuery]);
 
   useEffect(() => {
     if (!selectedCampaignId) return;
     const loadAdSets = async () => {
       try {
         setAdsetLoading(true);
-        const result = await getAdSetMetrics(selectedCampaignId, period);
+        const result = await getAdSetMetrics(selectedCampaignId, metricsQuery);
         setAdsetData(result.adsets || []);
       } catch (err) {
         console.error('Error loading ad set metrics:', err);
@@ -161,7 +265,7 @@ export default function ClientPerformancePage() {
       }
     };
     loadAdSets();
-  }, [selectedCampaignId, period]);
+  }, [selectedCampaignId, metricsQuery]);
 
   // Load ad creative metrics
   useEffect(() => {
@@ -169,7 +273,7 @@ export default function ClientPerformancePage() {
     const loadAdCreatives = async () => {
       try {
         setAdCreativeLoading(true);
-        const result = await getAdMetrics(selectedCampaignId, period);
+        const result = await getAdMetrics(selectedCampaignId, metricsQuery);
         setAdCreativeData(result.ads || []);
       } catch (err) {
         console.error('Error loading ad creative metrics:', err);
@@ -179,7 +283,7 @@ export default function ClientPerformancePage() {
       }
     };
     loadAdCreatives();
-  }, [selectedCampaignId, period]);
+  }, [selectedCampaignId, metricsQuery]);
 
   // Load breakdown data (demographics + placements)
   useEffect(() => {
@@ -188,8 +292,8 @@ export default function ClientPerformancePage() {
       try {
         setBreakdownLoading(true);
         const [ageGender, placements] = await Promise.allSettled([
-          getBreakdowns(selectedCampaignId, 'age_gender', period),
-          getBreakdowns(selectedCampaignId, 'platform_position', period),
+          getBreakdowns(selectedCampaignId, 'age_gender', metricsQuery),
+          getBreakdowns(selectedCampaignId, 'platform_position', metricsQuery),
         ]);
         setAgeGenderData(ageGender.status === 'fulfilled' ? ageGender.value.segments : []);
         setPlacementData(placements.status === 'fulfilled' ? placements.value.segments : []);
@@ -202,7 +306,7 @@ export default function ClientPerformancePage() {
       }
     };
     loadBreakdowns();
-  }, [selectedCampaignId, period]);
+  }, [selectedCampaignId, metricsQuery]);
 
   // Load temporal analysis
   useEffect(() => {
@@ -210,7 +314,7 @@ export default function ClientPerformancePage() {
     const loadTemporal = async () => {
       try {
         setTemporalLoading(true);
-        const result = await getTemporalAnalysis(selectedCampaignId, period);
+        const result = await getTemporalAnalysis(selectedCampaignId, metricsQuery);
         setTemporalData(result);
       } catch (err) {
         console.error('Error loading temporal analysis:', err);
@@ -220,7 +324,26 @@ export default function ClientPerformancePage() {
       }
     };
     loadTemporal();
-  }, [selectedCampaignId, period]);
+  }, [selectedCampaignId, metricsQuery]);
+
+  // Load last-week temporal analysis (based on current date range end)
+  useEffect(() => {
+    if (!selectedCampaignId) return;
+    const loadTemporalLastWeek = async () => {
+      try {
+        setTemporalLastWeekLoading(true);
+        const lastWeekRange = getLastWeekRange(metricsQuery, period);
+        const result = await getTemporalAnalysis(selectedCampaignId, lastWeekRange);
+        setTemporalLastWeekData(result);
+      } catch (err) {
+        console.error('Error loading last-week temporal analysis:', err);
+        setTemporalLastWeekData(null);
+      } finally {
+        setTemporalLastWeekLoading(false);
+      }
+    };
+    loadTemporalLastWeek();
+  }, [selectedCampaignId, metricsQuery, period]);
 
   // Load business metrics (CAC, LTV)
   useEffect(() => {
@@ -228,7 +351,7 @@ export default function ClientPerformancePage() {
     const loadBusiness = async () => {
       try {
         setBusinessLoading(true);
-        const result = await getBusinessMetrics(selectedCampaignId, period);
+        const result = await getBusinessMetrics(selectedCampaignId, metricsQuery);
         setBusinessData(result);
       } catch (err) {
         console.error('Error loading business metrics:', err);
@@ -238,13 +361,15 @@ export default function ClientPerformancePage() {
       }
     };
     loadBusiness();
-  }, [selectedCampaignId, period]);
+  }, [selectedCampaignId, metricsQuery]);
 
-  const loadLeadTracking = async (campaignId: string) => {
+  const loadLeadTracking = async (campaignId: string, query: MetricsQuery) => {
     try {
-      const days = period === '7d' ? 7 : period === '14d' ? 14 : 30;
-      const endDate = new Date().toISOString().split('T')[0];
-      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const resolvedPeriod: MetricsPeriod =
+        query.period && query.period !== 'custom' ? query.period : '30d';
+
+      const startDate = query.startDate ?? getDateRangeFromPeriod(resolvedPeriod).startDate;
+      const endDate = query.endDate ?? getDateRangeFromPeriod(resolvedPeriod).endDate;
 
       const data = await getLeadTracking(campaignId, { startDate, endDate });
       setLeadTrackingData(data);
@@ -254,26 +379,91 @@ export default function ClientPerformancePage() {
     }
   };
 
+  const handleMetaSync = async () => {
+    if (syncing) return;
+    try {
+      setSyncing(true);
+      setError(null);
+
+      const accountId = CLIENT_AD_ACCOUNTS[String(clientId)];
+      const resolvedPeriod: MetricsPeriod =
+        metricsQuery.period && metricsQuery.period !== 'custom' ? metricsQuery.period : period;
+      const resolvedRange =
+        metricsQuery.startDate && metricsQuery.endDate
+          ? { since: metricsQuery.startDate, until: metricsQuery.endDate }
+          : resolvedPeriod !== 'custom'
+            ? (() => {
+                const range = getDateRangeFromPeriod(resolvedPeriod);
+                return { since: range.startDate, until: range.endDate };
+              })()
+            : undefined;
+
+      if (resolvedRange) {
+        const since = new Date(resolvedRange.since);
+        const until = new Date(resolvedRange.until);
+        const daysDiff = Math.floor((until.getTime() - since.getTime()) / (1000 * 60 * 60 * 24));
+        const maxSyncDays = 365;
+
+        if (Number.isNaN(since.getTime()) || Number.isNaN(until.getTime()) || daysDiff < 1) {
+          throw new Error('Selecione um intervalo de datas válido (a data inicial deve ser anterior à final).');
+        }
+
+        if (daysDiff > maxSyncDays) {
+          throw new Error(`Para sincronizar com a Meta, o intervalo máximo é de ${maxSyncDays} dias.`);
+        }
+      }
+
+      // Trigger full sync to get ad creatives
+      await syncMetaAds({
+        syncLevel: 'full',
+        accountId,
+        clientId: String(clientId),
+        ...(resolvedRange ?? {}),
+      });
+      // Refresh local data
+      await refreshAll();
+    } catch (err) {
+      console.error('Meta sync failed:', err);
+      const message = getApiErrorMessage(err, 'Falha ao sincronizar com Meta Ads. Tente novamente.');
+      if (
+        message.toLowerCase().includes('error validating access token') ||
+        message.toLowerCase().includes('session has expired') ||
+        message.toLowerCase().includes('access token')
+      ) {
+        setError(
+          'Meta Ads: token expirou/é inválido. Atualize META_ACCESS_TOKEN no `backend/.env` e reinicie o backend.'
+        );
+      } else {
+        setError(`Meta Ads: ${message}`);
+      }
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const refreshAll = async () => {
     if (!clientId || refreshing) return;
     try {
       setRefreshing(true);
+      setError(null);
       const [summaryData, progressData] = await Promise.all([
-        getClientPerformanceSummary(String(clientId)),
+        getClientPerformanceSummary(String(clientId), metricsQuery),
         getClientBpmnProgress(String(clientId)),
       ]);
       setSummary(summaryData);
       setBpmnProgress(progressData);
 
       if (selectedCampaignId) {
-        const [metrics, adsets, ads, agBreak, plBreak, temporal, business] = await Promise.allSettled([
-          getCampaignMetrics(selectedCampaignId, period),
-          getAdSetMetrics(selectedCampaignId, period),
-          getAdMetrics(selectedCampaignId, period),
-          getBreakdowns(selectedCampaignId, 'age_gender', period),
-          getBreakdowns(selectedCampaignId, 'platform_position', period),
-          getTemporalAnalysis(selectedCampaignId, period),
-          getBusinessMetrics(selectedCampaignId, period),
+        const lastWeekRange = getLastWeekRange(metricsQuery, period);
+        const [metrics, adsets, ads, agBreak, plBreak, temporal, temporalLastWeek, business] = await Promise.allSettled([
+          getCampaignMetrics(selectedCampaignId, metricsQuery),
+          getAdSetMetrics(selectedCampaignId, metricsQuery),
+          getAdMetrics(selectedCampaignId, metricsQuery),
+          getBreakdowns(selectedCampaignId, 'age_gender', metricsQuery),
+          getBreakdowns(selectedCampaignId, 'platform_position', metricsQuery),
+          getTemporalAnalysis(selectedCampaignId, metricsQuery),
+          getTemporalAnalysis(selectedCampaignId, lastWeekRange),
+          getBusinessMetrics(selectedCampaignId, metricsQuery),
         ]);
 
         if (metrics.status === 'fulfilled') setDailyMetrics(metrics.value);
@@ -282,12 +472,16 @@ export default function ClientPerformancePage() {
         setAgeGenderData(agBreak.status === 'fulfilled' ? agBreak.value.segments : []);
         setPlacementData(plBreak.status === 'fulfilled' ? plBreak.value.segments : []);
         if (temporal.status === 'fulfilled') setTemporalData(temporal.value);
+        if (temporalLastWeek.status === 'fulfilled') setTemporalLastWeekData(temporalLastWeek.value);
         if (business.status === 'fulfilled') setBusinessData(business.value);
 
-        loadLeadTracking(selectedCampaignId);
+        loadLeadTracking(selectedCampaignId, metricsQuery);
       }
+
+      setLastUpdatedAt(new Date().toISOString());
     } catch (err) {
       console.error('Error refreshing dashboard:', err);
+      setError(getApiErrorMessage(err, 'Falha ao atualizar os dados. Verifique o backend e tente novamente.'));
     } finally {
       setRefreshing(false);
     }
@@ -374,7 +568,7 @@ export default function ClientPerformancePage() {
     );
   }
 
-  if (error || !summary) {
+  if (!summary) {
     return (
       <div className="min-h-screen bg-background p-8">
         <div className="max-w-4xl mx-auto">
@@ -407,10 +601,33 @@ export default function ClientPerformancePage() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Performance Dashboard</h1>
               <p className="text-muted-foreground">{summary.clientName}</p>
+              {lastUpdatedAt && (
+                <p className="text-xs text-muted-foreground">
+                  Última atualização: {new Date(lastUpdatedAt).toLocaleString('pt-BR')}
+                </p>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Select value={period} onValueChange={(value) => setPeriod(value as MetricsPeriod)}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={period}
+              onValueChange={(value) => {
+                const next = value as MetricsPeriod;
+
+                setPeriod(next);
+
+                if (next === 'custom') {
+                  const basePeriod = period !== 'custom' ? period : '30d';
+                  const range = getDateRangeFromPeriod(basePeriod);
+                  setCustomStartDate(range.startDate);
+                  setCustomEndDate(range.endDate);
+                  setMetricsQuery({ period: 'custom', ...range });
+                  return;
+                }
+
+                setMetricsQuery({ period: next });
+              }}
+            >
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Select period" />
               </SelectTrigger>
@@ -422,6 +639,46 @@ export default function ClientPerformancePage() {
                 ))}
               </SelectContent>
             </Select>
+            {period === 'custom' && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="w-[150px]"
+                />
+                <span className="text-sm text-muted-foreground">até</span>
+                <Input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="w-[150px]"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (!customStartDate || !customEndDate) {
+                      setError('Selecione a data inicial e a data final.');
+                      return;
+                    }
+                    if (customStartDate > customEndDate) {
+                      setError('A data inicial deve ser anterior à data final.');
+                      return;
+                    }
+
+                    setError(null);
+                    setMetricsQuery({
+                      period: 'custom',
+                      startDate: customStartDate,
+                      endDate: customEndDate,
+                    });
+                  }}
+                  disabled={refreshing || syncing}
+                >
+                  Aplicar
+                </Button>
+              </div>
+            )}
             <Button
               variant="outline"
               className="gap-2"
@@ -429,7 +686,16 @@ export default function ClientPerformancePage() {
               disabled={refreshing}
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Atualizando...' : 'Atualizar Dados'}
+              {refreshing ? 'Atualizando...' : 'Recarregar'}
+            </Button>
+            <Button
+              variant="default"
+              className="gap-2 bg-blue-600 hover:bg-blue-700"
+              onClick={handleMetaSync}
+              disabled={syncing}
+            >
+              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Sincronizando...' : 'Sync Meta Ads (Full)'}
             </Button>
             {selectedCampaignId && (
               <Button
@@ -451,6 +717,20 @@ export default function ClientPerformancePage() {
             </Button>
           </div>
         </div>
+
+        {error && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-destructive">Atenção</p>
+                <p className="text-sm text-muted-foreground">{error}</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setError(null)}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Lead Generation Metrics Card */}
         {selectedCampaignId && (
@@ -487,7 +767,7 @@ export default function ClientPerformancePage() {
             campaignName={selectedCampaign.campaignName}
             onSuccess={() => {
               setShowTrackingForm(false);
-              loadLeadTracking(selectedCampaignId);
+              loadLeadTracking(selectedCampaignId, metricsQuery);
             }}
           />
         )}
@@ -561,7 +841,7 @@ export default function ClientPerformancePage() {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Receita</p>
-                        <p className="font-medium">R$ {record.revenueGenerated.toLocaleString('pt-BR', {maximumFractionDigits: 0})}</p>
+                        <p className="font-medium">R$ {record.revenueGenerated.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">ROI</p>
@@ -599,14 +879,29 @@ export default function ClientPerformancePage() {
 
         {/* Temporal Analysis */}
         {selectedCampaignId && (
-          <TemporalAnalysis
-            data={temporalData?.byDayOfWeek || []}
-            bestDay={temporalData?.bestDay || null}
-            worstDay={temporalData?.worstDay || null}
-            cheapestDay={temporalData?.cheapestDay || null}
-            mostExpensiveDay={temporalData?.mostExpensiveDay || null}
-            loading={temporalLoading}
-          />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <TemporalAnalysis
+              title="Análise Temporal"
+              badgeLabel="Período selecionado"
+              data={temporalData?.byDayOfWeek || []}
+              bestDay={temporalData?.bestDay || null}
+              worstDay={temporalData?.worstDay || null}
+              cheapestDay={temporalData?.cheapestDay || null}
+              mostExpensiveDay={temporalData?.mostExpensiveDay || null}
+              loading={temporalLoading}
+            />
+            <TemporalAnalysis
+              title="Última semana"
+              badgeLabel="Últimos 7 dias"
+              description="Resumo por dia da semana nos últimos 7 dias (dentro do intervalo selecionado)."
+              data={temporalLastWeekData?.byDayOfWeek || []}
+              bestDay={temporalLastWeekData?.bestDay || null}
+              worstDay={temporalLastWeekData?.worstDay || null}
+              cheapestDay={temporalLastWeekData?.cheapestDay || null}
+              mostExpensiveDay={temporalLastWeekData?.mostExpensiveDay || null}
+              loading={temporalLastWeekLoading}
+            />
+          </div>
         )}
 
         {/* Business Metrics (CAC, LTV) */}

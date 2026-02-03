@@ -16,6 +16,55 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/utils';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isDashboardOverview = (value: unknown): value is DashboardOverview => {
+  if (!isRecord(value)) return false;
+
+  const clients = value.clients;
+  const campaigns = value.campaigns;
+  const performance = value.performance;
+  const bpmn = value.bpmn;
+  const reports = value.reports;
+
+  if (!isRecord(clients) || typeof clients.total !== 'number' || typeof clients.active !== 'number') {
+    return false;
+  }
+
+  if (
+    !isRecord(campaigns) ||
+    typeof campaigns.total !== 'number' ||
+    typeof campaigns.active !== 'number'
+  ) {
+    return false;
+  }
+
+  if (
+    !isRecord(performance) ||
+    typeof performance.totalSpend !== 'number' ||
+    typeof performance.totalRevenue !== 'number' ||
+    typeof performance.avgRoas !== 'number' ||
+    typeof performance.avgCtr !== 'number'
+  ) {
+    return false;
+  }
+
+  if (!isRecord(bpmn) || typeof bpmn.avgProgress !== 'number') {
+    return false;
+  }
+
+  if (
+    !isRecord(reports) ||
+    typeof reports.totalGenerated !== 'number' ||
+    !(typeof reports.lastGenerated === 'string' || reports.lastGenerated === null)
+  ) {
+    return false;
+  }
+
+  return Array.isArray(value.recentActivity);
+};
+
 export default function DashboardPage() {
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,7 +74,12 @@ export default function DashboardPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const data = await getDashboardOverview();
+        const data: unknown = await getDashboardOverview();
+        if (!isDashboardOverview(data)) {
+          throw new Error(
+            'Unexpected dashboard response. Check NEXT_PUBLIC_API_URL and ensure the Fastify backend is running.'
+          );
+        }
         setOverview(data);
         setError(null);
       } catch (err) {
@@ -63,7 +117,7 @@ export default function DashboardPage() {
           <CardContent>
             <p className="text-sm text-muted-foreground">{error}</p>
             <p className="text-xs text-muted-foreground mt-2">
-              Make sure the backend server is running on port 3001
+              Make sure the Fastify backend is running and NEXT_PUBLIC_API_URL points to it (e.g. http://localhost:3003)
             </p>
           </CardContent>
         </Card>
@@ -83,9 +137,7 @@ export default function DashboardPage() {
 
   const activityItems = overview?.recentActivity ?? [];
 
-  const formattedLastReport = overview?.reports.lastGenerated
-    ? formatDate(overview.reports.lastGenerated, 'MMM dd, yyyy')
-    : '-';
+  const formattedLastReport = formatDate(overview?.reports?.lastGenerated, 'MMM dd, yyyy');
 
   return (
     <div className="min-h-screen bg-background p-8">
@@ -179,7 +231,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <Badge variant="outline">
-                    Reports {overview.reports.totalGenerated}
+                    Reports {overview?.reports?.totalGenerated ?? 0}
                   </Badge>
                 </CardHeader>
                 <CardContent>
