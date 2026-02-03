@@ -236,6 +236,7 @@ export interface LeadTrackingData {
   date: string;
   // Manual input fields
   qualifiedLeads: number; // Leads with real potential
+  disqualificationReasons?: Record<string, number> | null; // Why leads were not qualified (manual)
   contractsClosed: number; // Contracts closed
   averageTicket: number; // Average contract value
   revenueGenerated: number; // Total revenue from closed contracts

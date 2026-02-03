@@ -11,11 +11,16 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const categories = [
   { value: 'all', label: 'Todos' },
+  { value: 'contacts', label: 'Contatos' },
+  { value: 'qualification', label: 'Qualificação' },
+  { value: 'trend', label: 'Tendência' },
+  { value: 'stalled', label: 'Travada' },
+  { value: 'sync', label: 'Sync' },
+  { value: 'budget', label: 'Orçamento' },
   { value: 'roas', label: 'ROAS' },
   { value: 'ctr', label: 'CTR' },
-  { value: 'budget', label: 'Budget' },
   { value: 'cpl', label: 'CPL' },
-  { value: 'conversions', label: 'Conversoes' },
+  { value: 'conversions', label: 'Conversões' },
   { value: 'bpmn', label: 'BPMN' },
 ];
 

@@ -13,11 +13,22 @@ interface LeadTrackingFormProps {
   onSuccess?: () => void;
 }
 
+const DISQUALIFICATION_PRESETS: Array<{ key: string; label: string }> = [
+  { key: 'curioso', label: 'Curioso / sem intenção' },
+  { key: 'fora_tema', label: 'Fora do tema' },
+  { key: 'sem_perfil', label: 'Sem perfil (não se encaixa)' },
+  { key: 'sem_verba', label: 'Sem verba' },
+  { key: 'ja_tem_advogado', label: 'Já tem advogado / já resolveu' },
+  { key: 'nao_respondeu', label: 'Não respondeu' },
+  { key: 'outros', label: 'Outros' },
+];
+
 export function LeadTrackingForm({ campaignId, campaignName, onSuccess }: LeadTrackingFormProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     qualifiedLeads: 0,
+    disqualificationReasons: Object.fromEntries(DISQUALIFICATION_PRESETS.map((preset) => [preset.key, 0])) as Record<string, number>,
     contractsClosed: 0,
     averageTicket: 0,
     revenueGenerated: 0,
@@ -31,9 +42,16 @@ export function LeadTrackingForm({ campaignId, campaignName, onSuccess }: LeadTr
     setLoading(true);
 
     try {
+      const cleanedReasonsEntries = Object.entries(formData.disqualificationReasons || {}).filter(
+        ([, count]) => (Number.isFinite(count) ? count : 0) > 0
+      );
+      const cleanedReasons =
+        cleanedReasonsEntries.length > 0 ? Object.fromEntries(cleanedReasonsEntries) : undefined;
+
       await upsertLeadTracking({
         campaignId,
         ...formData,
+        disqualificationReasons: cleanedReasons,
         responseTimeHours: formData.responseTimeHours > 0 ? formData.responseTimeHours : null,
         notes: formData.notes || null,
       });
@@ -79,6 +97,37 @@ export function LeadTrackingForm({ campaignId, campaignName, onSuccess }: LeadTr
                   setFormData({ ...formData, qualifiedLeads: parseInt(e.target.value) || 0 })
                 }
               />
+            </div>
+
+            <div className="col-span-2">
+              <Label>Motivos de Desqualificação (opcional)</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Preencha apenas os motivos que fizeram as pessoas não avançarem (não precisa fechar 100% com o total).
+              </p>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                {DISQUALIFICATION_PRESETS.map((preset) => (
+                  <div key={preset.key}>
+                    <Label htmlFor={`reason-${preset.key}`} className="text-xs">
+                      {preset.label}
+                    </Label>
+                    <Input
+                      id={`reason-${preset.key}`}
+                      type="number"
+                      min="0"
+                      value={formData.disqualificationReasons[preset.key] ?? 0}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          disqualificationReasons: {
+                            ...formData.disqualificationReasons,
+                            [preset.key]: parseInt(e.target.value) || 0,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div>

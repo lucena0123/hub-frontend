@@ -544,13 +544,23 @@ export default function ClientPerformancePage() {
   // Calculate aggregated lead tracking data
   const aggregatedLeadData = useMemo(() => {
     return leadTrackingData.reduce(
-      (acc, curr) => ({
-        qualifiedLeads: acc.qualifiedLeads + (curr.qualifiedLeads || 0),
-        contractsClosed: acc.contractsClosed + (curr.contractsClosed || 0),
-        totalRevenue: acc.totalRevenue + (curr.revenueGenerated || 0),
-        roi: curr.roi || acc.roi,
-      }),
-      { qualifiedLeads: 0, contractsClosed: 0, totalRevenue: 0, roi: 0 }
+      (acc, curr) => {
+        acc.qualifiedLeads += curr.qualifiedLeads || 0;
+        acc.contractsClosed += curr.contractsClosed || 0;
+        acc.totalRevenue += curr.revenueGenerated || 0;
+
+        const reasons = curr.disqualificationReasons;
+        if (reasons && typeof reasons === 'object') {
+          for (const [key, value] of Object.entries(reasons)) {
+            const count = typeof value === 'number' ? value : Number(value);
+            if (!Number.isFinite(count) || count <= 0) continue;
+            acc.disqualificationReasons[key] = (acc.disqualificationReasons[key] ?? 0) + count;
+          }
+        }
+
+        return acc;
+      },
+      { qualifiedLeads: 0, contractsClosed: 0, totalRevenue: 0, disqualificationReasons: {} as Record<string, number> }
     );
   }, [leadTrackingData]);
 
@@ -822,10 +832,15 @@ export default function ClientPerformancePage() {
             totalMessagingFirstReply={messagingMetrics.totalMessagingFirstReply}
             totalLinkClicks={messagingMetrics.totalLinkClicks}
             totalSpend={messagingMetrics.totalSpend}
+            hasManualTracking={leadTrackingData.length > 0}
             qualifiedLeads={aggregatedLeadData.qualifiedLeads}
+            disqualificationReasons={
+              Object.keys(aggregatedLeadData.disqualificationReasons).length > 0
+                ? aggregatedLeadData.disqualificationReasons
+                : null
+            }
             contractsClosed={aggregatedLeadData.contractsClosed}
             totalRevenue={aggregatedLeadData.totalRevenue}
-            roi={aggregatedLeadData.roi}
           />
         )}
 
@@ -907,35 +922,54 @@ export default function ClientPerformancePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {leadTrackingData.map((record) => (
-                  <div key={record.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex gap-6">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Data</p>
-                        <p className="font-medium">{new Date(record.date).toLocaleDateString('pt-BR')}</p>
+                {leadTrackingData.map((record) => {
+                  const disqualificationEntries = Object.entries(record.disqualificationReasons ?? {})
+                    .filter(([, count]) => (Number.isFinite(count) ? count : 0) > 0)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 3);
+
+                  const disqualificationText =
+                    disqualificationEntries.length > 0
+                      ? `Motivos: ${disqualificationEntries
+                          .map(([key, count]) => `${key.replaceAll('_', ' ')} (${count})`)
+                          .join(', ')}`
+                      : null;
+
+                  return (
+                    <div key={record.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex gap-6">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Data</p>
+                          <p className="font-medium">{new Date(record.date).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Leads Qualificados</p>
+                          <p className="font-medium">{record.qualifiedLeads}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Contratos Fechados</p>
+                          <p className="font-medium">{record.contractsClosed}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Receita</p>
+                          <p className="font-medium">R$ {record.revenueGenerated.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">ROI</p>
+                          <p className="font-medium text-green-600">{record.roi ? `${record.roi.toFixed(0)}%` : '—'}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Leads Qualificados</p>
-                        <p className="font-medium">{record.qualifiedLeads}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Contratos Fechados</p>
-                        <p className="font-medium">{record.contractsClosed}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Receita</p>
-                        <p className="font-medium">R$ {record.revenueGenerated.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">ROI</p>
-                        <p className="font-medium text-green-600">{record.roi ? `${record.roi.toFixed(0)}%` : '—'}</p>
+                      <div className="flex flex-col items-end gap-1 max-w-xs">
+                        {record.notes && (
+                          <p className="text-sm text-muted-foreground truncate w-full text-right">{record.notes}</p>
+                        )}
+                        {disqualificationText && (
+                          <p className="text-xs text-muted-foreground truncate w-full text-right">{disqualificationText}</p>
+                        )}
                       </div>
                     </div>
-                    {record.notes && (
-                      <p className="text-sm text-muted-foreground max-w-xs truncate">{record.notes}</p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
