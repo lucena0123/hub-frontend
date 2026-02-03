@@ -190,7 +190,7 @@ export interface BPMNProgress {
 export interface MonthlyReport {
   id: string;
   clientId: string;
-  reportType: 'monthly' | 'quarterly' | 'custom';
+  reportType: 'monthly' | 'weekly' | 'quarterly' | 'custom';
   periodStart: string;
   periodEnd: string;
   title: string;

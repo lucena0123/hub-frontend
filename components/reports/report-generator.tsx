@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Download, FileText, X } from 'lucide-react';
-import { generateReport, getReportDownloadUrl } from '@/lib/api/client';
+import { generateReport, generateWeeklyReport, getReportDownloadUrl } from '@/lib/api/client';
 import type { MonthlyReport } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,8 +41,23 @@ const monthOptions = [
 
 export function ReportGenerator({ open, onClose, clientId, clientName, onGenerated }: ReportGeneratorProps) {
   const today = new Date();
+  const toIsoDateUtc = (date: Date) => {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const shiftUtcDays = (date: Date, days: number) => {
+    const next = new Date(date);
+    next.setUTCDate(next.getUTCDate() + days);
+    return next;
+  };
+
+  const [reportType, setReportType] = useState<'monthly' | 'weekly'>('monthly');
   const [month, setMonth] = useState(String(today.getMonth() + 1));
   const [year, setYear] = useState(String(today.getFullYear()));
+  const [startDate, setStartDate] = useState(() => toIsoDateUtc(shiftUtcDays(today, -6)));
+  const [endDate, setEndDate] = useState(() => toIsoDateUtc(today));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successReport, setSuccessReport] = useState<MonthlyReport | null>(null);
@@ -57,10 +72,13 @@ export function ReportGenerator({ open, onClose, clientId, clientName, onGenerat
     try {
       setLoading(true);
       setError(null);
-      const report = await generateReport(clientId, {
-        month: Number(month),
-        year: Number(year),
-      });
+      const report =
+        reportType === 'weekly'
+          ? await generateWeeklyReport(clientId, { startDate, endDate })
+          : await generateReport(clientId, {
+              month: Number(month),
+              year: Number(year),
+            });
       setSuccessReport(report);
       onGenerated?.(report);
     } catch (err) {
@@ -79,7 +97,7 @@ export function ReportGenerator({ open, onClose, clientId, clientName, onGenerat
           <div>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Generate monthly report
+              Generate report
             </CardTitle>
             <p className="text-sm text-muted-foreground">{clientName ?? clientId}</p>
           </div>
@@ -88,38 +106,66 @@ export function ReportGenerator({ open, onClose, clientId, clientName, onGenerat
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Month</Label>
-              <Select value={month} onValueChange={setMonth}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {monthOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Year</Label>
-              <Input
-                type="number"
-                min={2020}
-                value={year}
-                onChange={(event) => setYear(event.target.value)}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label>Type</Label>
+            <Select value={reportType} onValueChange={(value) => setReportType(value as 'monthly' | 'weekly')}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="monthly">Monthly</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          {reportType === 'monthly' ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Month</Label>
+                <Select value={month} onValueChange={setMonth}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {monthOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Year</Label>
+                <Input
+                  type="number"
+                  min={2020}
+                  value={year}
+                  onChange={(event) => setYear(event.target.value)}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Start date</Label>
+                <Input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>End date</Label>
+                <Input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+              </div>
+            </div>
+          )}
 
           <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
             <p className="font-semibold text-foreground">Preview</p>
             <p className="mt-2">
-              Report for {selectedMonthLabel} {year}. The report will include performance KPIs,
-              campaign breakdown, and BPMN progress snapshot.
+              {reportType === 'weekly'
+                ? `Report for ${startDate} to ${endDate}.`
+                : `Report for ${selectedMonthLabel} ${year}.`}{' '}
+              The report will include performance KPIs, campaign breakdown, and BPMN progress snapshot.
             </p>
           </div>
 

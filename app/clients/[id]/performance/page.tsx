@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -16,6 +16,8 @@ import {
   getTemporalAnalysis,
   getBusinessMetrics,
   syncMetaAds,
+  getMetaSyncDetails,
+  type MetaSyncDetails,
 } from '@/lib/api/client';
 import type {
   ClientPerformanceSummary,
@@ -190,6 +192,15 @@ export default function ClientPerformancePage() {
   const [businessLoading, setBusinessLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [metaSyncDetails, setMetaSyncDetails] = useState<MetaSyncDetails | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const loadSummary = async () => {
@@ -383,6 +394,7 @@ export default function ClientPerformancePage() {
     if (syncing) return;
     try {
       setSyncing(true);
+      setMetaSyncDetails(null);
       setError(null);
 
       const accountId = CLIENT_AD_ACCOUNTS[String(clientId)];
@@ -414,13 +426,51 @@ export default function ClientPerformancePage() {
       }
 
       // Trigger full sync to get ad creatives
-      await syncMetaAds({
+      const syncResponse = await syncMetaAds({
         syncLevel: 'full',
+        async: true,
         accountId,
         clientId: String(clientId),
         ...(resolvedRange ?? {}),
       });
-      // Refresh local data
+
+      const syncId = syncResponse.syncId;
+      if (!syncId) {
+        throw new Error('A sincronização não retornou um syncId. Verifique o backend.');
+      }
+
+      const pollIntervalMs = 1500;
+      const pollTimeoutMs = 30 * 60 * 1000; // 30 min
+      const pollStart = Date.now();
+      let finishedState: 'success' | 'partial' | null = null;
+
+      // Poll sync status until completion
+      while (Date.now() - pollStart < pollTimeoutMs) {
+        const details = await getMetaSyncDetails(syncId);
+        if (mountedRef.current) setMetaSyncDetails(details);
+
+        const state = details.state ?? (details.completedAt ? details.status : 'running');
+        if (state !== 'running') {
+          if (state === 'failed') {
+            const backendMessage =
+              details.errorMessage ??
+              (typeof details.metadata?.error === 'string' ? details.metadata.error : null) ??
+              'Falha no sync.';
+            throw new Error(backendMessage);
+          }
+
+          finishedState = state;
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+      }
+
+      if (!finishedState) {
+        throw new Error('Tempo limite aguardando a sincronização com a Meta. Verifique o histórico de sync.');
+      }
+
+      // Refresh local data after completion
       await refreshAll();
     } catch (err) {
       console.error('Meta sync failed:', err);
@@ -557,6 +607,17 @@ export default function ClientPerformancePage() {
     };
   }, [selectedCampaign, selectedCampaignId, summary]);
 
+  const metaSyncProgress = metaSyncDetails?.metadata?.progress;
+  const metaSyncPercent =
+    metaSyncProgress?.overallTotal && metaSyncProgress.overallTotal > 0
+      ? Math.min(100, Math.round(((metaSyncProgress.overallCompleted ?? 0) / metaSyncProgress.overallTotal) * 100))
+      : null;
+  const metaSyncRange =
+    metaSyncProgress?.currentSince && metaSyncProgress?.currentUntil
+      ? `${metaSyncProgress.currentSince} → ${metaSyncProgress.currentUntil}`
+      : null;
+  const metaSyncMessage = metaSyncProgress?.message ?? 'Sincronizando com Meta Ads...';
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -683,7 +744,7 @@ export default function ClientPerformancePage() {
               variant="outline"
               className="gap-2"
               onClick={refreshAll}
-              disabled={refreshing}
+              disabled={refreshing || syncing}
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               {refreshing ? 'Atualizando...' : 'Recarregar'}
@@ -713,10 +774,32 @@ export default function ClientPerformancePage() {
               onClick={() => setOpenReportGenerator(true)}
             >
               <FileText className="h-4 w-4" />
-              Gerar Relatório Mensal
+              Gerar Relatório
             </Button>
           </div>
         </div>
+
+        {syncing && (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-blue-700">Meta Ads</p>
+                <p className="text-sm text-blue-700/80">
+                  {metaSyncMessage} {metaSyncPercent !== null ? `(${metaSyncPercent}%)` : ''}
+                </p>
+                {metaSyncRange && (
+                  <p className="text-xs text-blue-700/70">{metaSyncRange}</p>
+                )}
+              </div>
+              {metaSyncProgress?.stage && (
+                <p className="text-xs text-blue-700/70">
+                  {metaSyncProgress.stage}{' '}
+                  {(metaSyncProgress.stageCompleted ?? 0)}/{(metaSyncProgress.stageTotal ?? 0)}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
