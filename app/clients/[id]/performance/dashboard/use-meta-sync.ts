@@ -18,6 +18,21 @@ export type MetaCoverage =
   | { state: 'outdated'; label: string }
   | { state: 'running' | 'success' | 'failed' | 'partial'; label: string };
 
+export type CreativeCoverage =
+  | { state: 'missing'; label: string }
+  | { state: 'outdated'; label: string }
+  | { state: 'insufficient'; label: string; syncLevel: string | null }
+  | { state: 'running' | 'success' | 'failed' | 'partial'; label: string };
+
+const getSyncLevelRank = (value: string | null | undefined) => {
+  const level = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (level === 'full') return 3;
+  if (level === 'ad') return 2;
+  if (level === 'adset') return 1;
+  if (level === 'campaign') return 0;
+  return -1;
+};
+
 export const useMetaSync = (params: {
   clientId: string | null;
   metricsQuery: MetricsQuery;
@@ -232,6 +247,77 @@ export const useMetaSync = (params: {
     return { state, label: 'Meta: sincronizando…' };
   }, [metaSyncDetails, resolvedRange]);
 
+  const { creativeCoverage, creativeCoverageDetails } = useMemo(() => {
+    if (!resolvedRange) return { creativeCoverage: null as CreativeCoverage | null, creativeCoverageDetails: null as MetaSyncDetails | null };
+
+    const history = metaSyncHistory.length > 0 ? metaSyncHistory : metaSyncDetails ? [metaSyncDetails] : [];
+    if (history.length === 0) {
+      return {
+        creativeCoverage: { state: 'missing', label: 'Criativos: sem sync ad/full' } satisfies CreativeCoverage,
+        creativeCoverageDetails: null,
+      };
+    }
+
+    const coversRange = (item: MetaSyncDetails) =>
+      item.dateRangeStart <= resolvedRange.startDate && item.dateRangeEnd >= resolvedRange.endDate;
+    const isAdOrFull = (item: MetaSyncDetails) => getSyncLevelRank(item.metadata?.syncLevel) >= getSyncLevelRank('ad');
+
+    const bestCoveringAd = history.find((item) => coversRange(item) && isAdOrFull(item));
+    const coveringAny = history.find((item) => coversRange(item));
+    const lastAdOrFull = history.find((item) => isAdOrFull(item));
+
+    if (bestCoveringAd) {
+      const state: 'running' | 'success' | 'failed' | 'partial' =
+        bestCoveringAd.state ?? (bestCoveringAd.completedAt ? bestCoveringAd.status : 'running');
+
+      const unmapped = bestCoveringAd.unmappedCampaigns?.length ?? 0;
+
+      if (state === 'success') {
+        return {
+          creativeCoverage: { state, label: 'Criativos: ok' } satisfies CreativeCoverage,
+          creativeCoverageDetails: bestCoveringAd,
+        };
+      }
+      if (state === 'partial') {
+        return {
+          creativeCoverage: { state, label: unmapped > 0 ? `Criativos: parcial (${unmapped} unmapped)` : 'Criativos: parcial' } satisfies CreativeCoverage,
+          creativeCoverageDetails: bestCoveringAd,
+        };
+      }
+      if (state === 'failed') {
+        return {
+          creativeCoverage: { state, label: 'Criativos: falha no sync' } satisfies CreativeCoverage,
+          creativeCoverageDetails: bestCoveringAd,
+        };
+      }
+      return {
+        creativeCoverage: { state, label: 'Criativos: sincronizando…' } satisfies CreativeCoverage,
+        creativeCoverageDetails: bestCoveringAd,
+      };
+    }
+
+    if (coveringAny) {
+      const syncLevel = typeof coveringAny.metadata?.syncLevel === 'string' ? coveringAny.metadata.syncLevel : null;
+      return {
+        creativeCoverage: { state: 'insufficient', label: 'Criativos: não sincronizado (rode ad/full)', syncLevel } satisfies CreativeCoverage,
+        creativeCoverageDetails: coveringAny,
+      };
+    }
+
+    if (lastAdOrFull) {
+      return {
+        creativeCoverage: { state: 'outdated', label: 'Criativos: fora do período' } satisfies CreativeCoverage,
+        creativeCoverageDetails: lastAdOrFull,
+      };
+    }
+
+    const bestEffortLevel = typeof history[0]?.metadata?.syncLevel === 'string' ? history[0].metadata.syncLevel : null;
+    return {
+      creativeCoverage: { state: 'missing', label: 'Criativos: sem sync ad/full' } satisfies CreativeCoverage,
+      creativeCoverageDetails: bestEffortLevel ? { ...history[0], metadata: { ...(history[0].metadata ?? null), syncLevel: bestEffortLevel } } : history[0] ?? null,
+    };
+  }, [metaSyncDetails, metaSyncHistory, resolvedRange]);
+
   return {
     syncing,
     handleMetaSync,
@@ -244,5 +330,7 @@ export const useMetaSync = (params: {
     metaSyncPercent,
     metaSyncRange,
     metaCoverage,
+    creativeCoverage,
+    creativeCoverageDetails,
   };
 };

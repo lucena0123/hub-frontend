@@ -1,10 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import type { CreativeCoverage } from '@/app/clients/[id]/performance/use-client-performance-dashboard';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { MetaSyncDetails } from '@/lib/api/client';
 import type { CreativeLibraryResponse, CreativeLibraryStatus } from '@/types';
 import { formatDate } from '@/lib/utils';
 
@@ -20,12 +22,29 @@ interface CreativeLibraryProps {
   scope: 'campaign' | 'client';
   hasCampaignSelected: boolean;
   onScopeChange: (value: 'campaign' | 'client') => void;
+  creativeCoverage?: CreativeCoverage | null;
+  creativeCoverageDetails?: MetaSyncDetails | null;
 }
 
 type FilterStatus = 'all' | CreativeLibraryStatus;
 type SortKey = 'spend' | 'conversations' | 'cpl' | 'trend';
 
-export function CreativeLibrary({ data, loading, scope, hasCampaignSelected, onScopeChange }: CreativeLibraryProps) {
+const getSyncErrorMessage = (details: MetaSyncDetails | null | undefined) => {
+  if (!details) return null;
+  if (details.errorMessage) return details.errorMessage;
+  if (typeof details.metadata?.error === 'string') return details.metadata.error;
+  return null;
+};
+
+export function CreativeLibrary({
+  data,
+  loading,
+  scope,
+  hasCampaignSelected,
+  onScopeChange,
+  creativeCoverage,
+  creativeCoverageDetails,
+}: CreativeLibraryProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [sortKey, setSortKey] = useState<SortKey>('spend');
@@ -36,6 +55,63 @@ export function CreativeLibrary({ data, loading, scope, hasCampaignSelected, onS
     ? `${formatDate(data.period.start, 'dd/MM/yyyy', data.period.start)} – ${formatDate(data.period.end, 'dd/MM/yyyy', data.period.end)}`
     : null;
   const scopeLabel = scope === 'campaign' ? 'para a campanha selecionada' : 'para o cliente';
+
+  const creativeCoverageClass =
+    creativeCoverage?.state === 'success'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+      : creativeCoverage?.state === 'partial' || creativeCoverage?.state === 'running'
+        ? 'border-amber-200 bg-amber-50 text-amber-900'
+        : creativeCoverage?.state === 'failed'
+          ? 'border-rose-200 bg-rose-50 text-rose-800'
+          : 'text-muted-foreground';
+
+  const creativeSyncLevel = creativeCoverageDetails?.metadata?.syncLevel ? String(creativeCoverageDetails.metadata.syncLevel) : null;
+  const creativeSyncRange = creativeCoverageDetails ? `${creativeCoverageDetails.dateRangeStart} → ${creativeCoverageDetails.dateRangeEnd}` : null;
+  const creativeSyncTimestamp = creativeCoverageDetails
+    ? new Date(creativeCoverageDetails.completedAt ?? creativeCoverageDetails.startedAt).toLocaleString('pt-BR')
+    : null;
+
+  const showCreativeCallout = creativeCoverage && creativeCoverage.state !== 'success' && creativeCoverage.state !== 'running';
+  const creativeCalloutBaseClass =
+    creativeCoverage?.state === 'failed' ? 'border-rose-200 bg-rose-50' : 'border-amber-200 bg-amber-50';
+  const creativeCalloutTextClass = creativeCoverage?.state === 'failed' ? 'text-rose-800' : 'text-amber-900';
+  const creativeCalloutTextMutedClass = creativeCoverage?.state === 'failed' ? 'text-rose-800/80' : 'text-amber-900/80';
+  const creativeCalloutTextSubtleClass = creativeCoverage?.state === 'failed' ? 'text-rose-800/70' : 'text-amber-900/70';
+
+  const emptyTableMessage = useMemo(() => {
+    const base = `Nenhum criativo encontrado ${scopeLabel}${periodLabel ? ` no período ${periodLabel}` : ''}.`;
+
+    if (!creativeCoverage) {
+      return `${base} Se a campanha não teve entrega, isso é esperado; caso contrário, execute o sync com syncLevel "ad" ou "full".`;
+    }
+
+    if (creativeCoverage.state === 'missing') {
+      return `${base} Sem sync ad/full para capturar criativos. Rode o Sync Meta Ads (Full) no topo.`;
+    }
+
+    if (creativeCoverage.state === 'outdated') {
+      return `${base} O último sync ad/full cobre ${creativeSyncRange ?? '—'}. Ajuste o período ou rode um novo sync full.`;
+    }
+
+    if (creativeCoverage.state === 'insufficient') {
+      const level = creativeCoverage.syncLevel ?? creativeSyncLevel ?? '—';
+      return `${base} Há sync no período, mas o nível é ${level}. Rode sync ad/full para capturar criativos e snapshots.`;
+    }
+
+    if (creativeCoverage.state === 'partial') {
+      return `${base} Sync parcial pode deixar a biblioteca incompleta. Rode um sync full e revise unmapped/erros.`;
+    }
+
+    if (creativeCoverage.state === 'failed') {
+      return `${base} Falha no sync. ${getSyncErrorMessage(creativeCoverageDetails) ? `Erro: ${getSyncErrorMessage(creativeCoverageDetails)}` : 'Rode um sync full e tente novamente.'}`;
+    }
+
+    if (creativeCoverage.state === 'running') {
+      return `${base} Sincronizando criativos… aguarde a conclusão do sync.`;
+    }
+
+    return `${base} Se a campanha não teve entrega, isso é esperado.`;
+  }, [creativeCoverage, creativeCoverageDetails, creativeSyncLevel, creativeSyncRange, periodLabel, scopeLabel]);
 
   const filtered = useMemo(() => {
     const base = statusFilter === 'all' ? creatives : creatives.filter((c) => c.status === statusFilter);
@@ -74,6 +150,19 @@ export function CreativeLibrary({ data, loading, scope, hasCampaignSelected, onS
           <Badge variant="outline">Library</Badge>
         </CardTitle>
         <CardDescription>Agrupado por snapshot (copy/CTA). Mostra vencedores, perdedores e sinais de fadiga.</CardDescription>
+        {creativeCoverage ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className={creativeCoverageClass}>
+              {creativeCoverage.label}
+            </Badge>
+            {creativeSyncTimestamp && (
+              <span className="text-xs text-muted-foreground">
+                Último sync: {creativeSyncTimestamp}
+                {creativeSyncLevel ? ` · nível ${creativeSyncLevel}` : ''}
+              </span>
+            )}
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2 pt-2">
           <Select
             value={scope}
@@ -130,6 +219,45 @@ export function CreativeLibrary({ data, loading, scope, hasCampaignSelected, onS
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {showCreativeCallout ? (
+          <div className={`rounded-lg border p-4 ${creativeCalloutBaseClass}`}>
+            <div className="space-y-1">
+              <p className={`text-sm font-medium ${creativeCalloutTextClass}`}>Criativos (Meta Ads)</p>
+              {creativeCoverage.state === 'missing' ? (
+                <p className={`text-sm ${creativeCalloutTextMutedClass}`}>
+                  Sem sync <span className="font-medium">ad/full</span> para capturar criativos e snapshots no período. Rode o{' '}
+                  <span className="font-medium">Sync Meta Ads (Full)</span> no topo.
+                </p>
+              ) : creativeCoverage.state === 'outdated' ? (
+                <p className={`text-sm ${creativeCalloutTextMutedClass}`}>
+                  O último sync <span className="font-medium">ad/full</span> que encontramos cobre{' '}
+                  <span className="font-medium">{creativeSyncRange ?? '—'}</span>. Ajuste o período selecionado ou rode um novo sync full.
+                </p>
+              ) : creativeCoverage.state === 'insufficient' ? (
+                <p className={`text-sm ${creativeCalloutTextMutedClass}`}>
+                  Há sync no período, mas o nível é <span className="font-medium">{creativeCoverage.syncLevel ?? creativeSyncLevel ?? '—'}</span>. Rode{' '}
+                  <span className="font-medium">ad/full</span> para capturar criativos e snapshots.
+                </p>
+              ) : creativeCoverage.state === 'partial' ? (
+                <p className={`text-sm ${creativeCalloutTextMutedClass}`}>
+                  Sync parcial pode deixar a biblioteca incompleta. Rode um sync full e revise campanhas <span className="font-medium">unmapped</span>/erros.
+                </p>
+              ) : (
+                <p className={`text-sm ${creativeCalloutTextMutedClass}`}>
+                  Falha no sync. {getSyncErrorMessage(creativeCoverageDetails) ? `Erro: ${getSyncErrorMessage(creativeCoverageDetails)}` : 'Verifique token e tente novamente.'}
+                </p>
+              )}
+              {creativeSyncRange || creativeSyncLevel ? (
+                <p className={`text-xs ${creativeCalloutTextSubtleClass}`}>
+                  {creativeSyncLevel ? `nível: ${creativeSyncLevel}` : null}
+                  {creativeSyncLevel && creativeSyncRange ? ' · ' : null}
+                  {creativeSyncRange ? `janela: ${creativeSyncRange}` : null}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         <CreativeLibraryInsightsPanel insights={insights} />
 
         {loading ? (
@@ -152,8 +280,7 @@ export function CreativeLibrary({ data, loading, scope, hasCampaignSelected, onS
                 {filtered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground">
-                      Nenhum criativo encontrado {scopeLabel}
-                      {periodLabel ? ` no período ${periodLabel}` : ''}. Se a campanha não teve entrega, isso é esperado; caso contrário, execute o sync com syncLevel &quot;ad&quot; ou &quot;full&quot;.
+                      {emptyTableMessage}
                     </TableCell>
                   </TableRow>
                 ) : (

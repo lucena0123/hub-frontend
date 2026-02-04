@@ -7,11 +7,11 @@ import type { MetricsPeriod, MetricsQuery } from '@/types';
 import { getDefaultCampaignIdFromSummary, useCampaignSelection } from './dashboard/use-campaign-selection';
 import { useCampaignData } from './dashboard/use-campaign-data';
 import { useCreativeInsights } from './dashboard/use-creative-insights';
-import { useMetaSync, type MetaCoverage } from './dashboard/use-meta-sync';
+import { useMetaSync, type CreativeCoverage, type MetaCoverage } from './dashboard/use-meta-sync';
 import { useClientSummary } from './dashboard/use-summary';
 import { getApiErrorMessage, getDateRangeFromPeriod, resolveMetricsRange } from './dashboard/utils';
 
-export type { MetaCoverage };
+export type { CreativeCoverage, MetaCoverage };
 
 export const useClientPerformanceDashboard = (clientIdRaw: string | null | undefined) => {
   const clientId = clientIdRaw ? String(clientIdRaw) : null;
@@ -212,6 +212,8 @@ export const useClientPerformanceDashboard = (clientIdRaw: string | null | undef
     metaSyncPercent: metaSync.metaSyncPercent,
     metaSyncRange: metaSync.metaSyncRange,
     metaCoverage: metaSync.metaCoverage,
+    creativeCoverage: metaSync.creativeCoverage,
+    creativeCoverageDetails: metaSync.creativeCoverageDetails,
     messagingMetrics,
     healthMetrics,
   };

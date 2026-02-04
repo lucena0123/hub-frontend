@@ -92,6 +92,8 @@ export default function ClientPerformancePage() {
     metaSyncPercent,
     metaSyncRange,
     metaCoverage,
+    creativeCoverage,
+    creativeCoverageDetails,
     messagingMetrics,
     healthMetrics,
   } = useClientPerformanceDashboard(clientId);
@@ -176,7 +178,12 @@ export default function ClientPerformancePage() {
           setError={setError}
         />
 
-        <OptimizationCenter data={optimizationData} loading={optimizationLoading} />
+        <OptimizationCenter
+          data={optimizationData}
+          loading={optimizationLoading}
+          creativeCoverage={creativeCoverage}
+          creativeCoverageDetails={creativeCoverageDetails}
+        />
 
         {selectedCampaignId &&
           (selectedCampaignHasDelivery ? (
@@ -387,6 +394,8 @@ export default function ClientPerformancePage() {
           scope={creativeLibraryScope}
           hasCampaignSelected={Boolean(selectedCampaignId)}
           onScopeChange={setCreativeLibraryScope}
+          creativeCoverage={creativeCoverage}
+          creativeCoverageDetails={creativeCoverageDetails}
         />
 
         {selectedCampaignId &&
