@@ -30,6 +30,7 @@ export const useMetaSync = (params: {
 
   const [syncing, setSyncing] = useState(false);
   const [metaSyncDetails, setMetaSyncDetails] = useState<MetaSyncDetails | null>(null);
+  const [metaSyncHistory, setMetaSyncHistory] = useState<MetaSyncDetails[]>([]);
   const [metaLastSuccessfulSync, setMetaLastSuccessfulSync] = useState<string | null>(null);
   const [metaSyncHistoryLoading, setMetaSyncHistoryLoading] = useState(false);
   const [metaAdAccountId, setMetaAdAccountId] = useState('');
@@ -62,6 +63,7 @@ export const useMetaSync = (params: {
     const accountId = metaAdAccountId.trim();
     if (!accountId) {
       setMetaSyncDetails(null);
+      setMetaSyncHistory([]);
       setMetaLastSuccessfulSync(null);
       return;
     }
@@ -70,9 +72,11 @@ export const useMetaSync = (params: {
     const loadHistory = async () => {
       try {
         setMetaSyncHistoryLoading(true);
-        const response = await getMetaSyncHistory({ accountId, limit: 1 });
+        const response = await getMetaSyncHistory({ accountId, limit: 5 });
         if (cancelled || !mountedRef.current) return;
-        setMetaSyncDetails(response.history?.[0] ?? null);
+        const history = response.history ?? [];
+        setMetaSyncHistory(history);
+        setMetaSyncDetails(history[0] ?? null);
         setMetaLastSuccessfulSync(response.lastSuccessfulSync ?? null);
       } catch {
         if (cancelled || !mountedRef.current) return;
@@ -167,6 +171,17 @@ export const useMetaSync = (params: {
       }
 
       await onAfterSync();
+
+      try {
+        const response = await getMetaSyncHistory({ accountId, limit: 5 });
+        if (mountedRef.current) {
+          const history = response.history ?? [];
+          setMetaSyncHistory(history);
+          setMetaLastSuccessfulSync(response.lastSuccessfulSync ?? null);
+        }
+      } catch {
+        // ignore
+      }
     } catch (err) {
       console.error('Meta sync failed:', err);
       const message = getApiErrorMessage(err, 'Falha ao sincronizar com Meta Ads. Tente novamente.');
@@ -222,6 +237,7 @@ export const useMetaSync = (params: {
     handleMetaSync,
     metaAdAccountId,
     metaSyncDetails,
+    metaSyncHistory,
     metaLastSuccessfulSync,
     metaSyncHistoryLoading,
     metaSyncMessage,
@@ -230,4 +246,3 @@ export const useMetaSync = (params: {
     metaCoverage,
   };
 };
-

@@ -85,6 +85,7 @@ export default function ClientPerformancePage() {
     handleMetaSync,
     metaAdAccountId,
     metaSyncDetails,
+    metaSyncHistory,
     metaLastSuccessfulSync,
     metaSyncHistoryLoading,
     metaSyncMessage,
@@ -163,6 +164,7 @@ export default function ClientPerformancePage() {
           syncing={syncing}
           onMetaSync={handleMetaSync}
           metaSyncDetails={metaSyncDetails}
+          metaSyncHistory={metaSyncHistory}
           metaSyncMessage={metaSyncMessage}
           metaSyncPercent={metaSyncPercent}
           metaSyncRange={metaSyncRange}

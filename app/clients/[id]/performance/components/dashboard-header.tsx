@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, FileText, PlusCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, FileText, PlusCircle, RefreshCw } from 'lucide-react';
 
 import type { MetaSyncDetails } from '@/lib/api/client';
 import type { MetricsPeriod, MetricsQuery } from '@/types';
@@ -43,6 +44,7 @@ export const PerformanceDashboardHeader = (props: {
   syncing: boolean;
   onMetaSync: () => void;
   metaSyncDetails: MetaSyncDetails | null;
+  metaSyncHistory: MetaSyncDetails[];
   metaSyncMessage: string;
   metaSyncPercent: number | null;
   metaSyncRange: string | null;
@@ -54,6 +56,7 @@ export const PerformanceDashboardHeader = (props: {
   setError: (value: string | null) => void;
 }) => {
   const metaSyncProgress = props.metaSyncDetails?.metadata?.progress;
+  const [showMetaHistory, setShowMetaHistory] = useState(false);
 
   const metaCoverageClass =
     props.metaCoverage?.state === 'success'
@@ -202,8 +205,79 @@ export const PerformanceDashboardHeader = (props: {
             <FileText className="h-4 w-4" />
             Gerar Relatório
           </Button>
+          </div>
         </div>
-      </div>
+
+        {props.metaCoverage && props.metaCoverage.state !== 'success' && props.metaCoverage.state !== 'running' ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-amber-900">Meta Ads</p>
+                {props.metaCoverage.state === 'missing' ? (
+                  <p className="text-sm text-amber-900/80">
+                    Sem sync registrado para este período. Rode um <span className="font-medium">Sync Meta Ads (Full)</span> para preencher os dados.
+                  </p>
+                ) : props.metaCoverage.state === 'outdated' ? (
+                  <p className="text-sm text-amber-900/80">
+                    O último sync cobre <span className="font-medium">{props.metaSyncDetails?.dateRangeStart} → {props.metaSyncDetails?.dateRangeEnd}</span>, mas o período selecionado está fora dessa janela.
+                  </p>
+                ) : props.metaCoverage.state === 'partial' ? (
+                  <p className="text-sm text-amber-900/80">
+                    Sync parcial{props.metaSyncDetails?.unmappedCampaigns?.length ? `: ${props.metaSyncDetails.unmappedCampaigns.length} campanhas unmapped` : ''}. Rode um sync full e revise o mapeamento/importação.
+                  </p>
+                ) : (
+                  <p className="text-sm text-amber-900/80">
+                    Sync com falha. {props.metaSyncDetails?.errorMessage ? `Erro: ${props.metaSyncDetails.errorMessage}` : 'Verifique token e tente novamente.'}
+                  </p>
+                )}
+
+                {props.metaSyncDetails?.metadata?.syncLevel ? (
+                  <p className="text-xs text-amber-900/70">
+                    nível: {String(props.metaSyncDetails.metadata.syncLevel)} · início: {new Date(props.metaSyncDetails.startedAt).toLocaleString('pt-BR')}
+                  </p>
+                ) : null}
+              </div>
+
+              {props.metaSyncHistory.length > 0 ? (
+                <Button variant="outline" className="gap-2" onClick={() => setShowMetaHistory((prev) => !prev)}>
+                  {showMetaHistory ? 'Ocultar histórico' : 'Ver histórico'}
+                  {showMetaHistory ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </Button>
+              ) : null}
+            </div>
+
+            {showMetaHistory ? (
+              <div className="mt-3 space-y-2">
+                {props.metaSyncHistory.slice(0, 5).map((item) => {
+                  const state = item.state ?? (item.completedAt ? item.status : 'running');
+                  const syncLevel = item.metadata?.syncLevel ? String(item.metadata.syncLevel) : '—';
+                  const unmapped = item.unmappedCampaigns?.length ?? 0;
+                  return (
+                    <div key={item.id} className="rounded-md border border-amber-200 bg-white/60 p-3 text-xs text-amber-950">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-medium">
+                          {new Date(item.startedAt).toLocaleString('pt-BR')} · {state} · nível {syncLevel}
+                        </p>
+                        <p className="text-amber-900/70">
+                          {item.dateRangeStart} → {item.dateRangeEnd}
+                        </p>
+                      </div>
+                      <p className="mt-1 text-amber-900/70">
+                        mapped: {item.mappedCampaigns} · updated: {item.updatedMetrics} · unmapped: {unmapped}
+                        {item.durationMs != null ? ` · duração: ${(item.durationMs / 1000).toFixed(1)}s` : ''}
+                      </p>
+                      {state === 'failed' && (item.errorMessage || item.metadata?.error) ? (
+                        <p className="mt-1 text-rose-700">
+                          {(item.errorMessage ?? (typeof item.metadata?.error === 'string' ? item.metadata.error : null)) || 'Falha no sync.'}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
       {props.syncing && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
@@ -240,4 +314,3 @@ export const PerformanceDashboardHeader = (props: {
     </>
   );
 };
-

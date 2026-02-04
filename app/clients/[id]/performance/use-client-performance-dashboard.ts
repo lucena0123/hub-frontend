@@ -205,6 +205,7 @@ export const useClientPerformanceDashboard = (clientIdRaw: string | null | undef
     handleMetaSync: metaSync.handleMetaSync,
     metaAdAccountId: metaSync.metaAdAccountId,
     metaSyncDetails: metaSync.metaSyncDetails,
+    metaSyncHistory: metaSync.metaSyncHistory,
     metaLastSuccessfulSync: metaSync.metaLastSuccessfulSync,
     metaSyncHistoryLoading: metaSync.metaSyncHistoryLoading,
     metaSyncMessage: metaSync.metaSyncMessage,
