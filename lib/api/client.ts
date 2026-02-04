@@ -19,13 +19,27 @@ import type {
   MetricsPeriod,
   MetricsQuery,
   MonthlyReport,
+  AdSetMetricsResponse,
+  AdMetricsResponse,
+  BreakdownResponse,
+  TemporalAnalysisResponse,
+  CreativeLibraryResponse,
+  OptimizationCenterResponse,
+  OptimizationCenterPlaybook,
+  CreativeCopyInsightsResponse,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_TIMEOUT_MS = (() => {
+  const raw = process.env.NEXT_PUBLIC_API_TIMEOUT_MS;
+  if (!raw) return 30000;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : 30000;
+})();
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: API_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -86,6 +100,7 @@ type ClientPayload = {
   name: string;
   email: string;
   cpfCnpj?: string;
+  metaAdAccountId?: string;
   tier: string;
   budget: number;
   contractStart: string;
@@ -93,11 +108,12 @@ type ClientPayload = {
 };
 
 export const createClient = async (payload: ClientPayload): Promise<Client> => {
-  const { name, email, cpfCnpj, tier, budget, contractStart, contractEnd } = payload;
+  const { name, email, cpfCnpj, metaAdAccountId, tier, budget, contractStart, contractEnd } = payload;
   const response = await apiClient.post<Client>('/api/clients', {
     name,
     email,
     cpfCnpj,
+    metaAdAccountId,
     tier,
     budget,
     contractStart,
@@ -107,11 +123,12 @@ export const createClient = async (payload: ClientPayload): Promise<Client> => {
 };
 
 export const updateClient = async (id: string, payload: ClientPayload): Promise<Client> => {
-  const { name, email, cpfCnpj, tier, budget, contractStart, contractEnd } = payload;
+  const { name, email, cpfCnpj, metaAdAccountId, tier, budget, contractStart, contractEnd } = payload;
   const response = await apiClient.put<Client>(`/api/clients/${id}`, {
     name,
     email,
     cpfCnpj,
+    metaAdAccountId,
     tier,
     budget,
     contractStart,
@@ -233,7 +250,8 @@ export const generateReport = async (
 ): Promise<MonthlyReport> => {
   const { data } = await apiClient.post<MonthlyReport>(
     `/api/reports/generate/${clientId}`,
-    payload
+    payload,
+    { timeout: 0 }
   );
   return data;
 };
@@ -352,9 +370,9 @@ export const deleteLeadTracking = async (campaignId: string, date: string): Prom
 export const getAdSetMetrics = async (
   campaignId: string,
   query?: MetricsQueryInput
-): Promise<{ campaignId: string; total: number; adsets: any[] }> => {
+): Promise<AdSetMetricsResponse> => {
   const params = normalizeMetricsQuery(query);
-  const { data } = await apiClient.get(
+  const { data } = await apiClient.get<AdSetMetricsResponse>(
     `/api/campaigns/${campaignId}/adset-metrics`,
     params ? { params } : undefined
   );
@@ -365,11 +383,58 @@ export const getAdSetMetrics = async (
 export const getAdMetrics = async (
   campaignId: string,
   query?: MetricsQueryInput
-): Promise<{ campaignId: string; total: number; ads: any[] }> => {
+): Promise<AdMetricsResponse> => {
   const params = normalizeMetricsQuery(query);
-  const { data } = await apiClient.get(
+  const { data } = await apiClient.get<AdMetricsResponse>(
     `/api/campaigns/${campaignId}/ad-metrics`,
     params ? { params } : undefined
+  );
+  return data;
+};
+
+export const getCreativeLibrary = async (
+  clientId: string,
+  query?: MetricsQueryInput
+): Promise<CreativeLibraryResponse> => {
+  const params = normalizeMetricsQuery(query);
+  const { data } = await apiClient.get<CreativeLibraryResponse>(
+    `/api/clients/${clientId}/creative-library`,
+    params ? { params } : undefined
+  );
+  return data;
+};
+
+export const getOptimizationCenter = async (
+  clientId: string,
+  query?: MetricsQueryInput
+): Promise<OptimizationCenterResponse> => {
+  const params = normalizeMetricsQuery(query);
+  const { data } = await apiClient.get<OptimizationCenterResponse>(
+    `/api/clients/${clientId}/optimization-center`,
+    params ? { params } : undefined
+  );
+  return data;
+};
+
+export const getOptimizationCenterPlaybook = async (): Promise<OptimizationCenterPlaybook> => {
+  const { data } = await apiClient.get<OptimizationCenterPlaybook>('/api/playbooks/optimization-center');
+  return data;
+};
+
+export const getCreativeCopyInsights = async (snapshotId: string): Promise<CreativeCopyInsightsResponse> => {
+  const { data } = await apiClient.get<CreativeCopyInsightsResponse>(
+    `/api/creative-snapshots/${snapshotId}/copy-insights`
+  );
+  return data;
+};
+
+export const generateCreativeCopyInsights = async (
+  snapshotId: string,
+  options?: { themeKey?: string; themeName?: string; force?: boolean }
+): Promise<{ success: boolean; snapshotId: string; status?: string; reused?: boolean }> => {
+  const { data } = await apiClient.post(
+    `/api/creative-snapshots/${snapshotId}/copy-insights`,
+    options ?? {}
   );
   return data;
 };
@@ -379,9 +444,9 @@ export const getBreakdowns = async (
   campaignId: string,
   type: 'age_gender' | 'platform_position' | 'device',
   query?: MetricsQueryInput
-): Promise<{ campaignId: string; breakdownType: string; total: number; segments: any[] }> => {
+): Promise<BreakdownResponse> => {
   const params = normalizeMetricsQuery(query);
-  const { data } = await apiClient.get(
+  const { data } = await apiClient.get<BreakdownResponse>(
     `/api/campaigns/${campaignId}/breakdowns/${type}`,
     params ? { params } : undefined
   );
@@ -392,16 +457,9 @@ export const getBreakdowns = async (
 export const getTemporalAnalysis = async (
   campaignId: string,
   query?: MetricsQueryInput
-): Promise<{
-  campaignId: string;
-  byDayOfWeek: any[];
-  bestDay: string | null;
-  worstDay: string | null;
-  cheapestDay: string | null;
-  mostExpensiveDay: string | null;
-}> => {
+): Promise<TemporalAnalysisResponse> => {
   const params = normalizeMetricsQuery(query);
-  const { data } = await apiClient.get(
+  const { data } = await apiClient.get<TemporalAnalysisResponse>(
     `/api/campaigns/${campaignId}/temporal-analysis`,
     params ? { params } : undefined
   );
@@ -510,6 +568,30 @@ export type MetaSyncDetails = {
 
 export const getMetaSyncDetails = async (syncId: string): Promise<MetaSyncDetails> => {
   const { data } = await apiClient.get<MetaSyncDetails>(`/api/metrics/sync/history/${syncId}`);
+  return data;
+};
+
+export type MetaSyncHistoryResponse = {
+  history: MetaSyncDetails[];
+  lastSuccessfulSync: string | null;
+  total: number;
+};
+
+export const getMetaSyncHistory = async (options?: {
+  platform?: string;
+  accountId?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<MetaSyncHistoryResponse> => {
+  const { platform, accountId, limit, offset } = options ?? {};
+  const { data } = await apiClient.get<MetaSyncHistoryResponse>('/api/metrics/sync/history', {
+    params: {
+      ...(platform ? { platform } : {}),
+      ...(accountId ? { accountId } : {}),
+      ...(typeof limit === 'number' ? { limit } : {}),
+      ...(typeof offset === 'number' ? { offset } : {}),
+    },
+  });
   return data;
 };
 

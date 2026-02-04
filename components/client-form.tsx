@@ -24,6 +24,7 @@ const tierOptions = [
 ] as const;
 
 const normalizeCpfCnpj = (value: string) => value.replace(/\D/g, '');
+const normalizeMetaAdAccountId = (value: string) => value.trim().replace(/^act_/i, '');
 
 export const clientFormSchema = z
   .object({
@@ -39,6 +40,15 @@ export const clientFormSchema = z
         const digits = normalizeCpfCnpj(value);
         return digits.length === 11 || digits.length === 14;
       }, 'CPF/CNPJ invalido'),
+    metaAdAccountId: z
+      .string()
+      .optional()
+      .or(z.literal(''))
+      .refine((value) => {
+        const normalized = normalizeMetaAdAccountId(value ?? '');
+        if (!normalized) return true;
+        return /^\d+$/.test(normalized);
+      }, 'Meta Ad Account ID invalido'),
     tier: z.enum(['basic', 'standard', 'premium', 'enterprise']),
     budget: z.number().min(1, 'Informe um budget valido'),
     contractStart: z.string().min(1, 'Informe a data de inicio'),
@@ -90,6 +100,7 @@ export function ClientForm({
       name: '',
       email: '',
       cpfCnpj: '',
+      metaAdAccountId: '',
       tier: 'basic',
       budget: 0,
       contractStart: '',
@@ -130,6 +141,18 @@ export function ClientForm({
           <Input id="cpfCnpj" placeholder="000.000.000-00" {...register('cpfCnpj')} />
           {errors.cpfCnpj && (
             <p className="text-xs text-destructive">{errors.cpfCnpj.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="metaAdAccountId">Meta Ad Account ID</Label>
+          <Input
+            id="metaAdAccountId"
+            placeholder="3781226838794313"
+            {...register('metaAdAccountId')}
+          />
+          {errors.metaAdAccountId && (
+            <p className="text-xs text-destructive">{errors.metaAdAccountId.message}</p>
           )}
         </div>
 

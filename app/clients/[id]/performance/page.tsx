@@ -7,25 +7,36 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, Activity, BarChart3, TrendingUp, FileText, PlusCircle, RefreshCw } from 'lucide-react';
 import {
   getCampaignMetrics,
+  getClientById,
   getClientBpmnProgress,
   getClientPerformanceSummary,
   getLeadTracking,
   getAdSetMetrics,
   getAdMetrics,
+  getCreativeLibrary,
+  getOptimizationCenter,
   getBreakdowns,
   getTemporalAnalysis,
   getBusinessMetrics,
   syncMetaAds,
   getMetaSyncDetails,
+  getMetaSyncHistory,
   type MetaSyncDetails,
 } from '@/lib/api/client';
 import type {
   ClientPerformanceSummary,
   DailyMetric,
+  AdSetMetric,
+  AdCreativeMetric,
+  BreakdownSegment,
+  TemporalAnalysisResponse,
+  BusinessMetricsResponse,
   MetricsPeriod,
   MetricsQuery,
   BPMNProgress,
   LeadTrackingData,
+  CreativeLibraryResponse,
+  OptimizationCenterResponse,
 } from '@/types';
 import { MetricsCard } from '@/components/performance/metrics-card';
 import { PerformanceChart } from '@/components/performance/performance-chart';
@@ -35,11 +46,14 @@ import { LeadGenMetricsCard } from '@/components/performance/lead-gen-metrics-ca
 import { CampaignHealthCard } from '@/components/performance/campaign-health-card';
 import { AdSetTable } from '@/components/performance/adset-table';
 import { CreativePerformanceTable } from '@/components/performance/creative-performance-table';
+import { CreativeLibrary } from '@/components/performance/creative-library';
+import { OptimizationCenter } from '@/components/performance/optimization-center';
 import { DemographicsChart } from '@/components/performance/demographics-chart';
 import { TemporalAnalysis } from '@/components/performance/temporal-analysis';
 import { BusinessMetricsCard } from '@/components/performance/business-metrics-card';
 import { LeadTrackingForm } from '@/components/performance/lead-tracking-form';
 import { ReportGenerator } from '@/components/reports/report-generator';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -59,11 +73,6 @@ const periodOptions: Array<{ value: MetricsPeriod; label: string }> = [
   { value: '90d', label: 'Últimos 90 dias' },
   { value: 'custom', label: 'Personalizado' },
 ];
-
-const CLIENT_AD_ACCOUNTS: Record<string, string> = {
-  '1436ab1e-69c1-460c-81a5-ce36862cfe71': '1146164314175749', // Costa & Lucena
-  '39301f7c-fc8a-4562-8b59-1acda4a72feb': '3781226838794313', // Brito & Silveira
-};
 
 const formatCurrency = (value: number) => {
   if (!Number.isFinite(value)) return '-';
@@ -177,22 +186,30 @@ export default function ClientPerformancePage() {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [openReportGenerator, setOpenReportGenerator] = useState(false);
   const [showTrackingForm, setShowTrackingForm] = useState(false);
-  const [adsetData, setAdsetData] = useState<any[]>([]);
+  const [adsetData, setAdsetData] = useState<AdSetMetric[]>([]);
   const [adsetLoading, setAdsetLoading] = useState(false);
-  const [adCreativeData, setAdCreativeData] = useState<any[]>([]);
+  const [adCreativeData, setAdCreativeData] = useState<AdCreativeMetric[]>([]);
   const [adCreativeLoading, setAdCreativeLoading] = useState(false);
-  const [ageGenderData, setAgeGenderData] = useState<any[]>([]);
-  const [placementData, setPlacementData] = useState<any[]>([]);
+  const [creativeLibraryScope, setCreativeLibraryScope] = useState<'campaign' | 'client'>('campaign');
+  const [creativeLibraryData, setCreativeLibraryData] = useState<CreativeLibraryResponse | null>(null);
+  const [creativeLibraryLoading, setCreativeLibraryLoading] = useState(true);
+  const [optimizationData, setOptimizationData] = useState<OptimizationCenterResponse | null>(null);
+  const [optimizationLoading, setOptimizationLoading] = useState(true);
+  const [ageGenderData, setAgeGenderData] = useState<BreakdownSegment[]>([]);
+  const [placementData, setPlacementData] = useState<BreakdownSegment[]>([]);
   const [breakdownLoading, setBreakdownLoading] = useState(false);
-  const [temporalData, setTemporalData] = useState<any>(null);
+  const [temporalData, setTemporalData] = useState<TemporalAnalysisResponse | null>(null);
   const [temporalLoading, setTemporalLoading] = useState(false);
-  const [temporalLastWeekData, setTemporalLastWeekData] = useState<any>(null);
+  const [temporalLastWeekData, setTemporalLastWeekData] = useState<TemporalAnalysisResponse | null>(null);
   const [temporalLastWeekLoading, setTemporalLastWeekLoading] = useState(false);
-  const [businessData, setBusinessData] = useState<any>(null);
+  const [businessData, setBusinessData] = useState<BusinessMetricsResponse | null>(null);
   const [businessLoading, setBusinessLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [metaSyncDetails, setMetaSyncDetails] = useState<MetaSyncDetails | null>(null);
+  const [metaLastSuccessfulSync, setMetaLastSuccessfulSync] = useState<string | null>(null);
+  const [metaSyncHistoryLoading, setMetaSyncHistoryLoading] = useState(false);
+  const [metaAdAccountId, setMetaAdAccountId] = useState('');
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -201,6 +218,22 @@ export default function ClientPerformancePage() {
       mountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    const loadClientMetaAccount = async () => {
+      if (!clientId) return;
+      try {
+        const client = await getClientById(String(clientId));
+        if (!mountedRef.current) return;
+        setMetaAdAccountId(client.metaAdAccountId?.trim?.() ? client.metaAdAccountId.trim() : '');
+      } catch {
+        // Non-fatal: the dashboard can still load metrics without the client details request.
+        if (mountedRef.current) setMetaAdAccountId('');
+      }
+    };
+
+    loadClientMetaAccount();
+  }, [clientId]);
 
   useEffect(() => {
     const loadSummary = async () => {
@@ -226,6 +259,43 @@ export default function ClientPerformancePage() {
 
     loadSummary();
   }, [clientId, metricsQuery]);
+
+  const resolvedRange = useMemo(() => {
+    const range = resolveMetricsRange(metricsQuery, period);
+    if (!range.startDate || !range.endDate) return null;
+    return range;
+  }, [metricsQuery, period]);
+
+  useEffect(() => {
+    const accountId = metaAdAccountId.trim();
+    if (!accountId) {
+      setMetaSyncDetails(null);
+      setMetaLastSuccessfulSync(null);
+      return;
+    }
+
+    let cancelled = false;
+    const loadHistory = async () => {
+      try {
+        setMetaSyncHistoryLoading(true);
+        const response = await getMetaSyncHistory({ accountId, limit: 1 });
+        if (cancelled || !mountedRef.current) return;
+        setMetaSyncDetails(response.history?.[0] ?? null);
+        setMetaLastSuccessfulSync(response.lastSuccessfulSync ?? null);
+      } catch {
+        if (cancelled || !mountedRef.current) return;
+        setMetaLastSuccessfulSync(null);
+      } finally {
+        if (!cancelled && mountedRef.current) setMetaSyncHistoryLoading(false);
+      }
+    };
+
+    loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [metaAdAccountId]);
 
   useEffect(() => {
     if (!summary || summary.campaigns.length === 0) {
@@ -267,7 +337,7 @@ export default function ClientPerformancePage() {
       try {
         setAdsetLoading(true);
         const result = await getAdSetMetrics(selectedCampaignId, metricsQuery);
-        setAdsetData(result.adsets || []);
+        setAdsetData(result.adsets ?? []);
       } catch (err) {
         console.error('Error loading ad set metrics:', err);
         setAdsetData([]);
@@ -285,7 +355,7 @@ export default function ClientPerformancePage() {
       try {
         setAdCreativeLoading(true);
         const result = await getAdMetrics(selectedCampaignId, metricsQuery);
-        setAdCreativeData(result.ads || []);
+        setAdCreativeData(result.ads ?? []);
       } catch (err) {
         console.error('Error loading ad creative metrics:', err);
         setAdCreativeData([]);
@@ -295,6 +365,61 @@ export default function ClientPerformancePage() {
     };
     loadAdCreatives();
   }, [selectedCampaignId, metricsQuery]);
+
+  // Ensure scope is valid when no campaign is selected
+  useEffect(() => {
+    if (!selectedCampaignId && creativeLibraryScope === 'campaign') {
+      setCreativeLibraryScope('client');
+    }
+  }, [selectedCampaignId, creativeLibraryScope]);
+
+  // Load creative library (aggregated by snapshot)
+  useEffect(() => {
+    if (!clientId) return;
+
+    const loadCreativeLibrary = async () => {
+      try {
+        setCreativeLibraryLoading(true);
+        const query: MetricsQuery = { ...metricsQuery };
+        if (creativeLibraryScope === 'campaign' && selectedCampaignId) query.campaignId = selectedCampaignId;
+        else delete query.campaignId;
+
+        const result = await getCreativeLibrary(String(clientId), query);
+        setCreativeLibraryData(result);
+      } catch (err) {
+        console.error('Error loading creative library:', err);
+        setCreativeLibraryData(null);
+      } finally {
+        setCreativeLibraryLoading(false);
+      }
+    };
+
+    loadCreativeLibrary();
+  }, [clientId, creativeLibraryScope, metricsQuery, selectedCampaignId]);
+
+  // Load optimization center (playbook recommendations)
+  useEffect(() => {
+    if (!clientId) return;
+
+    const loadOptimization = async () => {
+      try {
+        setOptimizationLoading(true);
+        const query: MetricsQuery = { ...metricsQuery };
+        if (selectedCampaignId) query.campaignId = selectedCampaignId;
+        else delete query.campaignId;
+
+        const result = await getOptimizationCenter(String(clientId), query);
+        setOptimizationData(result);
+      } catch (err) {
+        console.error('Error loading optimization center:', err);
+        setOptimizationData(null);
+      } finally {
+        setOptimizationLoading(false);
+      }
+    };
+
+    loadOptimization();
+  }, [clientId, metricsQuery, selectedCampaignId]);
 
   // Load breakdown data (demographics + placements)
   useEffect(() => {
@@ -397,7 +522,10 @@ export default function ClientPerformancePage() {
       setMetaSyncDetails(null);
       setError(null);
 
-      const accountId = CLIENT_AD_ACCOUNTS[String(clientId)];
+      const accountId = metaAdAccountId.trim();
+      if (!accountId) {
+        throw new Error('Defina o Meta Ad Account ID deste cliente para sincronizar.');
+      }
       const resolvedPeriod: MetricsPeriod =
         metricsQuery.period && metricsQuery.period !== 'custom' ? metricsQuery.period : period;
       const resolvedRange =
@@ -502,6 +630,39 @@ export default function ClientPerformancePage() {
       ]);
       setSummary(summaryData);
       setBpmnProgress(progressData);
+
+      try {
+        setCreativeLibraryLoading(true);
+        const query: MetricsQuery = { ...metricsQuery };
+        const fallbackCampaignId = summaryData.campaigns?.[0]?.campaignId ?? null;
+        const campaignIdForLibrary =
+          creativeLibraryScope === 'campaign' ? selectedCampaignId ?? fallbackCampaignId : null;
+
+        if (campaignIdForLibrary) query.campaignId = campaignIdForLibrary;
+        else delete query.campaignId;
+
+        const library = await getCreativeLibrary(String(clientId), query);
+        setCreativeLibraryData(library);
+      } catch (err) {
+        console.error('Error refreshing creative library:', err);
+      } finally {
+        setCreativeLibraryLoading(false);
+      }
+
+      try {
+        setOptimizationLoading(true);
+        const query: MetricsQuery = { ...metricsQuery };
+        if (selectedCampaignId) query.campaignId = selectedCampaignId;
+        else delete query.campaignId;
+
+        const optimization = await getOptimizationCenter(String(clientId), query);
+        setOptimizationData(optimization);
+      } catch (err) {
+        console.error('Error refreshing optimization center:', err);
+        setOptimizationData(null);
+      } finally {
+        setOptimizationLoading(false);
+      }
 
       if (selectedCampaignId) {
         const lastWeekRange = getLastWeekRange(metricsQuery, period);
@@ -628,6 +789,32 @@ export default function ClientPerformancePage() {
       : null;
   const metaSyncMessage = metaSyncProgress?.message ?? 'Sincronizando com Meta Ads...';
 
+  const metaCoverage = useMemo(() => {
+    if (!resolvedRange) return null;
+    if (!metaSyncDetails) {
+      return { state: 'missing' as const, label: 'Meta: sem sync para este período' };
+    }
+
+    const state: 'running' | 'success' | 'failed' | 'partial' =
+      metaSyncDetails.state ?? (metaSyncDetails.completedAt ? metaSyncDetails.status : 'running');
+
+    const coversRange =
+      metaSyncDetails.dateRangeStart <= resolvedRange.startDate &&
+      metaSyncDetails.dateRangeEnd >= resolvedRange.endDate;
+
+    if (!coversRange) {
+      return { state: 'outdated' as const, label: 'Meta: fora do período' };
+    }
+
+    if (state === 'success') return { state, label: 'Meta: dados completos' };
+    if (state === 'partial') {
+      const unmapped = metaSyncDetails.unmappedCampaigns?.length ?? 0;
+      return { state, label: unmapped > 0 ? `Meta: parcial (${unmapped} unmapped)` : 'Meta: parcial' };
+    }
+    if (state === 'failed') return { state, label: 'Meta: falha no sync' };
+    return { state, label: 'Meta: sincronizando…' };
+  }, [metaSyncDetails, resolvedRange]);
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -676,6 +863,34 @@ export default function ClientPerformancePage() {
                 <p className="text-xs text-muted-foreground">
                   Última atualização: {new Date(lastUpdatedAt).toLocaleString('pt-BR')}
                 </p>
+              )}
+              {(metaCoverage || metaSyncHistoryLoading || metaLastSuccessfulSync) && (
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  {metaCoverage && (
+                    <Badge
+                      variant="outline"
+                      className={
+                        metaCoverage.state === 'success'
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                          : metaCoverage.state === 'partial' || metaCoverage.state === 'running'
+                            ? 'border-amber-200 bg-amber-50 text-amber-900'
+                            : metaCoverage.state === 'failed'
+                              ? 'border-rose-200 bg-rose-50 text-rose-800'
+                              : 'text-muted-foreground'
+                      }
+                    >
+                      {metaCoverage.label}
+                    </Badge>
+                  )}
+                  {metaSyncHistoryLoading && (
+                    <span className="text-xs text-muted-foreground">carregando sync…</span>
+                  )}
+                  {metaLastSuccessfulSync && (
+                    <span className="text-xs text-muted-foreground">
+                      Último sync OK: {new Date(metaLastSuccessfulSync).toLocaleString('pt-BR')}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -759,11 +974,22 @@ export default function ClientPerformancePage() {
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               {refreshing ? 'Atualizando...' : 'Recarregar'}
             </Button>
+            <Input
+              value={metaAdAccountId}
+              placeholder="Meta Ad Account ID (configure no cliente)"
+              className="w-[210px] font-mono text-xs"
+              readOnly
+            />
+            {!metaAdAccountId.trim() && (
+              <Button variant="outline" asChild>
+                <Link href={`/clients/${String(clientId)}?tab=edit`}>Configurar Meta</Link>
+              </Button>
+            )}
             <Button
               variant="default"
               className="gap-2 bg-blue-600 hover:bg-blue-700"
               onClick={handleMetaSync}
-              disabled={syncing}
+              disabled={syncing || !metaAdAccountId.trim()}
             >
               <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
               {syncing ? 'Sincronizando...' : 'Sync Meta Ads (Full)'}
@@ -824,6 +1050,8 @@ export default function ClientPerformancePage() {
             </div>
           </div>
         )}
+
+        <OptimizationCenter data={optimizationData} loading={optimizationLoading} />
 
         {/* Lead Generation Metrics Card */}
         {selectedCampaignId && (
@@ -984,6 +1212,15 @@ export default function ClientPerformancePage() {
         {selectedCampaignId && (
           <CreativePerformanceTable ads={adCreativeData} loading={adCreativeLoading} />
         )}
+
+        {/* Creative Library */}
+        <CreativeLibrary
+          data={creativeLibraryData}
+          loading={creativeLibraryLoading}
+          scope={creativeLibraryScope}
+          hasCampaignSelected={Boolean(selectedCampaignId)}
+          onScopeChange={setCreativeLibraryScope}
+        />
 
         {/* Demographics & Placements */}
         {selectedCampaignId && (

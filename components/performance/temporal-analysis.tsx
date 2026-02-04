@@ -68,26 +68,13 @@ export function TemporalAnalysis({
   const badgeLabel = badgeLabelProp ?? 'Por dia da semana';
   const description = descriptionProp ?? 'Identifique os melhores dias para investir em anúncios';
 
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-10">
-          <p className="text-muted-foreground">Carregando...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
-    const maxConversations = Math.max(...data.map(d => d.totalConversations));
-    const minConversations = Math.min(...data.filter(d => d.totalConversations > 0).map(d => d.totalConversations));
+    const maxConversations = Math.max(...data.map((d) => d.totalConversations));
+    const minConversations = Math.min(...data.filter((d) => d.totalConversations > 0).map((d) => d.totalConversations));
 
-    return data.map(d => {
+    return data.map((d) => {
       let color = COLORS_BY_PERFORMANCE.average;
       if (d.totalConversations === maxConversations && maxConversations > 0) color = COLORS_BY_PERFORMANCE.best;
       else if (d.totalConversations === minConversations || d.totalConversations === 0) color = COLORS_BY_PERFORMANCE.worst;
@@ -106,6 +93,19 @@ export function TemporalAnalysis({
       };
     });
   }, [data]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-10">
+          <p className="text-muted-foreground">Carregando...</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!data || data.length === 0) {
     return (

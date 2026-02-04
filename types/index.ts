@@ -7,6 +7,7 @@ export interface Client {
   name: string;
   email: string;
   cpfCnpj?: string;
+  metaAdAccountId?: string | null;
   tier: 'basic' | 'premium' | 'enterprise' | 'standard';
   status: 'active' | 'inactive' | 'pending' | 'suspended' | 'churned';
   budget: number;

@@ -117,6 +117,7 @@ export default function ClientDetailsPage() {
         email: values.email,
         tier: values.tier,
         budget: values.budget,
+        metaAdAccountId: values.metaAdAccountId?.trim() ? values.metaAdAccountId.trim() : undefined,
         contractStart: values.contractStart,
         contractEnd: values.contractEnd ? values.contractEnd : null,
       });
@@ -254,6 +255,10 @@ export default function ClientDetailsPage() {
                     <span className="text-muted-foreground">CPF/CNPJ</span>
                     <span>{client.cpfCnpj ?? '-'}</span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Meta Ad Account ID</span>
+                    <span className="font-mono text-xs">{client.metaAdAccountId ?? '-'}</span>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -389,6 +394,7 @@ export default function ClientDetailsPage() {
                     name: client.name,
                     email: client.email,
                     cpfCnpj: client.cpfCnpj ?? '',
+                    metaAdAccountId: client.metaAdAccountId ?? '',
                     tier: client.tier ?? 'basic',
                     budget: client.budget,
                     contractStart: toDateInput(client.contractStart),

@@ -222,6 +222,146 @@ export interface MetricsQuery {
   campaignId?: string;
 }
 
+export interface AdSetMetric {
+  adsetId: string;
+  adsetName: string;
+  totalImpressions: number;
+  totalReach: number;
+  totalClicks: number;
+  totalSpend: number;
+  totalConversions: number;
+  totalMessagingConversations: number;
+  totalMessagingFirstReply: number;
+  avgCtr: number;
+  avgCpc: number;
+  avgCpm: number;
+  avgFrequency: number;
+  cpl: number;
+}
+
+export interface AdSetMetricsResponse {
+  campaignId: string;
+  total: number;
+  adsets: AdSetMetric[];
+}
+
+export interface AdCreativeSnapshot {
+  snapshotId: string;
+  creativeId: string | null;
+  capturedAt: string | null;
+  headline: string | null;
+  primaryText: string | null;
+  description: string | null;
+  ctaType: string | null;
+  destinationUrl: string | null;
+  imageUrl: string | null;
+  thumbnailUrl: string | null;
+  videoId: string | null;
+  format: string | null;
+  isDynamic: boolean;
+  headlines: unknown;
+  primaryTexts: unknown;
+  ctaTypes: unknown;
+  destinationUrls: unknown;
+}
+
+export interface AdCreativeMetric {
+  adId: string;
+  adName: string;
+  adsetId: string;
+  creativeId?: string | null;
+  creativeSnapshotId?: string | null;
+  creative?: AdCreativeSnapshot | null;
+  totalImpressions: number;
+  totalReach: number;
+  totalClicks: number;
+  totalSpend: number;
+  totalConversions: number;
+  totalMessagingConversations: number;
+  avgCtr: number;
+  avgCpm: number;
+  cpl: number;
+  videoThruplay: number;
+  video3secViews: number;
+  videoP25: number;
+  videoP50: number;
+  videoP75: number;
+  videoP100: number;
+  hookRate: number;
+  holdRate: number;
+}
+
+export interface AdMetricsResponse {
+  campaignId: string;
+  total: number;
+  ads: AdCreativeMetric[];
+}
+
+export interface BreakdownSegment {
+  label: string;
+  impressions: number;
+  clicks: number;
+  spend: number;
+  reach: number;
+  conversions: number;
+  ctr: number;
+  cpm: number;
+  shareOfSpend: number;
+}
+
+export interface BreakdownResponse {
+  campaignId: string;
+  breakdownType: string;
+  total: number;
+  segments: BreakdownSegment[];
+}
+
+export interface TemporalDayOfWeekData {
+  dayOfWeek: number;
+  dayName: string;
+  totalImpressions: number;
+  totalClicks: number;
+  totalSpend: number;
+  totalConversions: number;
+  totalConversations: number;
+  avgCtr: number;
+  avgCpm: number;
+  cpl: number;
+  daysCount: number;
+}
+
+export interface TemporalAnalysisResponse {
+  campaignId: string;
+  byDayOfWeek: TemporalDayOfWeekData[];
+  bestDay: string | null;
+  worstDay: string | null;
+  cheapestDay: string | null;
+  mostExpensiveDay: string | null;
+}
+
+export interface BusinessMetricsData {
+  totalSpend: number;
+  totalConversations: number;
+  totalContracts: number;
+  totalRevenue: number;
+  avgTicket: number;
+  cac: number;
+  costPerLead: number;
+  conversionRate: number;
+  ltv: number;
+  ltvCacRatio: number;
+  ltvCacHealth: string;
+  roi: number;
+  config: {
+    lifetimeMonths: number;
+    monthlyRevenue: number;
+  };
+}
+
+export interface BusinessMetricsResponse extends BusinessMetricsData {
+  campaignId: string;
+}
+
 // Lead Generation Metrics (for service businesses like law firms)
 export interface LeadGenMetrics extends DailyMetric {
   messagingConversations: number; // Conversations started (WhatsApp/Messenger)
@@ -268,4 +408,231 @@ export interface LeadGenPerformanceSummary extends PerformanceSummary {
     avgROI: number;
     avgCostPerContract: number;
   };
+}
+
+export type CreativeLibraryStatus = 'winner' | 'loser' | 'fatigued' | 'neutral';
+
+export interface CreativeLibraryAdset {
+  adsetId: string;
+  adsetName: string | null;
+}
+
+export interface CreativeLibraryItem {
+  snapshotId: string;
+  creativeId: string | null;
+  capturedAt: string | null;
+  lastSeenAt: string | null;
+  headline: string | null;
+  primaryText: string | null;
+  description: string | null;
+  ctaType: string | null;
+  destinationUrl: string | null;
+  imageUrl: string | null;
+  thumbnailUrl: string | null;
+  videoId: string | null;
+  format: string | null;
+  isDynamic: boolean;
+  headlines: unknown;
+  primaryTexts: unknown;
+  descriptions: unknown;
+  ctaTypes: unknown;
+  destinationUrls: unknown;
+  campaigns: string[];
+  adsets: CreativeLibraryAdset[];
+  adsCount: number;
+  metrics: {
+    totalSpend: number;
+    totalConversations: number;
+    totalImpressions: number;
+    totalClicks: number;
+    avgCtr: number;
+    avgCpm: number;
+    cpl: number | null;
+  };
+  recent: {
+    spend: number;
+    conversations: number;
+    cpl: number | null;
+  };
+  previous: {
+    spend: number;
+    conversations: number;
+    cpl: number | null;
+  };
+  deltas: {
+    conversationsPct: number | null;
+    cplPct: number | null;
+  };
+  flags: {
+    winner: boolean;
+    loser: boolean;
+    fatigued: boolean;
+  };
+  status: CreativeLibraryStatus;
+}
+
+export interface CreativeLibraryInsights {
+  medianCpl: number | null;
+  topCtas: Array<{
+    ctaType: string;
+    conversations: number;
+    spend: number;
+    cpl: number | null;
+  }>;
+  topHeadlines: Array<{
+    headline: string;
+    conversations: number;
+    spend: number;
+    cpl: number | null;
+  }>;
+  counts: {
+    winners: number;
+    losers: number;
+    fatigued: number;
+  };
+}
+
+export interface CreativeLibraryResponse {
+  clientId: string;
+  period: { start: string; end: string };
+  scope: { clientId?: string; campaignId?: string };
+  total: number;
+  creatives: CreativeLibraryItem[];
+  insights: CreativeLibraryInsights;
+}
+
+export type OptimizationCenterSeverity = 'critical' | 'warning' | 'info' | 'opportunity';
+export type OptimizationCenterCategory = 'campaign' | 'creative' | 'qualification' | 'data';
+export type OptimizationCenterAction = 'review' | 'pause' | 'refresh' | 'scale' | 'track' | 'sync';
+
+export interface OptimizationCenterThemeTargets {
+  minSpendForEvaluation: number;
+  minContactsForEvaluation: number;
+  copyHeadlineMinChars: number;
+  copyHeadlineMaxChars: number;
+  copyPrimaryTextMaxChars: number;
+  targetCplGoodMax: number;
+  targetCplOkMax: number;
+  targetCplBadMin: number;
+  cplRisePctWarning: number;
+  contactsDropPctWarning: number;
+  frequencyWarning: number;
+  frequencyCritical: number;
+  firstReplyRateMin: number;
+  qualificationRateTargetMin: number;
+  creativeMinSpendWinner: number;
+  creativeMinSpendLoser: number;
+  creativeWinnerPercentile: number;
+  creativeWinnerMaxCount: number;
+  creativeLoserCplMultiplier: number;
+  creativeLoserMaxConversations: number;
+  creativeFatigueDropPct: number;
+  creativeFatigueCplMultiplier: number;
+  creativeFatigueMinPrevConversations: number;
+  creativeFatigueMinSpend: number;
+  hookRateMin: number;
+  holdRateMin: number;
+}
+
+export interface OptimizationCenterThemeConfig {
+  key: string;
+  name: string;
+  description: string;
+  tags: string[];
+  keywords: string[];
+  targets?: Partial<OptimizationCenterThemeTargets>;
+}
+
+export interface OptimizationCenterRuleConfig {
+  id: string;
+  level: 'campaign' | 'creative' | 'qualification' | 'data';
+  severity: OptimizationCenterSeverity;
+  category: OptimizationCenterCategory;
+  action: OptimizationCenterAction;
+  title: string;
+  description: string;
+  condition: string;
+}
+
+export interface OptimizationCenterPlaybook {
+  key: 'optimization-center';
+  version: string;
+  updatedAt: string;
+  description: string;
+  copy?: {
+    preferredCtaTypes: string[];
+    prohibitedPhrases: string[];
+    notes?: string;
+  };
+  ai?: {
+    copySuggestions?: {
+      enabled: boolean;
+      requiresEnv: 'OPENAI_API_KEY';
+      model: string;
+      promptVersion: string;
+    };
+  };
+  defaults: OptimizationCenterThemeTargets;
+  themes: OptimizationCenterThemeConfig[];
+  rules: OptimizationCenterRuleConfig[];
+}
+
+export interface CreativeCopyInsightsResponse {
+  snapshotId: string;
+  themeKey: string | null;
+  themeName: string | null;
+  status: 'success' | 'failed' | 'pending';
+  model: string | null;
+  promptVersion: string | null;
+  analysis: any | null;
+  errorMessage: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface OptimizationCenterItem {
+  id: string;
+  ruleId?: string;
+  severity: OptimizationCenterSeverity;
+  category: OptimizationCenterCategory;
+  action: OptimizationCenterAction;
+  title: string;
+  description: string;
+  theme?: { key: string; name: string; matchedBy: string; matchedValue: string | null };
+  entity?: { type: 'campaign' | 'creative'; id: string; name?: string | null };
+  metrics?: Record<string, number | string | null>;
+  thresholds?: Record<string, number | string | null>;
+}
+
+export interface OptimizationCenterHighlight {
+  snapshotId: string;
+  headline: string | null;
+  ctaType: string | null;
+  thumbnailUrl: string | null;
+  isDynamic: boolean;
+  spend: number;
+  conversations: number;
+  cpl: number | null;
+}
+
+export interface OptimizationCenterResponse {
+  clientId: string;
+  period: { start: string; end: string };
+  scope: { clientId?: string; campaignId?: string };
+  generatedAt: string;
+  playbookVersion: string;
+  theme?: {
+    themeKey: string;
+    themeName: string;
+    matchedBy: 'tag' | 'keyword' | 'default';
+    matchedValue: string | null;
+    targets: OptimizationCenterThemeTargets;
+  };
+  summary: { total: number; critical: number; warning: number; info: number; opportunity: number };
+  highlights: {
+    winners: OptimizationCenterHighlight[];
+    losers: OptimizationCenterHighlight[];
+    fatigued: OptimizationCenterHighlight[];
+  };
+  items: OptimizationCenterItem[];
 }

@@ -24,6 +24,7 @@ export default function NewClientPage() {
         email: values.email,
         tier: values.tier,
         budget: values.budget,
+        metaAdAccountId: values.metaAdAccountId?.trim() ? values.metaAdAccountId.trim() : undefined,
         contractStart: values.contractStart,
         contractEnd: values.contractEnd ? values.contractEnd : null,
       };
