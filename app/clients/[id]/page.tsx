@@ -3,76 +3,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Building2, ClipboardList, UserCog, BarChart3, FileText, Bell } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
+
 import { getClientById, updateClient } from '@/lib/api/client';
-import type { Client } from '@/types';
-import { ClientForm, type ClientFormValues } from '@/components/client-form';
-import { Badge } from '@/components/ui/badge';
+import type { ClientFormValues } from '@/components/client-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { formatDate } from '@/lib/utils';
 
-const tierColors = {
-  basic: 'bg-gray-500',
-  premium: 'bg-blue-500',
-  enterprise: 'bg-purple-500',
-  standard: 'bg-slate-500',
-};
-
-const statusColors = {
-  active: 'bg-green-500',
-  inactive: 'bg-red-500',
-  pending: 'bg-yellow-500',
-  suspended: 'bg-orange-500',
-  churned: 'bg-zinc-500',
-};
-
-type ClientCampaign = {
-  id: string;
-  name: string;
-  status?: string;
-  platform?: string;
-  budget?: number;
-  spent?: number;
-  externalId?: string;
-};
-
-type ClientProcess = {
-  id: string;
-  processId: string;
-  status: string;
-  priority?: number;
-  startedAt?: string;
-  completedAt?: string;
-  currentPhase?: string | null;
-  currentTask?: string | null;
-};
-
-type ClientDetails = Client & {
-  campaigns?: ClientCampaign[];
-  processes?: ClientProcess[];
-  _count?: {
-    processes?: number;
-    campaigns?: number;
-    metrics?: number;
-  };
-};
-
-const toDateInput = (value?: string | null) => {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toISOString().slice(0, 10);
-};
+import type { ClientDetails } from './client-types';
+import { ClientCampaignsTable } from './components/client-campaigns';
+import { ClientEditForm } from './components/client-edit';
+import { ClientHeader } from './components/client-header';
+import { ClientOverview } from './components/client-overview';
+import { ClientProcessesTable } from './components/client-processes';
 
 export default function ClientDetailsPage() {
   const params = useParams();
@@ -103,7 +47,7 @@ export default function ClientDetailsPage() {
       }
     };
 
-    fetchClient();
+    void fetchClient();
   }, [clientId]);
 
   const handleUpdate = async (values: ClientFormValues) => {
@@ -169,48 +113,7 @@ export default function ClientDetailsPage() {
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" size="icon-sm">
-              <Link href="/clients">
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-                <Building2 className="h-7 w-7" />
-                {client.name}
-              </h1>
-              <p className="text-muted-foreground">Client profile and activity overview</p>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-2">
-              <Badge className={tierColors[client.tier] || 'bg-gray-500'}>{client.tier}</Badge>
-              <Badge className={statusColors[client.status] || 'bg-gray-500'}>{client.status}</Badge>
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button asChild variant="secondary" size="sm">
-                <Link href={`/clients/${client.id}/performance`} className="gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Performance
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/clients/${client.id}/reports`} className="gap-2">
-                  <FileText className="h-4 w-4" />
-                  Reports
-                </Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/alerts" className="gap-2">
-                  <Bell className="h-4 w-4" />
-                  Alertas
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ClientHeader client={client} />
 
         <Tabs defaultValue={defaultTab} className="space-y-6">
           <TabsList>
@@ -221,191 +124,23 @@ export default function ClientDetailsPage() {
           </TabsList>
 
           <TabsContent value="overview">
-            <div className="grid gap-6 md:grid-cols-3">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contract</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Start</span>
-                    <span>{formatDate(client.contractStart)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">End</span>
-                    <span>{formatDate(client.contractEnd)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Budget</span>
-                    <span>${client.budget.toLocaleString()}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contact</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Email</span>
-                    <span>{client.email}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">CPF/CNPJ</span>
-                    <span>{client.cpfCnpj ?? '-'}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Meta Ad Account ID</span>
-                    <span className="font-mono text-xs">{client.metaAdAccountId ?? '-'}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Activity</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Campaigns</span>
-                    <span>{client._count?.campaigns ?? campaigns.length}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Processes</span>
-                    <span>{client._count?.processes ?? processes.length}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Metrics</span>
-                    <span>{client._count?.metrics ?? '-'}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <ClientOverview client={client} campaignsCount={campaigns.length} processesCount={processes.length} />
           </TabsContent>
 
           <TabsContent value="campaigns">
-            <Card>
-              <CardHeader>
-                <CardTitle>Associated campaigns</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Platform</TableHead>
-                        <TableHead>Budget</TableHead>
-                        <TableHead>Spent</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {campaigns.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center text-muted-foreground">
-                            No campaigns found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        campaigns.map((campaign) => (
-                          <TableRow key={campaign.id}>
-                            <TableCell className="font-medium">{campaign.name}</TableCell>
-                            <TableCell>{campaign.status ?? '-'}</TableCell>
-                            <TableCell>{campaign.platform ?? '-'}</TableCell>
-                            <TableCell>
-                              {campaign.budget ? `$${campaign.budget.toLocaleString()}` : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {campaign.spent ? `$${campaign.spent.toLocaleString()}` : '-'}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <ClientCampaignsTable campaigns={campaigns} />
           </TabsContent>
 
           <TabsContent value="processes">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent processes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Process ID</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Priority</TableHead>
-                        <TableHead>Started</TableHead>
-                        <TableHead>Current Phase</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {processes.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center text-muted-foreground">
-                            No processes found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        processes.map((process) => (
-                          <TableRow key={process.id}>
-                            <TableCell className="font-mono text-xs">{process.processId}</TableCell>
-                            <TableCell>{process.status}</TableCell>
-                            <TableCell>{process.priority ?? '-'}</TableCell>
-                            <TableCell>{formatDate(process.startedAt)}</TableCell>
-                            <TableCell>{process.currentPhase ?? process.currentTask ?? '-'}</TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <ClientProcessesTable processes={processes} />
           </TabsContent>
 
           <TabsContent value="edit">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserCog className="h-4 w-4" />
-                  Update client
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {saveMessage && (
-                  <div className="rounded-md border px-4 py-3 text-sm text-muted-foreground">
-                    {saveMessage}
-                  </div>
-                )}
-                <ClientForm
-                  onSubmit={handleUpdate}
-                  submitting={saving}
-                  submitLabel="Save changes"
-                  defaultValues={{
-                    name: client.name,
-                    email: client.email,
-                    cpfCnpj: client.cpfCnpj ?? '',
-                    metaAdAccountId: client.metaAdAccountId ?? '',
-                    tier: client.tier ?? 'basic',
-                    budget: client.budget,
-                    contractStart: toDateInput(client.contractStart),
-                    contractEnd: toDateInput(client.contractEnd),
-                  }}
-                />
-              </CardContent>
-            </Card>
+            <ClientEditForm client={client} saving={saving} saveMessage={saveMessage} onSubmit={handleUpdate} />
           </TabsContent>
         </Tabs>
       </div>
     </div>
   );
 }
+
