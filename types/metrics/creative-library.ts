@@ -36,6 +36,10 @@ export interface CreativeLibraryItem {
     avgCtr: number;
     avgCpm: number;
     cpl: number | null;
+    video3sViewsTotal: number;
+    videoThruplayTotal: number;
+    hookRateAvg: number | null;
+    holdRateAvg: number | null;
   };
   recent: {
     spend: number;
@@ -57,6 +61,14 @@ export interface CreativeLibraryItem {
     fatigued: boolean;
   };
   status: CreativeLibraryStatus;
+  analysis?: {
+    reasons: Array<{
+      code: string;
+      message: string;
+      severity: 'info' | 'warning' | 'critical';
+      thresholds?: Record<string, number>;
+    }>;
+  };
 }
 
 export interface CreativeLibraryInsights {
@@ -88,4 +100,3 @@ export interface CreativeLibraryResponse {
   creatives: CreativeLibraryItem[];
   insights: CreativeLibraryInsights;
 }
-

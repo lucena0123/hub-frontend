@@ -13,6 +13,19 @@ export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expan
   const thumbnailUrl = creative.thumbnailUrl || creative.imageUrl || null;
   const domain = getDomainFromUrl(creative.destinationUrl);
   const ctaLabel = formatCta(creative.ctaType);
+  const reasons = creative.analysis?.reasons ?? [];
+
+  const showVideoMetrics =
+    creative.metrics.video3sViewsTotal > 0 ||
+    creative.metrics.videoThruplayTotal > 0 ||
+    creative.metrics.hookRateAvg != null ||
+    creative.metrics.holdRateAvg != null;
+
+  const reasonBadgeClass: Record<NonNullable<CreativeLibraryItem['analysis']>['reasons'][number]['severity'], string> = {
+    info: 'bg-blue-100 text-blue-800 border-blue-200',
+    warning: 'bg-amber-100 text-amber-900 border-amber-200',
+    critical: 'bg-rose-100 text-rose-800 border-rose-200',
+  };
 
   const listHeadlines = Array.isArray(creative.headlines) ? creative.headlines : [];
   const listPrimaryTexts = Array.isArray(creative.primaryTexts) ? creative.primaryTexts : [];
@@ -80,6 +93,42 @@ export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expan
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">Descrição</p>
                   <p className="text-sm whitespace-pre-wrap">{creative.description}</p>
+                </div>
+              )}
+
+              {reasons.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Por que este status?</p>
+                  <div className="mt-1 space-y-1">
+                    {reasons.slice(0, 3).map((reason) => (
+                      <div key={reason.code} className="flex flex-wrap items-start gap-2">
+                        <Badge variant="outline" className={reasonBadgeClass[reason.severity]}>
+                          {reason.severity}
+                        </Badge>
+                        <p className="text-sm text-muted-foreground">{reason.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {showVideoMetrics && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Métricas de vídeo</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {creative.metrics.hookRateAvg != null && (
+                      <Badge variant="outline">hook: {creative.metrics.hookRateAvg.toFixed(1)}%</Badge>
+                    )}
+                    {creative.metrics.holdRateAvg != null && (
+                      <Badge variant="outline">hold: {creative.metrics.holdRateAvg.toFixed(1)}%</Badge>
+                    )}
+                    {creative.metrics.video3sViewsTotal > 0 && (
+                      <Badge variant="outline">views 3s: {formatNumber(creative.metrics.video3sViewsTotal)}</Badge>
+                    )}
+                    {creative.metrics.videoThruplayTotal > 0 && (
+                      <Badge variant="outline">thruplay: {formatNumber(creative.metrics.videoThruplayTotal)}</Badge>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -187,4 +236,3 @@ export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expan
     </>
   );
 };
-
