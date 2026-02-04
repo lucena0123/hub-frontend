@@ -19,9 +19,11 @@ import { OptimizationCenter } from '@/components/performance/optimization-center
 import { PerformanceChart } from '@/components/performance/performance-chart';
 import { TemporalAnalysis } from '@/components/performance/temporal-analysis';
 import { ReportGenerator } from '@/components/reports/report-generator';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { formatDate } from '@/lib/utils';
 
 import { useClientPerformanceDashboard } from './use-client-performance-dashboard';
 import { PerformanceDashboardHeader } from './components/dashboard-header';
@@ -93,6 +95,18 @@ export default function ClientPerformancePage() {
     healthMetrics,
   } = useClientPerformanceDashboard(clientId);
 
+  const selectedCampaignHasDelivery = Boolean(
+    selectedCampaignId &&
+      selectedCampaign &&
+      ((selectedCampaign.totalSpend ?? 0) > 0 ||
+        (selectedCampaign.totalMessagingConversations ?? 0) > 0 ||
+        (selectedCampaign.totalImpressions ?? 0) > 0)
+  );
+
+  const selectedPeriodLabel = summary
+    ? `${formatDate(summary.period.start, 'dd/MM/yyyy', summary.period.start)} – ${formatDate(summary.period.end, 'dd/MM/yyyy', summary.period.end)}`
+    : null;
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -162,32 +176,72 @@ export default function ClientPerformancePage() {
 
         <OptimizationCenter data={optimizationData} loading={optimizationLoading} />
 
-        {selectedCampaignId && (
-          <LeadGenMetricsCard
-            totalMessagingConversations={messagingMetrics.totalMessagingConversations}
-            totalMessagingFirstReply={messagingMetrics.totalMessagingFirstReply}
-            totalLinkClicks={messagingMetrics.totalLinkClicks}
-            totalSpend={messagingMetrics.totalSpend}
-            hasManualTracking={leadTrackingData.length > 0}
-            qualifiedLeads={aggregatedLeadData.qualifiedLeads}
-            disqualificationReasons={Object.keys(aggregatedLeadData.disqualificationReasons).length > 0 ? aggregatedLeadData.disqualificationReasons : null}
-            contractsClosed={aggregatedLeadData.contractsClosed}
-            totalRevenue={aggregatedLeadData.totalRevenue}
-          />
-        )}
+        {selectedCampaignId &&
+          (selectedCampaignHasDelivery ? (
+            <LeadGenMetricsCard
+              totalMessagingConversations={messagingMetrics.totalMessagingConversations}
+              totalMessagingFirstReply={messagingMetrics.totalMessagingFirstReply}
+              totalLinkClicks={messagingMetrics.totalLinkClicks}
+              totalSpend={messagingMetrics.totalSpend}
+              hasManualTracking={leadTrackingData.length > 0}
+              qualifiedLeads={aggregatedLeadData.qualifiedLeads}
+              disqualificationReasons={
+                Object.keys(aggregatedLeadData.disqualificationReasons).length > 0 ? aggregatedLeadData.disqualificationReasons : null
+              }
+              contractsClosed={aggregatedLeadData.contractsClosed}
+              totalRevenue={aggregatedLeadData.totalRevenue}
+            />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Lead Generation Performance
+                  <Badge variant="outline">Lead Gen</Badge>
+                </CardTitle>
+                <CardDescription>WhatsApp/Messenger conversations and funnel metrics</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  Sem dados para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
+                  <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
+                </p>
+                <p>
+                  Se ela está ativa na Meta mas não entrega, verifique status, público, orçamento e limites da conta. Se necessário, rode um sync full no topo.
+                </p>
+              </CardContent>
+            </Card>
+          ))}
 
-        {selectedCampaignId && (
-          <CampaignHealthCard
-            totalReach={healthMetrics.totalReach}
-            avgFrequency={healthMetrics.avgFrequency}
-            avgCpm={healthMetrics.avgCpm}
-            totalImpressions={healthMetrics.totalImpressions}
-            totalSpend={healthMetrics.totalSpend}
-            qualityRanking={healthMetrics.qualityRanking}
-            engagementRateRanking={healthMetrics.engagementRateRanking}
-            conversionRateRanking={healthMetrics.conversionRateRanking}
-          />
-        )}
+        {selectedCampaignId &&
+          (selectedCampaignHasDelivery ? (
+            <CampaignHealthCard
+              totalReach={healthMetrics.totalReach}
+              avgFrequency={healthMetrics.avgFrequency}
+              avgCpm={healthMetrics.avgCpm}
+              totalImpressions={healthMetrics.totalImpressions}
+              totalSpend={healthMetrics.totalSpend}
+              qualityRanking={healthMetrics.qualityRanking}
+              engagementRateRanking={healthMetrics.engagementRateRanking}
+              conversionRateRanking={healthMetrics.conversionRateRanking}
+            />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Saúde da Campanha
+                  <Badge variant="outline">Health</Badge>
+                </CardTitle>
+                <CardDescription>Alcance, frequência, CPM e rankings de qualidade do Meta</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  Sem dados de saúde para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
+                  <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
+                </p>
+                <p>Quando não há entrega (impressões/gasto), é esperado que alcance, frequência e CPM fiquem zerados.</p>
+              </CardContent>
+            </Card>
+          ))}
 
         {showTrackingForm && selectedCampaignId && selectedCampaign && (
           <LeadTrackingForm
@@ -256,6 +310,21 @@ export default function ClientPerformancePage() {
                   </div>
                 </CardContent>
               </Card>
+            ) : !selectedCampaignHasDelivery ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sem entrega no período selecionado</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    A campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> não teve entrega (gasto, impressões ou conversas) no período{' '}
+                    <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Troque a campanha no seletor, ajuste o período ou rode um sync full da Meta.
+                  </p>
+                </CardContent>
+              </Card>
             ) : (
               <PerformanceChart data={dailyMetrics} title="Tendência de Performance" />
             )}
@@ -266,9 +335,49 @@ export default function ClientPerformancePage() {
 
         {selectedCampaignId && leadTrackingData.length > 0 && <LeadTrackingHistory records={leadTrackingData} />}
 
-        {selectedCampaignId && <AdSetTable adsets={adsetData} loading={adsetLoading} />}
+        {selectedCampaignId &&
+          (selectedCampaignHasDelivery ? (
+            <AdSetTable adsets={adsetData} loading={adsetLoading} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Conjuntos de Anuncios
+                  <Badge variant="outline">Ad Sets</Badge>
+                </CardTitle>
+                <CardDescription>Performance por publico/segmentacao</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  Sem dados de ad sets para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
+                  <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
+                </p>
+                <p>Sem entrega, é esperado não haver métricas por conjunto.</p>
+              </CardContent>
+            </Card>
+          ))}
 
-        {selectedCampaignId && <CreativePerformanceTable ads={adCreativeData} loading={adCreativeLoading} />}
+        {selectedCampaignId &&
+          (selectedCampaignHasDelivery ? (
+            <CreativePerformanceTable ads={adCreativeData} loading={adCreativeLoading} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Performance de Criativos
+                  <Badge variant="outline">Ads</Badge>
+                </CardTitle>
+                <CardDescription>Análise individual de cada anúncio</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  Sem dados de criativos para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
+                  <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
+                </p>
+                <p>Sem entrega, é esperado não haver métricas por anúncio.</p>
+              </CardContent>
+            </Card>
+          ))}
 
         <CreativeLibrary
           data={creativeLibraryData}
@@ -278,37 +387,110 @@ export default function ClientPerformancePage() {
           onScopeChange={setCreativeLibraryScope}
         />
 
-        {selectedCampaignId && (
-          <DemographicsChart ageGenderData={ageGenderData} placementData={placementData} loading={breakdownLoading} />
-        )}
+        {selectedCampaignId &&
+          (selectedCampaignHasDelivery ? (
+            <DemographicsChart ageGenderData={ageGenderData} placementData={placementData} loading={breakdownLoading} />
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Demografia (Idade + Gênero)</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    Sem dados demográficos para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
+                    <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
+                  </p>
+                  <p>Sem entrega, é esperado não haver breakdowns.</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Posicionamentos</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    Sem dados de posicionamento para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
+                    <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
+                  </p>
+                  <p>Sem entrega, é esperado não haver breakdowns.</p>
+                </CardContent>
+              </Card>
+            </div>
+          ))}
 
-        {selectedCampaignId && (
-          <div className="grid gap-4 lg:grid-cols-2">
-            <TemporalAnalysis
-              title="Análise Temporal"
-              badgeLabel="Período selecionado"
-              data={temporalData?.byDayOfWeek || []}
-              bestDay={temporalData?.bestDay || null}
-              worstDay={temporalData?.worstDay || null}
-              cheapestDay={temporalData?.cheapestDay || null}
-              mostExpensiveDay={temporalData?.mostExpensiveDay || null}
-              loading={temporalLoading}
-            />
-            <TemporalAnalysis
-              title="Última semana"
-              badgeLabel="Últimos 7 dias"
-              description="Resumo por dia da semana nos últimos 7 dias (dentro do intervalo selecionado)."
-              data={temporalLastWeekData?.byDayOfWeek || []}
-              bestDay={temporalLastWeekData?.bestDay || null}
-              worstDay={temporalLastWeekData?.worstDay || null}
-              cheapestDay={temporalLastWeekData?.cheapestDay || null}
-              mostExpensiveDay={temporalLastWeekData?.mostExpensiveDay || null}
-              loading={temporalLastWeekLoading}
-            />
-          </div>
-        )}
+        {selectedCampaignId &&
+          (selectedCampaignHasDelivery ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <TemporalAnalysis
+                title="Análise Temporal"
+                badgeLabel="Período selecionado"
+                data={temporalData?.byDayOfWeek || []}
+                bestDay={temporalData?.bestDay || null}
+                worstDay={temporalData?.worstDay || null}
+                cheapestDay={temporalData?.cheapestDay || null}
+                mostExpensiveDay={temporalData?.mostExpensiveDay || null}
+                loading={temporalLoading}
+              />
+              <TemporalAnalysis
+                title="Última semana"
+                badgeLabel="Últimos 7 dias"
+                description="Resumo por dia da semana nos últimos 7 dias (dentro do intervalo selecionado)."
+                data={temporalLastWeekData?.byDayOfWeek || []}
+                bestDay={temporalLastWeekData?.bestDay || null}
+                worstDay={temporalLastWeekData?.worstDay || null}
+                cheapestDay={temporalLastWeekData?.cheapestDay || null}
+                mostExpensiveDay={temporalLastWeekData?.mostExpensiveDay || null}
+                loading={temporalLastWeekLoading}
+              />
+            </div>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Análise Temporal</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    Sem dados suficientes para análise temporal da campanha{' '}
+                    <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
+                    <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
+                  </p>
+                  <p>Sem entrega, é esperado não haver padrões por dia da semana.</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Última semana</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    Sem dados suficientes na última semana (dentro do intervalo) para a campanha{' '}
+                    <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span>.
+                  </p>
+                  <p>Ajuste o período ou selecione outra campanha.</p>
+                </CardContent>
+              </Card>
+            </div>
+          ))}
 
-        {selectedCampaignId && <BusinessMetricsCard data={businessData} loading={businessLoading} />}
+        {selectedCampaignId &&
+          (selectedCampaignHasDelivery ? (
+            <BusinessMetricsCard data={businessData} loading={businessLoading} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Métricas de Negócio</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  Sem dados de negócio para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
+                  <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
+                </p>
+                <p>Sem entrega e/ou sem tracking manual de funil, CAC e LTV não podem ser calculados.</p>
+              </CardContent>
+            </Card>
+          ))}
 
         {metricsLoading ? (
           <Card>

@@ -67,7 +67,7 @@ export function CreativePerformanceTable({ ads, loading }: CreativePerformanceTa
               {sortedAds.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={hasVideoData ? 8 : 6} className="text-center text-muted-foreground">
-                    Nenhum dado de criativos disponível. Execute o sync com syncLevel &quot;ad&quot; ou &quot;full&quot;.
+                    Nenhum dado de criativos no período selecionado. Se a campanha não teve entrega, isso é esperado; caso contrário, execute o sync com syncLevel &quot;ad&quot; ou &quot;full&quot;.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -103,4 +103,3 @@ export function CreativePerformanceTable({ ads, loading }: CreativePerformanceTa
     </Card>
   );
 }
-

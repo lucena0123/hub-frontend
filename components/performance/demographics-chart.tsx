@@ -68,7 +68,7 @@ function BreakdownBarChart({ data, title, description }: { data: BreakdownSegmen
           <CardTitle className="text-base">{title}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground text-center py-8">
-          Nenhum dado disponível. Execute o sync com syncLevel &quot;full&quot;.
+          Nenhum dado disponível no período selecionado. Se a campanha não teve entrega, isso é esperado; caso contrário, execute o sync com syncLevel &quot;full&quot;.
         </CardContent>
       </Card>
     );

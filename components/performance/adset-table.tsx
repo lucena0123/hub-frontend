@@ -87,7 +87,7 @@ export function AdSetTable({ adsets, loading }: AdSetTableProps) {
               {adsets.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-muted-foreground">
-                    Nenhum dado de ad set disponivel. Execute o sync com syncLevel &quot;adset&quot; ou &quot;full&quot;.
+                    Nenhum dado de ad set no período selecionado. Se a campanha não teve entrega, isso é esperado; caso contrário, execute o sync com syncLevel &quot;adset&quot; ou &quot;full&quot;.
                   </TableCell>
                 </TableRow>
               ) : (

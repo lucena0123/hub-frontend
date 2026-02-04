@@ -114,7 +114,7 @@ export function TemporalAnalysis({
           <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground text-center py-8">
-          Sem dados suficientes para análise temporal.
+          Sem dados suficientes para análise temporal no período selecionado. Se a campanha não teve entrega, isso é esperado.
         </CardContent>
       </Card>
     );

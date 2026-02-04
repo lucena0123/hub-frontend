@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { CreativeLibraryResponse, CreativeLibraryStatus } from '@/types';
+import { formatDate } from '@/lib/utils';
 
 import { statusBadgeClass } from './creative-library/formatters';
 import { CreativeLibraryInsightsPanel } from './creative-library/insights';
@@ -31,6 +32,10 @@ export function CreativeLibrary({ data, loading, scope, hasCampaignSelected, onS
 
   const creatives = data?.creatives ?? EMPTY_CREATIVES;
   const insights = data?.insights ?? null;
+  const periodLabel = data?.period
+    ? `${formatDate(data.period.start, 'dd/MM/yyyy', data.period.start)} – ${formatDate(data.period.end, 'dd/MM/yyyy', data.period.end)}`
+    : null;
+  const scopeLabel = scope === 'campaign' ? 'para a campanha selecionada' : 'para o cliente';
 
   const filtered = useMemo(() => {
     const base = statusFilter === 'all' ? creatives : creatives.filter((c) => c.status === statusFilter);
@@ -147,7 +152,8 @@ export function CreativeLibrary({ data, loading, scope, hasCampaignSelected, onS
                 {filtered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground">
-                      Nenhum criativo encontrado. Execute o sync com syncLevel &quot;ad&quot; ou &quot;full&quot;.
+                      Nenhum criativo encontrado {scopeLabel}
+                      {periodLabel ? ` no período ${periodLabel}` : ''}. Se a campanha não teve entrega, isso é esperado; caso contrário, execute o sync com syncLevel &quot;ad&quot; ou &quot;full&quot;.
                     </TableCell>
                   </TableRow>
                 ) : (
