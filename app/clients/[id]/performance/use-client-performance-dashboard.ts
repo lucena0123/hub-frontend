@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 
 import type { MetricsPeriod, MetricsQuery } from '@/types';
 
-import { useCampaignSelection } from './dashboard/use-campaign-selection';
+import { getDefaultCampaignIdFromSummary, useCampaignSelection } from './dashboard/use-campaign-selection';
 import { useCampaignData } from './dashboard/use-campaign-data';
 import { useCreativeInsights } from './dashboard/use-creative-insights';
 import { useMetaSync, type MetaCoverage } from './dashboard/use-meta-sync';
@@ -85,7 +85,7 @@ export const useClientPerformanceDashboard = (clientIdRaw: string | null | undef
       setError(null);
 
       const summaryData = await refreshSummary();
-      const fallbackCampaignId = summaryData?.campaigns?.[0]?.campaignId ?? null;
+      const fallbackCampaignId = getDefaultCampaignIdFromSummary(summaryData ?? null);
 
       await Promise.allSettled([
         refreshCreativeInsights({ fallbackCampaignId }),
@@ -215,4 +215,3 @@ export const useClientPerformanceDashboard = (clientIdRaw: string | null | undef
     healthMetrics,
   };
 };
-

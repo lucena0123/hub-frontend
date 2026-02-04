@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Activity } from 'lucide-react';
+import { Activity, RefreshCw } from 'lucide-react';
 
 import { AdSetTable } from '@/components/performance/adset-table';
 import { BpmnProgressTracker } from '@/components/performance/bpmn-progress-tracker';
@@ -232,6 +232,28 @@ export default function ClientPerformancePage() {
                 </CardHeader>
                 <CardContent className="flex h-[320px] items-center justify-center">
                   <Activity className="h-6 w-6 animate-spin text-muted-foreground" />
+                </CardContent>
+              </Card>
+            ) : !selectedCampaignId ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sem entrega no período selecionado</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma campanha teve entrega (gasto, impressões ou conversas) no período atual. Ajuste o período, selecione uma campanha ou rode um sync full da Meta.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="default"
+                      className="gap-2 bg-blue-600 hover:bg-blue-700"
+                      onClick={handleMetaSync}
+                      disabled={syncing || !metaAdAccountId.trim()}
+                    >
+                      <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                      {syncing ? 'Sincronizando...' : 'Sync Meta Ads (Full)'}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ) : (
