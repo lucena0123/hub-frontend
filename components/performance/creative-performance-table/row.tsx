@@ -59,14 +59,14 @@ export const CreativePerformanceRow = (props: {
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="font-medium truncate max-w-[320px]">{creative?.headline || ad.adName || ad.adId}</p>
+                <p className="font-medium truncate max-w-[320px]">{ad.adName || creative?.headline || ad.adId}</p>
                 {ctaLabel && <Badge variant="outline">{ctaLabel}</Badge>}
                 {typeLabel && <Badge variant="secondary">{typeLabel}</Badge>}
                 {domain && <Badge variant="outline">{domain}</Badge>}
                 {!creative && <Badge variant="outline">sem snapshot</Badge>}
               </div>
               <p className="text-xs text-muted-foreground truncate max-w-[420px]">
-                {ad.adName || ad.adId}
+                {creative?.headline || ad.adId}
                 {snapshotId ? ` · snapshot ${snapshotId.slice(0, 8)}` : ''}
               </p>
             </div>

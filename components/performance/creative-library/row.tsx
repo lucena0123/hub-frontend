@@ -6,6 +6,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import type { CreativeLibraryItem } from '@/types';
 
 import { formatCta, formatCurrency, formatNumber, getDomainFromUrl, pctClass, statusBadgeClass, statusLabel } from './formatters';
+import { AdPreviewDialog } from './previews/ad-preview-dialog';
 
 export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expanded: boolean; onToggle: () => void }) => {
   const { creative, expanded, onToggle } = props;
@@ -37,20 +38,22 @@ export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expan
       <TableRow className="cursor-pointer" onClick={onToggle}>
         <TableCell className="max-w-[520px]">
           <div className="flex items-start gap-3">
-            <div className="h-10 w-10 flex-none overflow-hidden rounded-md border bg-muted">
-              {thumbnailUrl ? (
-                <img
-                  src={thumbnailUrl}
-                  alt="Preview do criativo"
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                />
-              ) : null}
-            </div>
+            <AdPreviewDialog creative={creative}>
+              <div className="h-10 w-10 flex-none overflow-hidden rounded-md border bg-muted cursor-pointer hover:opacity-80 transition-opacity">
+                {thumbnailUrl ? (
+                  <img
+                    src={thumbnailUrl}
+                    alt="Preview do criativo"
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : null}
+              </div>
+            </AdPreviewDialog>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="font-medium truncate max-w-[360px]">{creative.headline || 'Criativo'}</p>
+                <p className="font-medium truncate max-w-[360px]">{creative.adNames?.[0] || creative.headline || 'Criativo'}</p>
                 <Badge variant="outline" className={statusBadgeClass[creative.status]}>
                   {statusLabel[creative.status]}
                 </Badge>

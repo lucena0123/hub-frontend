@@ -17,6 +17,7 @@ export interface CreativeLibraryItem {
   destinationUrl: string | null;
   imageUrl: string | null;
   thumbnailUrl: string | null;
+  videoUrl?: string | null;
   videoId: string | null;
   format: string | null;
   isDynamic: boolean;
@@ -26,6 +27,7 @@ export interface CreativeLibraryItem {
   ctaTypes: unknown;
   destinationUrls: unknown;
   campaigns: string[];
+  adNames: string[];
   adsets: CreativeLibraryAdset[];
   adsCount: number;
   metrics: {
