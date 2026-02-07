@@ -28,7 +28,7 @@ export const CopyLab = (props: {
   if (copyCandidates.length === 0) return null;
 
   return (
-    <Card className="border-dashed">
+    <Card className="border-dashed border-l-4 border-l-purple-500">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center justify-between">
           Sugestões de Copy (IA)
@@ -45,7 +45,7 @@ export const CopyLab = (props: {
             <SelectContent>
               {copyCandidates.map((c) => (
                 <SelectItem key={c.snapshotId} value={c.snapshotId}>
-                  {(c.headline || 'Criativo').slice(0, 80)}
+                  {(c.adNames?.[0] || c.headline || 'Criativo').slice(0, 80)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -122,7 +122,7 @@ export const CopyLab = (props: {
             ) : null}
 
             {Array.isArray(copyInsights.analysis?.suggestions?.headlines) &&
-            copyInsights.analysis.suggestions.headlines.length > 0 ? (
+              copyInsights.analysis.suggestions.headlines.length > 0 ? (
               <div>
                 <p className="text-xs font-medium text-muted-foreground">Headlines sugeridas</p>
                 <ul className="list-disc pl-5 text-sm">
@@ -134,7 +134,7 @@ export const CopyLab = (props: {
             ) : null}
 
             {Array.isArray(copyInsights.analysis?.suggestions?.primaryTexts) &&
-            copyInsights.analysis.suggestions.primaryTexts.length > 0 ? (
+              copyInsights.analysis.suggestions.primaryTexts.length > 0 ? (
               <div>
                 <p className="text-xs font-medium text-muted-foreground">Textos (WhatsApp) sugeridos</p>
                 <ul className="list-disc pl-5 text-sm">
@@ -159,7 +159,7 @@ export const CopyLab = (props: {
             ) : null}
 
             {Array.isArray(copyInsights.analysis?.suggestions?.experiments) &&
-            copyInsights.analysis.suggestions.experiments.length > 0 ? (
+              copyInsights.analysis.suggestions.experiments.length > 0 ? (
               <div>
                 <p className="text-xs font-medium text-muted-foreground">Testes sugeridos</p>
                 <ul className="list-disc pl-5 text-sm">

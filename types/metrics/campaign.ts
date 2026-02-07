@@ -110,6 +110,7 @@ export interface PerformanceSummary {
   budgetUsed: number;
   budgetRemaining: number;
   budgetUtilization: number;
+  budgetMode?: 'abo' | 'cbo' | 'mixed' | 'unknown';
   dailyMetrics: DailyMetric[];
   vsLastPeriod?: {
     impressions: number;

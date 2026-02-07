@@ -65,9 +65,9 @@ export function LeadTrackingForm({ campaignId, campaignName, onSuccess }: LeadTr
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Tracking Manual do Funil</CardTitle>
+    <Card className="border-l-4 border-l-lime-500">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Tracking Manual do Funil</CardTitle>
         <CardDescription>
           Adicione dados de qualificação e fechamento para {campaignName}
         </CardDescription>

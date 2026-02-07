@@ -1,5 +1,6 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -46,23 +47,23 @@ const formatCurrency = (value: number) => {
 export function AdSetTable({ adsets, loading }: AdSetTableProps) {
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Conjuntos de Anuncios</CardTitle>
+      <Card className="border-l-4 border-l-fuchsia-500">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Conjuntos de Anúncios</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-10">
-          <p className="text-muted-foreground">Carregando...</p>
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          Conjuntos de Anuncios
-          <Badge variant="outline">Ad Sets</Badge>
+    <Card className="border-l-4 border-l-fuchsia-500">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between text-base">
+          Conjuntos de Anúncios
+          <Badge variant="outline">Conjuntos</Badge>
         </CardTitle>
         <CardDescription>
           Performance por publico/segmentacao

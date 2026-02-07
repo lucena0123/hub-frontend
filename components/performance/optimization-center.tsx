@@ -90,9 +90,9 @@ export function OptimizationCenter({ data, loading, creativeCoverage, creativeCo
   const creativeCalloutTextSubtleClass = creativeCoverage?.state === 'failed' ? 'text-rose-800/70' : 'text-amber-900/70';
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+    <Card className="border-l-4 border-l-orange-500">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between text-base">
           Centro de Otimização
           <Badge variant="outline">Playbook</Badge>
         </CardTitle>

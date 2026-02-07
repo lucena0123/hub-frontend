@@ -33,9 +33,12 @@ const formatCurrency = (value: number) => {
 
 export function CampaignTable({ campaigns }: CampaignTableProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Performance por Campanha</CardTitle>
+    <Card className="border-l-4 border-l-sky-500">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between text-base">
+          Performance por Campanha
+          <Badge variant="outline">Campanhas</Badge>
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">
@@ -67,6 +70,19 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
                     <TableCell className="font-medium max-w-[200px] truncate">{campaign.campaignName}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {campaign.platform}
+                      {campaign.budgetMode && campaign.budgetMode !== 'unknown' && (
+                        <Badge
+                          variant="outline"
+                          className={`ml-2 text-[10px] px-1 py-0 h-5 ${campaign.budgetMode === 'abo'
+                              ? 'border-purple-200 bg-purple-50 text-purple-700'
+                              : campaign.budgetMode === 'cbo'
+                                ? 'border-sky-200 bg-sky-50 text-sky-700'
+                                : 'border-amber-200 bg-amber-50 text-amber-700'
+                            }`}
+                        >
+                          {campaign.budgetMode.toUpperCase()}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       {formatNumber(campaign.totalReach || 0)}
@@ -84,7 +100,7 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
                     <TableCell className="text-right">
                       <span className={
                         (campaign.avgFrequency || 0) >= 5 ? 'text-rose-600 font-medium' :
-                        (campaign.avgFrequency || 0) >= 3 ? 'text-yellow-600' : ''
+                          (campaign.avgFrequency || 0) >= 3 ? 'text-yellow-600' : ''
                       }>
                         {(campaign.avgFrequency || 0).toFixed(1)}x
                       </span>

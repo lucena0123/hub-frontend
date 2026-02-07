@@ -1,5 +1,6 @@
 export * from './adsets';
 export * from './ads';
+export * from './action-proposals';
 export * from './breakdowns';
 export * from './bpmn';
 export * from './business';

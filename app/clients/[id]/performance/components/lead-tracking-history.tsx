@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export const LeadTrackingHistory = (props: { records: LeadTrackingData[] }) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Histórico de Funil Manual</CardTitle>
+    <Card className="border-l-4 border-l-lime-500">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Histórico de Funil Manual</CardTitle>
         <CardDescription>Dados de qualificação e fechamento inseridos manualmente</CardDescription>
       </CardHeader>
       <CardContent>

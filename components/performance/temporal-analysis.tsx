@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Loader2 } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -96,12 +97,12 @@ export function TemporalAnalysis({
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
+      <Card className="border-l-4 border-l-teal-500">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{title}</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-10">
-          <p className="text-muted-foreground">Carregando...</p>
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     );
@@ -109,21 +110,21 @@ export function TemporalAnalysis({
 
   if (!data || data.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
+      <Card className="border-l-4 border-l-teal-500">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{title}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground text-center py-8">
-          Sem dados suficientes para análise temporal no período selecionado. Se a campanha não teve entrega, isso é esperado.
+          Sem dados temporais no período. Rode um sync para preencher.
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+    <Card className="border-l-4 border-l-teal-500">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between text-base">
           {title}
           <Badge variant="outline">{badgeLabel}</Badge>
         </CardTitle>
@@ -180,12 +181,12 @@ export function TemporalAnalysis({
         </ResponsiveContainer>
 
         {/* Day details table */}
-        <div className="mt-4 grid grid-cols-7 gap-2">
+        <div className="mt-4 grid grid-cols-7 gap-2 border-t pt-4">
           {data.map((d) => (
-            <div key={d.dayOfWeek} className="text-center p-2 rounded-lg border">
-              <p className="text-xs font-medium text-muted-foreground">{d.dayName.slice(0, 3)}</p>
-              <p className="text-lg font-bold">{d.totalConversations}</p>
-              <p className="text-xs text-muted-foreground">
+            <div key={d.dayOfWeek} className="text-center p-2 rounded-lg bg-teal-500/5 border border-teal-500/10">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{d.dayName.slice(0, 3)}</p>
+              <p className="text-lg font-bold mt-0.5">{d.totalConversations}</p>
+              <p className="text-[10px] text-muted-foreground">
                 {d.cpl > 0 ? formatCurrency(d.cpl) : '-'}
               </p>
             </div>

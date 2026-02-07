@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, Users, PlayCircle, Bell } from 'lucide-react';
 import { AlertBadge } from '@/components/alerts/alert-badge';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 const navItems = [
   {
@@ -14,12 +15,12 @@ const navItems = [
   },
   {
     href: '/clients',
-    label: 'Clients',
+    label: 'Clientes',
     icon: Users,
   },
   {
     href: '/processes',
-    label: 'Processes',
+    label: 'Processos',
     icon: PlayCircle,
   },
   {
@@ -39,7 +40,7 @@ export function Navigation() {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/" className="font-bold text-xl">
-              BPMN System
+              Hub
             </Link>
             <div className="flex gap-4">
               {navItems.map((item) => {
@@ -64,8 +65,9 @@ export function Navigation() {
               })}
             </div>
           </div>
-          <div className="text-sm text-muted-foreground">
-            v1.0.0
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <span className="text-sm text-muted-foreground">v1.0.0</span>
           </div>
         </div>
       </div>

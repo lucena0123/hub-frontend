@@ -22,6 +22,11 @@ const periodOptions: Array<{ value: MetricsPeriod; label: string }> = [
   { value: 'custom', label: 'Personalizado' },
 ];
 
+interface CampaignOption {
+  campaignId: string;
+  campaignName: string;
+}
+
 export const PerformanceDashboardHeader = (props: {
   clientId: string;
   clientName: string;
@@ -48,7 +53,9 @@ export const PerformanceDashboardHeader = (props: {
   metaSyncMessage: string;
   metaSyncPercent: number | null;
   metaSyncRange: string | null;
+  campaigns: CampaignOption[];
   selectedCampaignId: string | null;
+  setSelectedCampaignId: (value: string) => void;
   showTrackingForm: boolean;
   onToggleTrackingForm: () => void;
   onOpenReportGenerator: () => void;
@@ -69,6 +76,7 @@ export const PerformanceDashboardHeader = (props: {
 
   return (
     <>
+      {/* Linha 1: Navegação + Título + Período */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="icon-sm">
@@ -77,30 +85,33 @@ export const PerformanceDashboardHeader = (props: {
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Performance Dashboard</h1>
-            <p className="text-muted-foreground">{props.clientName}</p>
+            <h1 className="text-2xl font-bold tracking-tight">Performance</h1>
+            <p className="text-sm text-muted-foreground">{props.clientName}</p>
             {props.lastUpdatedAt && (
-              <p className="text-xs text-muted-foreground">Última atualização: {new Date(props.lastUpdatedAt).toLocaleString('pt-BR')}</p>
-            )}
-            {(props.metaCoverage || props.metaSyncHistoryLoading || props.metaLastSuccessfulSync) && (
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                {props.metaCoverage && (
-                  <Badge variant="outline" className={metaCoverageClass}>
-                    {props.metaCoverage.label}
-                  </Badge>
-                )}
-                {props.metaSyncHistoryLoading && <span className="text-xs text-muted-foreground">carregando sync…</span>}
-                {props.metaLastSuccessfulSync && (
-                  <span className="text-xs text-muted-foreground">
-                    Último sync OK: {new Date(props.metaLastSuccessfulSync).toLocaleString('pt-BR')}
-                  </span>
-                )}
-              </div>
+              <p className="text-xs text-muted-foreground">Atualizado: {new Date(props.lastUpdatedAt).toLocaleString('pt-BR')}</p>
             )}
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {props.campaigns.length > 0 && (
+            <Select
+              value={props.selectedCampaignId ?? undefined}
+              onValueChange={(value) => props.setSelectedCampaignId(value)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Campanha" />
+              </SelectTrigger>
+              <SelectContent>
+                {props.campaigns.map((c) => (
+                  <SelectItem key={c.campaignId} value={c.campaignId}>
+                    {c.campaignName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <Select
             value={props.period}
             onValueChange={(value) => {
@@ -119,7 +130,7 @@ export const PerformanceDashboardHeader = (props: {
             }}
           >
             <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Select period" />
+              <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent>
               {periodOptions.map((option) => (
@@ -131,17 +142,18 @@ export const PerformanceDashboardHeader = (props: {
           </Select>
 
           {props.period === 'custom' && (
-            <div className="flex flex-wrap items-center gap-2">
+            <>
               <Input
                 type="date"
                 value={props.customStartDate}
                 onChange={(e) => props.setCustomStartDate(e.target.value)}
-                className="w-[150px]"
+                className="w-[140px]"
               />
               <span className="text-sm text-muted-foreground">até</span>
-              <Input type="date" value={props.customEndDate} onChange={(e) => props.setCustomEndDate(e.target.value)} className="w-[150px]" />
+              <Input type="date" value={props.customEndDate} onChange={(e) => props.setCustomEndDate(e.target.value)} className="w-[140px]" />
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => {
                   if (!props.customStartDate || !props.customEndDate) {
                     props.setError('Selecione a data inicial e a data final.');
@@ -163,121 +175,134 @@ export const PerformanceDashboardHeader = (props: {
               >
                 Aplicar
               </Button>
-            </div>
+            </>
           )}
-
-          <Button variant="outline" className="gap-2" onClick={props.onRefreshAll} disabled={props.refreshing || props.syncing}>
-            <RefreshCw className={`h-4 w-4 ${props.refreshing ? 'animate-spin' : ''}`} />
-            {props.refreshing ? 'Atualizando...' : 'Recarregar'}
-          </Button>
-
-          <Input
-            value={props.metaAdAccountId}
-            placeholder="Meta Ad Account ID (configure no cliente)"
-            className="w-[210px] font-mono text-xs"
-            readOnly
-          />
-
-          {!props.metaAdAccountId.trim() && (
-            <Button variant="outline" asChild>
-              <Link href={`/clients/${props.clientId}?tab=edit`}>Configurar Meta</Link>
-            </Button>
-          )}
-
-          <Button
-            variant="default"
-            className="gap-2 bg-blue-600 hover:bg-blue-700"
-            onClick={props.onMetaSync}
-            disabled={props.syncing || !props.metaAdAccountId.trim()}
-          >
-            <RefreshCw className={`h-4 w-4 ${props.syncing ? 'animate-spin' : ''}`} />
-            {props.syncing ? 'Sincronizando...' : 'Sync Meta Ads (Full)'}
-          </Button>
-
-          {props.selectedCampaignId && (
-            <Button variant="outline" className="gap-2" onClick={props.onToggleTrackingForm}>
-              <PlusCircle className="h-4 w-4" />
-              {props.showTrackingForm ? 'Ocultar' : 'Adicionar'} Dados do Funil
-            </Button>
-          )}
-
-          <Button variant="outline" className="gap-2" onClick={props.onOpenReportGenerator}>
-            <FileText className="h-4 w-4" />
-            Gerar Relatório
-          </Button>
-          </div>
         </div>
+      </div>
 
-        {props.metaCoverage && props.metaCoverage.state !== 'success' && props.metaCoverage.state !== 'running' ? (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-amber-900">Meta Ads</p>
-                {props.metaCoverage.state === 'missing' ? (
-                  <p className="text-sm text-amber-900/80">
-                    Sem sync registrado para este período. Rode um <span className="font-medium">Sync Meta Ads (Full)</span> para preencher os dados.
-                  </p>
-                ) : props.metaCoverage.state === 'outdated' ? (
-                  <p className="text-sm text-amber-900/80">
-                    O último sync cobre <span className="font-medium">{props.metaSyncDetails?.dateRangeStart} → {props.metaSyncDetails?.dateRangeEnd}</span>, mas o período selecionado está fora dessa janela.
-                  </p>
-                ) : props.metaCoverage.state === 'partial' ? (
-                  <p className="text-sm text-amber-900/80">
-                    Sync parcial{props.metaSyncDetails?.unmappedCampaigns?.length ? `: ${props.metaSyncDetails.unmappedCampaigns.length} campanhas unmapped` : ''}. Rode um sync full e revise o mapeamento/importação.
-                  </p>
-                ) : (
-                  <p className="text-sm text-amber-900/80">
-                    Sync com falha. {props.metaSyncDetails?.errorMessage ? `Erro: ${props.metaSyncDetails.errorMessage}` : 'Verifique token e tente novamente.'}
-                  </p>
-                )}
+      {/* Linha 2: Ações */}
+      <div className="flex flex-wrap items-center gap-2">
+        {props.metaCoverage && (
+          <Badge variant="outline" className={metaCoverageClass}>
+            {props.metaCoverage.label}
+          </Badge>
+        )}
 
-                {props.metaSyncDetails?.metadata?.syncLevel ? (
-                  <p className="text-xs text-amber-900/70">
-                    nível: {String(props.metaSyncDetails.metadata.syncLevel)} · início: {new Date(props.metaSyncDetails.startedAt).toLocaleString('pt-BR')}
-                  </p>
-                ) : null}
-              </div>
+        {props.metaSyncHistoryLoading && <span className="text-xs text-muted-foreground">carregando sync…</span>}
 
-              {props.metaSyncHistory.length > 0 ? (
-                <Button variant="outline" className="gap-2" onClick={() => setShowMetaHistory((prev) => !prev)}>
-                  {showMetaHistory ? 'Ocultar histórico' : 'Ver histórico'}
-                  {showMetaHistory ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
+        {props.metaLastSuccessfulSync && (
+          <span className="text-xs text-muted-foreground">
+            Sync OK: {new Date(props.metaLastSuccessfulSync).toLocaleString('pt-BR')}
+          </span>
+        )}
+
+        <div className="flex-1" />
+
+        <Button
+          variant="default"
+          size="sm"
+          className="gap-2 bg-blue-600 hover:bg-blue-700"
+          onClick={props.onMetaSync}
+          disabled={props.syncing || !props.metaAdAccountId.trim()}
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${props.syncing ? 'animate-spin' : ''}`} />
+          {props.syncing ? 'Sincronizando...' : 'Sync Meta'}
+        </Button>
+
+        {!props.metaAdAccountId.trim() && (
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/clients/${props.clientId}?tab=edit`}>Configurar Meta</Link>
+          </Button>
+        )}
+
+        <Button variant="outline" size="sm" className="gap-2" onClick={props.onRefreshAll} disabled={props.refreshing || props.syncing}>
+          <RefreshCw className={`h-3.5 w-3.5 ${props.refreshing ? 'animate-spin' : ''}`} />
+          Recarregar
+        </Button>
+
+        {props.selectedCampaignId && (
+          <Button variant="outline" size="sm" className="gap-2" onClick={props.onToggleTrackingForm}>
+            <PlusCircle className="h-3.5 w-3.5" />
+            {props.showTrackingForm ? 'Ocultar' : 'Dados do Funil'}
+          </Button>
+        )}
+
+        <Button variant="outline" size="sm" className="gap-2" onClick={props.onOpenReportGenerator}>
+          <FileText className="h-3.5 w-3.5" />
+          Relatório
+        </Button>
+      </div>
+
+      {props.metaCoverage && props.metaCoverage.state !== 'success' && props.metaCoverage.state !== 'running' ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-amber-900">Meta Ads</p>
+              {props.metaCoverage.state === 'missing' ? (
+                <p className="text-sm text-amber-900/80">
+                  Sem sync registrado para este período. Rode um <span className="font-medium">Sync Meta</span> para preencher os dados.
+                </p>
+              ) : props.metaCoverage.state === 'outdated' ? (
+                <p className="text-sm text-amber-900/80">
+                  O último sync cobre <span className="font-medium">{props.metaSyncDetails?.dateRangeStart} → {props.metaSyncDetails?.dateRangeEnd}</span>, mas o período selecionado está fora dessa janela.
+                </p>
+              ) : props.metaCoverage.state === 'partial' ? (
+                <p className="text-sm text-amber-900/80">
+                  Sync parcial{props.metaSyncDetails?.unmappedCampaigns?.length ? `: ${props.metaSyncDetails.unmappedCampaigns.length} campanhas unmapped` : ''}. Rode um sync full e revise o mapeamento.
+                </p>
+              ) : (
+                <p className="text-sm text-amber-900/80">
+                  Sync com falha. {props.metaSyncDetails?.errorMessage ? `Erro: ${props.metaSyncDetails.errorMessage}` : 'Verifique token e tente novamente.'}
+                </p>
+              )}
+
+              {props.metaSyncDetails?.metadata?.syncLevel ? (
+                <p className="text-xs text-amber-900/70">
+                  nível: {String(props.metaSyncDetails.metadata.syncLevel)} · início: {new Date(props.metaSyncDetails.startedAt).toLocaleString('pt-BR')}
+                </p>
               ) : null}
             </div>
 
-            {showMetaHistory ? (
-              <div className="mt-3 space-y-2">
-                {props.metaSyncHistory.slice(0, 5).map((item) => {
-                  const state = item.state ?? (item.completedAt ? item.status : 'running');
-                  const syncLevel = item.metadata?.syncLevel ? String(item.metadata.syncLevel) : '—';
-                  const unmapped = item.unmappedCampaigns?.length ?? 0;
-                  return (
-                    <div key={item.id} className="rounded-md border border-amber-200 bg-white/60 p-3 text-xs text-amber-950">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="font-medium">
-                          {new Date(item.startedAt).toLocaleString('pt-BR')} · {state} · nível {syncLevel}
-                        </p>
-                        <p className="text-amber-900/70">
-                          {item.dateRangeStart} → {item.dateRangeEnd}
-                        </p>
-                      </div>
-                      <p className="mt-1 text-amber-900/70">
-                        mapped: {item.mappedCampaigns} · updated: {item.updatedMetrics} · unmapped: {unmapped}
-                        {item.durationMs != null ? ` · duração: ${(item.durationMs / 1000).toFixed(1)}s` : ''}
-                      </p>
-                      {state === 'failed' && (item.errorMessage || item.metadata?.error) ? (
-                        <p className="mt-1 text-rose-700">
-                          {(item.errorMessage ?? (typeof item.metadata?.error === 'string' ? item.metadata.error : null)) || 'Falha no sync.'}
-                        </p>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
+            {props.metaSyncHistory.length > 0 ? (
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowMetaHistory((prev) => !prev)}>
+                {showMetaHistory ? 'Ocultar histórico' : 'Ver histórico'}
+                {showMetaHistory ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
             ) : null}
           </div>
-        ) : null}
+
+          {showMetaHistory ? (
+            <div className="mt-3 space-y-2">
+              {props.metaSyncHistory.slice(0, 5).map((item) => {
+                const state = item.state ?? (item.completedAt ? item.status : 'running');
+                const syncLevel = item.metadata?.syncLevel ? String(item.metadata.syncLevel) : '—';
+                const unmapped = item.unmappedCampaigns?.length ?? 0;
+                return (
+                  <div key={item.id} className="rounded-md border border-amber-200 bg-white/60 p-3 text-xs text-amber-950">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-medium">
+                        {new Date(item.startedAt).toLocaleString('pt-BR')} · {state} · nível {syncLevel}
+                      </p>
+                      <p className="text-amber-900/70">
+                        {item.dateRangeStart} → {item.dateRangeEnd}
+                      </p>
+                    </div>
+                    <p className="mt-1 text-amber-900/70">
+                      mapped: {item.mappedCampaigns} · updated: {item.updatedMetrics} · unmapped: {unmapped}
+                      {item.durationMs != null ? ` · duração: ${(item.durationMs / 1000).toFixed(1)}s` : ''}
+                    </p>
+                    {state === 'failed' && (item.errorMessage || item.metadata?.error) ? (
+                      <p className="mt-1 text-rose-700">
+                        {(item.errorMessage ?? (typeof item.metadata?.error === 'string' ? item.metadata.error : null)) || 'Falha no sync.'}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {props.syncing && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">

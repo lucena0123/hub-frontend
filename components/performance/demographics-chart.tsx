@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Loader2 } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -63,20 +64,20 @@ function BreakdownBarChart({ data, title, description }: { data: BreakdownSegmen
 
   if (data.length === 0) {
     return (
-      <Card>
-        <CardHeader>
+      <Card className="border-l-4 border-l-cyan-500">
+        <CardHeader className="pb-3">
           <CardTitle className="text-base">{title}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground text-center py-8">
-          Nenhum dado disponível no período selecionado. Se a campanha não teve entrega, isso é esperado; caso contrário, execute o sync com syncLevel &quot;full&quot;.
+          Sem dados demográficos no período. Rode um sync full para preencher.
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border-l-4 border-l-cyan-500">
+      <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center justify-between">
           {title}
           <Badge variant="outline">{data.length} segmentos</Badge>
@@ -131,16 +132,16 @@ export function DemographicsChart({ ageGenderData, placementData, loading }: Dem
   if (loading) {
     return (
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle className="text-base">Demografia</CardTitle></CardHeader>
+        <Card className="border-l-4 border-l-cyan-500">
+          <CardHeader className="pb-3"><CardTitle className="text-base">Demografia</CardTitle></CardHeader>
           <CardContent className="flex items-center justify-center py-10">
-            <p className="text-muted-foreground">Carregando...</p>
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-base">Posicionamentos</CardTitle></CardHeader>
+        <Card className="border-l-4 border-l-cyan-500">
+          <CardHeader className="pb-3"><CardTitle className="text-base">Posicionamentos</CardTitle></CardHeader>
           <CardContent className="flex items-center justify-center py-10">
-            <p className="text-muted-foreground">Carregando...</p>
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </CardContent>
         </Card>
       </div>

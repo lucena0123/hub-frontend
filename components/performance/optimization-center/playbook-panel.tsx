@@ -9,7 +9,7 @@ export const PlaybookPanel = (props: { open: boolean }) => {
   if (!open) return null;
 
   return (
-    <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+    <div className="rounded-lg border border-orange-500/10 bg-orange-500/5 p-3 space-y-2">
       {loading ? (
         <p className="text-sm text-muted-foreground">Carregando playbook...</p>
       ) : error ? (

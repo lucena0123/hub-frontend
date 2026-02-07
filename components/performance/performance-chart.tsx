@@ -64,9 +64,9 @@ export function PerformanceChart({ title = 'Tendência da Campanha', data, targe
   const targetLabel = hasExplicitTargetCpl ? 'Meta CPL' : 'CPL médio';
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
+    <Card className="border-l-4 border-l-amber-500">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -115,8 +115,8 @@ export function PerformanceChart({ title = 'Tendência da Campanha', data, targe
           </div>
 
           <div className="h-[120px]">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-medium">CPL (R$)</p>
+            <div className="mb-2 flex items-center justify-between border-t pt-3">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">CPL (R$)</p>
               <p className="text-xs text-muted-foreground">
                 {targetLabel}: {computedTargetCpl > 0 ? formatCurrency(computedTargetCpl) : '-'}
               </p>

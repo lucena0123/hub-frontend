@@ -6,12 +6,19 @@ import type { OptimizationCenterHighlight } from '@/types';
 
 import { formatCpl, formatCta, formatCurrency } from './formatters';
 
+const badgeColorMap: Record<string, string> = {
+  winners: 'border-l-emerald-500',
+  fadiga: 'border-l-amber-500',
+  losers: 'border-l-rose-500',
+};
+
 const HighlightCard = (props: { title: string; badge: string; items: OptimizationCenterHighlight[] }) => {
   const { title, badge, items } = props;
+  const borderClass = badgeColorMap[badge] ?? 'border-l-slate-400';
 
   if (items.length === 0) {
     return (
-      <Card className="border-dashed">
+      <Card className={`border-dashed border-l-4 ${borderClass}`}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center justify-between">
             {title}
@@ -24,7 +31,7 @@ const HighlightCard = (props: { title: string; badge: string; items: Optimizatio
   }
 
   return (
-    <Card className="border-dashed">
+    <Card className={`border-dashed border-l-4 ${borderClass}`}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center justify-between">
           {title}
@@ -52,7 +59,7 @@ const HighlightCard = (props: { title: string; badge: string; items: Optimizatio
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-medium truncate max-w-[240px]">{c.headline || 'Criativo'}</p>
+                    <p className="text-sm font-medium truncate max-w-[240px]">{c.adNames?.[0] || c.headline || 'Criativo'}</p>
                     {cta && <Badge variant="outline">{cta}</Badge>}
                     {c.isDynamic && <Badge variant="secondary">dynamic</Badge>}
                   </div>

@@ -63,52 +63,52 @@ export function LeadGenMetricsCard({
     topDisqualification.length > 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          Lead Generation Performance
-          <Badge variant="outline">Lead Gen</Badge>
+    <Card className="border-l-4 border-l-emerald-500">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between text-base">
+          Performance de Leads
+          <Badge variant="outline">Leads</Badge>
         </CardTitle>
         <CardDescription>
-          WhatsApp/Messenger conversations and funnel metrics
+          Conversas e métricas de funil
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           {/* Automatic Metrics (from Meta API) */}
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Conversas Iniciadas</p>
-            <p className="text-2xl font-bold">{totalMessagingConversations}</p>
-            <p className="text-xs text-muted-foreground">
+          <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Conversas</p>
+            <p className="text-lg font-bold mt-0.5">{totalMessagingConversations}</p>
+            <p className="text-[10px] text-muted-foreground">
               CPL: R$ {cpl.toFixed(2)}
             </p>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Com Resposta</p>
-            <p className="text-2xl font-bold">{totalMessagingFirstReply}</p>
-            <p className="text-xs text-muted-foreground">
+          <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Com Resposta</p>
+            <p className="text-lg font-bold mt-0.5">{totalMessagingFirstReply}</p>
+            <p className="text-[10px] text-muted-foreground">
               {responseRate.toFixed(1)}% responderam
             </p>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Cliques</p>
-            <p className="text-2xl font-bold">{totalLinkClicks}</p>
-            <p className="text-xs text-muted-foreground">
+          <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Cliques</p>
+            <p className="text-lg font-bold mt-0.5">{totalLinkClicks}</p>
+            <p className="text-[10px] text-muted-foreground">
               {clickToConversationRate.toFixed(1)}% converteram
             </p>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Investimento</p>
-            <p className="text-2xl font-bold">R$ {totalSpend.toLocaleString('pt-BR', {maximumFractionDigits: 0})}</p>
+          <div className="p-3 rounded-lg bg-violet-500/5 border border-violet-500/10">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Investimento</p>
+            <p className="text-lg font-bold mt-0.5">R$ {totalSpend.toLocaleString('pt-BR', {maximumFractionDigits: 0})}</p>
           </div>
 
           {/* Manual Tracking Metrics */}
           {showManualSection && (
             <>
-              <div className="space-y-1 border-t pt-4 md:col-span-4">
+              <div className="space-y-1 border-t pt-4 col-span-2">
                 <p className="text-sm font-semibold text-muted-foreground">
                   Funil Manual (Input do Usuário)
                 </p>
@@ -154,7 +154,7 @@ export function LeadGenMetricsCard({
               </div>
 
               {topDisqualification.length > 0 && (
-                <div className="space-y-2 md:col-span-4">
+                <div className="space-y-2 col-span-2">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-medium text-muted-foreground">Motivos de desqualificação</p>
                     <p className="text-xs text-muted-foreground">Total: {totalDisqualified}</p>

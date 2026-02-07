@@ -38,6 +38,12 @@ function frequencyColor(freq: number): string {
   return 'text-rose-600';
 }
 
+function frequencyBg(freq: number): string {
+  if (freq < 3) return 'bg-emerald-500/5 border-emerald-500/10';
+  if (freq < 5) return 'bg-yellow-500/5 border-yellow-500/10';
+  return 'bg-rose-500/5 border-rose-500/10';
+}
+
 function frequencyStatus(freq: number): string {
   if (freq < 3) return 'Saudável';
   if (freq < 5) return 'Atenção';
@@ -57,85 +63,75 @@ export function CampaignHealthCard({
   const hasRankings = qualityRanking || engagementRateRanking || conversionRateRanking;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+    <Card className="border-l-4 border-l-violet-500">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between text-base">
           Saúde da Campanha
-          <Badge variant="outline">Health</Badge>
+          <Badge variant="outline">Saúde</Badge>
         </CardTitle>
         <CardDescription>
-          Alcance, frequência, CPM e rankings de qualidade do Meta
+          Alcance, frequência, CPM e rankings Meta
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Alcance</p>
-            <p className="text-2xl font-bold">{totalReach.toLocaleString('pt-BR')}</p>
-            <p className="text-xs text-muted-foreground">
-              pessoas únicas
-            </p>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 rounded-lg bg-violet-500/5 border border-violet-500/10">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Alcance</p>
+            <p className="text-lg font-bold mt-0.5">{totalReach.toLocaleString('pt-BR')}</p>
+            <p className="text-[10px] text-muted-foreground">pessoas únicas</p>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Frequência</p>
-            <p className={`text-2xl font-bold ${frequencyColor(avgFrequency)}`}>
+          <div className={`p-3 rounded-lg border ${frequencyBg(avgFrequency)}`}>
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Frequência</p>
+            <p className={`text-lg font-bold mt-0.5 ${frequencyColor(avgFrequency)}`}>
               {avgFrequency.toFixed(2)}x
             </p>
-            <p className="text-xs text-muted-foreground">
-              {frequencyStatus(avgFrequency)}
-            </p>
+            <p className="text-[10px] text-muted-foreground">{frequencyStatus(avgFrequency)}</p>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">CPM</p>
-            <p className="text-2xl font-bold">
+          <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">CPM</p>
+            <p className="text-lg font-bold mt-0.5">
               R$ {avgCpm.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
             </p>
-            <p className="text-xs text-muted-foreground">
-              custo por mil impressões
-            </p>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Impressões</p>
-            <p className="text-2xl font-bold">{totalImpressions.toLocaleString('pt-BR')}</p>
-            <p className="text-xs text-muted-foreground">
+          <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Impressões</p>
+            <p className="text-lg font-bold mt-0.5">{totalImpressions.toLocaleString('pt-BR')}</p>
+            <p className="text-[10px] text-muted-foreground">
               Invest: R$ {totalSpend.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
             </p>
           </div>
+        </div>
 
-          {hasRankings && (
-            <>
-              <div className="border-t pt-4 md:col-span-4">
-                <p className="text-sm font-semibold text-muted-foreground">
-                  Rankings de Qualidade (Meta)
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Qualidade</p>
+        {hasRankings && (
+          <div className="space-y-3 pt-2 border-t">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              Rankings de Qualidade (Meta)
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="text-center space-y-1.5">
+                <p className="text-xs text-muted-foreground">Qualidade</p>
                 <Badge className={rankingColor[qualityRanking || 'UNKNOWN'] || 'bg-slate-400'}>
                   {rankingLabel[qualityRanking || 'UNKNOWN'] || qualityRanking || '—'}
                 </Badge>
               </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Engajamento</p>
+              <div className="text-center space-y-1.5">
+                <p className="text-xs text-muted-foreground">Engajamento</p>
                 <Badge className={rankingColor[engagementRateRanking || 'UNKNOWN'] || 'bg-slate-400'}>
                   {rankingLabel[engagementRateRanking || 'UNKNOWN'] || engagementRateRanking || '—'}
                 </Badge>
               </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Conversão</p>
+              <div className="text-center space-y-1.5">
+                <p className="text-xs text-muted-foreground">Conversão</p>
                 <Badge className={rankingColor[conversionRateRanking || 'UNKNOWN'] || 'bg-slate-400'}>
                   {rankingLabel[conversionRateRanking || 'UNKNOWN'] || conversionRateRanking || '—'}
                 </Badge>
               </div>
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

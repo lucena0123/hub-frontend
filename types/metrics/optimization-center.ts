@@ -123,6 +123,7 @@ export interface OptimizationCenterHighlight {
   headline: string | null;
   ctaType: string | null;
   thumbnailUrl: string | null;
+  adNames?: string[];
   isDynamic: boolean;
   spend: number;
   conversations: number;
@@ -142,6 +143,18 @@ export interface OptimizationCenterResponse {
     matchedValue: string | null;
     targets: OptimizationCenterThemeTargets;
   };
+  budgetDiagnostics?: Array<{
+    campaignId: string;
+    campaignName: string;
+    budgetMode: string;
+    budgetSource: string;
+    assumedBudgetKind: string;
+    campaignBudget: number;
+    adsetDailyBudget: number;
+    adsetLifetimeBudget: number;
+    expectedSpendLast7: number;
+    minSpendForEvaluation: number;
+  }>;
   summary: { total: number; critical: number; warning: number; info: number; opportunity: number };
   highlights: {
     winners: OptimizationCenterHighlight[];
