@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import type { CreativeCoverage } from '@/app/clients/[id]/performance/use-client-performance-dashboard';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +12,6 @@ import type { CreativeLibraryResponse, CreativeLibraryStatus } from '@/types';
 import { formatDate } from '@/lib/utils';
 
 import { statusBadgeClass } from './creative-library/formatters';
-import { CreativeLibraryInsightsPanel } from './creative-library/insights';
 import { CreativeLibraryRow } from './creative-library/row';
 
 const EMPTY_CREATIVES: CreativeLibraryResponse['creatives'] = [];
@@ -143,11 +143,11 @@ export function CreativeLibrary({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+    <Card className="border-l-4 border-l-violet-500">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between text-base">
           Biblioteca de Criativos
-          <Badge variant="outline">Library</Badge>
+          <Badge variant="outline">Biblioteca</Badge>
         </CardTitle>
         <CardDescription>Agrupado por snapshot (copy/CTA). Mostra vencedores, perdedores e sinais de fadiga.</CardDescription>
         {creativeCoverage ? (
@@ -184,9 +184,9 @@ export function CreativeLibrary({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="winner">Winners</SelectItem>
+              <SelectItem value="winner">Vencedores</SelectItem>
               <SelectItem value="fatigued">Fadiga</SelectItem>
-              <SelectItem value="loser">Losers</SelectItem>
+              <SelectItem value="loser">Perdedores</SelectItem>
               <SelectItem value="neutral">Neutros</SelectItem>
             </SelectContent>
           </Select>
@@ -258,11 +258,9 @@ export function CreativeLibrary({
           </div>
         ) : null}
 
-        <CreativeLibraryInsightsPanel insights={insights} />
-
         {loading ? (
           <div className="flex items-center justify-center py-10">
-            <p className="text-muted-foreground">Carregando biblioteca...</p>
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <div className="rounded-md border overflow-x-auto">

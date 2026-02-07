@@ -1,33 +1,46 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { AdCreativeMetric } from '@/types';
+import type { AdCreativeMetric, CreativeLibraryResponse } from '@/types';
 
 import { CreativePerformanceRow } from './creative-performance-table/row';
 
 interface CreativePerformanceTableProps {
   ads: AdCreativeMetric[];
   loading?: boolean;
+  creativeLibraryData?: CreativeLibraryResponse | null;
 }
 
-export function CreativePerformanceTable({ ads, loading }: CreativePerformanceTableProps) {
+export function CreativePerformanceTable({ ads, loading, creativeLibraryData }: CreativePerformanceTableProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const sortedAds = useMemo(() => {
     return [...ads].sort((a, b) => (b.totalSpend || 0) - (a.totalSpend || 0));
   }, [ads]);
 
+  const libraryLookup = useMemo(() => {
+    const map = new Map<string, { status: NonNullable<CreativeLibraryResponse['creatives']>[number]['status']; reasons: NonNullable<NonNullable<CreativeLibraryResponse['creatives']>[number]['analysis']>['reasons'] }>();
+    if (!creativeLibraryData?.creatives) return map;
+    for (const c of creativeLibraryData.creatives) {
+      if (c.snapshotId && c.status !== 'neutral') {
+        map.set(c.snapshotId, { status: c.status, reasons: c.analysis?.reasons ?? [] });
+      }
+    }
+    return map;
+  }, [creativeLibraryData]);
+
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Performance de Criativos</CardTitle>
+      <Card className="border-l-4 border-l-pink-500">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Performance de Criativos</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-10">
-          <p className="text-muted-foreground">Carregando...</p>
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     );
@@ -36,11 +49,11 @@ export function CreativePerformanceTable({ ads, loading }: CreativePerformanceTa
   const hasVideoData = sortedAds.some((ad) => ad.video3secViews > 0 || ad.videoThruplay > 0);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+    <Card className="border-l-4 border-l-pink-500">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between text-base">
           Performance de Criativos
-          <Badge variant="outline">Ads</Badge>
+          <Badge variant="outline">Anúncios</Badge>
         </CardTitle>
         <CardDescription>Análise individual de cada anúncio{hasVideoData ? ' com métricas de vídeo' : ''}</CardDescription>
       </CardHeader>
@@ -76,6 +89,8 @@ export function CreativePerformanceTable({ ads, loading }: CreativePerformanceTa
                   const rowKey = snapshotId ? `${ad.adId}:${snapshotId}` : ad.adId;
                   const isExpanded = Boolean(snapshotId && expanded.has(rowKey));
 
+                  const libraryEntry = snapshotId ? libraryLookup.get(snapshotId) : undefined;
+
                   return (
                     <CreativePerformanceRow
                       key={rowKey}
@@ -84,6 +99,8 @@ export function CreativePerformanceTable({ ads, loading }: CreativePerformanceTa
                       snapshotId={snapshotId}
                       expanded={isExpanded}
                       hasVideoData={hasVideoData}
+                      status={libraryEntry?.status}
+                      reasons={libraryEntry?.reasons}
                       onToggle={() => {
                         setExpanded((prev) => {
                           const next = new Set(prev);

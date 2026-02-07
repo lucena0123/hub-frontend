@@ -3,27 +3,24 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Activity, RefreshCw } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 import { AdSetTable } from '@/components/performance/adset-table';
+import { BudgetPacingCard } from '@/components/performance/budget-pacing-card';
 import { BpmnProgressTracker } from '@/components/performance/bpmn-progress-tracker';
-import { BusinessMetricsCard } from '@/components/performance/business-metrics-card';
-import { CampaignHealthCard } from '@/components/performance/campaign-health-card';
 import { CampaignTable } from '@/components/performance/campaign-table';
+import { CampaignTrendCard } from '@/components/performance/campaign-trend-card';
 import { CreativeLibrary } from '@/components/performance/creative-library';
 import { CreativePerformanceTable } from '@/components/performance/creative-performance-table';
 import { DemographicsChart } from '@/components/performance/demographics-chart';
-import { LeadGenMetricsCard } from '@/components/performance/lead-gen-metrics-card';
+import { DiagnosticsPanel } from '@/components/performance/diagnostics-panel';
+import { KpiOverviewStrip } from '@/components/performance/kpi-overview-strip';
 import { LeadTrackingForm } from '@/components/performance/lead-tracking-form';
-import { OptimizationCenter } from '@/components/performance/optimization-center';
-import { PerformanceChart } from '@/components/performance/performance-chart';
 import { TemporalAnalysis } from '@/components/performance/temporal-analysis';
 import { ReportGenerator } from '@/components/reports/report-generator';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { formatDate } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { useClientPerformanceDashboard } from './use-client-performance-dashboard';
 import { PerformanceDashboardHeader } from './components/dashboard-header';
@@ -35,6 +32,7 @@ export default function ClientPerformancePage() {
 
   const [openReportGenerator, setOpenReportGenerator] = useState(false);
   const [showTrackingForm, setShowTrackingForm] = useState(false);
+  const [creativeView, setCreativeView] = useState<'ads' | 'library'>('ads');
 
   const {
     summary,
@@ -100,22 +98,20 @@ export default function ClientPerformancePage() {
 
   const selectedCampaignHasDelivery = Boolean(
     selectedCampaignId &&
-      selectedCampaign &&
-      ((selectedCampaign.totalSpend ?? 0) > 0 ||
-        (selectedCampaign.totalMessagingConversations ?? 0) > 0 ||
-        (selectedCampaign.totalImpressions ?? 0) > 0)
+    selectedCampaign &&
+    ((selectedCampaign.totalSpend ?? 0) > 0 ||
+      (selectedCampaign.totalMessagingConversations ?? 0) > 0 ||
+      (selectedCampaign.totalImpressions ?? 0) > 0)
   );
 
-  const selectedPeriodLabel = summary
-    ? `${formatDate(summary.period.start, 'dd/MM/yyyy', summary.period.start)} – ${formatDate(summary.period.end, 'dd/MM/yyyy', summary.period.end)}`
-    : null;
+  const roi = businessData?.roi ?? null;
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <Activity className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">Loading performance dashboard...</p>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Carregando performance...</p>
         </div>
       </div>
     );
@@ -127,12 +123,12 @@ export default function ClientPerformancePage() {
         <div className="max-w-4xl mx-auto">
           <Card>
             <CardHeader>
-              <CardTitle className="text-destructive">Error</CardTitle>
+              <CardTitle className="text-destructive">Erro</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{error ?? 'Client not found'}</p>
+              <p className="text-sm text-muted-foreground">{error ?? 'Cliente não encontrado'}</p>
               <Button asChild className="mt-4">
-                <Link href="/clients">Back to clients</Link>
+                <Link href="/clients">Voltar para clientes</Link>
               </Button>
             </CardContent>
           </Card>
@@ -143,7 +139,8 @@ export default function ClientPerformancePage() {
 
   return (
     <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* ─── HEADER ─── */}
         <PerformanceDashboardHeader
           clientId={summary.clientId}
           clientName={summary.clientName}
@@ -170,7 +167,12 @@ export default function ClientPerformancePage() {
           metaSyncMessage={metaSyncMessage}
           metaSyncPercent={metaSyncPercent}
           metaSyncRange={metaSyncRange}
+          campaigns={summary.campaigns.map((c) => ({
+            campaignId: c.campaignId,
+            campaignName: c.campaignName,
+          }))}
           selectedCampaignId={selectedCampaignId}
+          setSelectedCampaignId={setSelectedCampaignId}
           showTrackingForm={showTrackingForm}
           onToggleTrackingForm={() => setShowTrackingForm((prev) => !prev)}
           onOpenReportGenerator={() => setOpenReportGenerator(true)}
@@ -178,80 +180,47 @@ export default function ClientPerformancePage() {
           setError={setError}
         />
 
-        <OptimizationCenter
-          data={optimizationData}
-          loading={optimizationLoading}
-          creativeCoverage={creativeCoverage}
-          creativeCoverageDetails={creativeCoverageDetails}
+        {/* ─── 1. KPI OVERVIEW STRIP ─── */}
+        <KpiOverviewStrip
+          totalSpend={messagingMetrics.totalSpend}
+          totalConversations={messagingMetrics.totalMessagingConversations}
+          totalFirstReply={messagingMetrics.totalMessagingFirstReply}
+          avgFrequency={healthMetrics.avgFrequency}
+          roi={roi}
+          loading={businessLoading || metricsLoading}
         />
 
-        {selectedCampaignId &&
-          (selectedCampaignHasDelivery ? (
-            <LeadGenMetricsCard
-              totalMessagingConversations={messagingMetrics.totalMessagingConversations}
-              totalMessagingFirstReply={messagingMetrics.totalMessagingFirstReply}
-              totalLinkClicks={messagingMetrics.totalLinkClicks}
-              totalSpend={messagingMetrics.totalSpend}
-              hasManualTracking={leadTrackingData.length > 0}
-              qualifiedLeads={aggregatedLeadData.qualifiedLeads}
-              disqualificationReasons={
-                Object.keys(aggregatedLeadData.disqualificationReasons).length > 0 ? aggregatedLeadData.disqualificationReasons : null
-              }
-              contractsClosed={aggregatedLeadData.contractsClosed}
-              totalRevenue={aggregatedLeadData.totalRevenue}
-            />
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Lead Generation Performance
-                  <Badge variant="outline">Lead Gen</Badge>
-                </CardTitle>
-                <CardDescription>WhatsApp/Messenger conversations and funnel metrics</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>
-                  Sem dados para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
-                  <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
-                </p>
-                <p>
-                  Se ela está ativa na Meta mas não entrega, verifique status, público, orçamento e limites da conta. Se necessário, rode um sync full no topo.
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-
-        {selectedCampaignId &&
-          (selectedCampaignHasDelivery ? (
-            <CampaignHealthCard
+        {/* ─── 2. BUDGET PACING + TENDÊNCIA (2 cols) ─── */}
+        <div className="grid gap-6 lg:grid-cols-5">
+          <div className="lg:col-span-2">
+            <BudgetPacingCard clientId={clientId} />
+          </div>
+          <div className="lg:col-span-3">
+            <CampaignTrendCard
+              campaignName={selectedCampaign?.campaignName ?? null}
+              dailyMetrics={dailyMetrics}
+              metricsLoading={metricsLoading}
               totalReach={healthMetrics.totalReach}
-              avgFrequency={healthMetrics.avgFrequency}
               avgCpm={healthMetrics.avgCpm}
               totalImpressions={healthMetrics.totalImpressions}
-              totalSpend={healthMetrics.totalSpend}
               qualityRanking={healthMetrics.qualityRanking}
               engagementRateRanking={healthMetrics.engagementRateRanking}
               conversionRateRanking={healthMetrics.conversionRateRanking}
+              hasDelivery={selectedCampaignHasDelivery}
             />
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Saúde da Campanha
-                  <Badge variant="outline">Health</Badge>
-                </CardTitle>
-                <CardDescription>Alcance, frequência, CPM e rankings de qualidade do Meta</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>
-                  Sem dados de saúde para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
-                  <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
-                </p>
-                <p>Quando não há entrega (impressões/gasto), é esperado que alcance, frequência e CPM fiquem zerados.</p>
-              </CardContent>
-            </Card>
-          ))}
+          </div>
+        </div>
 
+        {/* ─── 3. DIAGNÓSTICO & AÇÕES ─── */}
+        <DiagnosticsPanel
+          clientId={clientId}
+          optimizationData={optimizationData}
+          optimizationLoading={optimizationLoading}
+          metricsQuery={metricsQuery}
+          selectedCampaignId={selectedCampaignId}
+        />
+
+        {/* ─── Tracking Form (Conditional) ─── */}
         {showTrackingForm && selectedCampaignId && selectedCampaign && (
           <LeadTrackingForm
             campaignId={selectedCampaignId}
@@ -263,261 +232,151 @@ export default function ClientPerformancePage() {
           />
         )}
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">Tendência da Campanha</h2>
-                <p className="text-sm text-muted-foreground">
-                  {selectedCampaign ? selectedCampaign.campaignName : 'Nenhuma campanha selecionada'}
-                </p>
-              </div>
-              {summary.campaigns.length > 1 && (
-                <Select value={selectedCampaignId ?? undefined} onValueChange={(value) => setSelectedCampaignId(value)}>
-                  <SelectTrigger className="w-[220px]">
-                    <SelectValue placeholder="Selecione campanha" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {summary.campaigns.map((campaign) => (
-                      <SelectItem key={campaign.campaignId} value={campaign.campaignId}>
-                        {campaign.campaignName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
+        {/* ─── 4. DETALHES (Tabs) ─── */}
+        <Tabs defaultValue="campaigns" className="space-y-4">
+          <TabsList className="flex-wrap h-auto w-full justify-start">
+            <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
+            <TabsTrigger value="adsets">Conjuntos</TabsTrigger>
+            <TabsTrigger value="creatives">Criativos</TabsTrigger>
+            <TabsTrigger value="breakdowns">Público & Tempo</TabsTrigger>
+            <TabsTrigger value="funnel">Funil</TabsTrigger>
+            <TabsTrigger value="progress">Progresso</TabsTrigger>
+          </TabsList>
 
+          <TabsContent value="campaigns" className="space-y-4">
             {metricsLoading ? (
               <Card>
-                <CardHeader>
-                  <CardTitle>Carregando métricas...</CardTitle>
-                </CardHeader>
-                <CardContent className="flex h-[320px] items-center justify-center">
-                  <Activity className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
-              </Card>
-            ) : !selectedCampaignId ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sem entrega no período selecionado</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Nenhuma campanha teve entrega (gasto, impressões ou conversas) no período atual. Ajuste o período, selecione uma campanha ou rode um sync full da Meta.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="default"
-                      className="gap-2 bg-blue-600 hover:bg-blue-700"
-                      onClick={handleMetaSync}
-                      disabled={syncing || !metaAdAccountId.trim()}
-                    >
-                      <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-                      {syncing ? 'Sincronizando...' : 'Sync Meta Ads (Full)'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : !selectedCampaignHasDelivery ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sem entrega no período selecionado</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    A campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> não teve entrega (gasto, impressões ou conversas) no período{' '}
-                    <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Troque a campanha no seletor, ajuste o período ou rode um sync full da Meta.
-                  </p>
+                <CardContent className="flex items-center justify-center py-10">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </CardContent>
               </Card>
             ) : (
-              <PerformanceChart data={dailyMetrics} title="Tendência de Performance" />
+              <CampaignTable campaigns={summary.campaigns} />
             )}
-          </div>
+          </TabsContent>
 
-          <BpmnProgressTracker progress={bpmnProgress} />
-        </div>
+          <TabsContent value="adsets">
+            {!selectedCampaignId ? (
+              <div className="flex items-center justify-center p-8 border rounded-lg border-dashed text-muted-foreground bg-muted/20">
+                Selecione uma campanha no topo para visualizar conjuntos.
+              </div>
+            ) : selectedCampaignHasDelivery ? (
+              <AdSetTable adsets={adsetData} loading={adsetLoading} />
+            ) : (
+              <div className="flex items-center justify-center p-8 border rounded-lg border-dashed text-sm text-muted-foreground bg-muted/20">
+                Sem dados de conjuntos para esta campanha no período.
+              </div>
+            )}
+          </TabsContent>
 
-        {selectedCampaignId && leadTrackingData.length > 0 && <LeadTrackingHistory records={leadTrackingData} />}
-
-        {selectedCampaignId &&
-          (selectedCampaignHasDelivery ? (
-            <AdSetTable adsets={adsetData} loading={adsetLoading} />
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Conjuntos de Anuncios
-                  <Badge variant="outline">Ad Sets</Badge>
-                </CardTitle>
-                <CardDescription>Performance por publico/segmentacao</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>
-                  Sem dados de ad sets para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
-                  <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
-                </p>
-                <p>Sem entrega, é esperado não haver métricas por conjunto.</p>
-              </CardContent>
-            </Card>
-          ))}
-
-        {selectedCampaignId &&
-          (selectedCampaignHasDelivery ? (
-            <CreativePerformanceTable ads={adCreativeData} loading={adCreativeLoading} />
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Performance de Criativos
-                  <Badge variant="outline">Ads</Badge>
-                </CardTitle>
-                <CardDescription>Análise individual de cada anúncio</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>
-                  Sem dados de criativos para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
-                  <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
-                </p>
-                <p>Sem entrega, é esperado não haver métricas por anúncio.</p>
-              </CardContent>
-            </Card>
-          ))}
-
-        <CreativeLibrary
-          data={creativeLibraryData}
-          loading={creativeLibraryLoading}
-          scope={creativeLibraryScope}
-          hasCampaignSelected={Boolean(selectedCampaignId)}
-          onScopeChange={setCreativeLibraryScope}
-          creativeCoverage={creativeCoverage}
-          creativeCoverageDetails={creativeCoverageDetails}
-        />
-
-        {selectedCampaignId &&
-          (selectedCampaignHasDelivery ? (
-            <DemographicsChart ageGenderData={ageGenderData} placementData={placementData} loading={breakdownLoading} />
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Demografia (Idade + Gênero)</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <p>
-                    Sem dados demográficos para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
-                    <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
-                  </p>
-                  <p>Sem entrega, é esperado não haver breakdowns.</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Posicionamentos</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <p>
-                    Sem dados de posicionamento para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
-                    <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
-                  </p>
-                  <p>Sem entrega, é esperado não haver breakdowns.</p>
-                </CardContent>
-              </Card>
+          <TabsContent value="creatives" className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center rounded-lg border bg-muted p-1 text-muted-foreground">
+                <button
+                  type="button"
+                  className={`inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition-all ${creativeView === 'ads' ? 'bg-background text-foreground shadow-sm' : 'hover:text-foreground'}`}
+                  onClick={() => setCreativeView('ads')}
+                >
+                  Anúncios
+                </button>
+                <button
+                  type="button"
+                  className={`inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition-all ${creativeView === 'library' ? 'bg-background text-foreground shadow-sm' : 'hover:text-foreground'}`}
+                  onClick={() => setCreativeView('library')}
+                >
+                  Biblioteca
+                </button>
+              </div>
             </div>
-          ))}
 
-        {selectedCampaignId &&
-          (selectedCampaignHasDelivery ? (
-            <div className="grid gap-4 lg:grid-cols-2">
-              <TemporalAnalysis
-                title="Análise Temporal"
-                badgeLabel="Período selecionado"
-                data={temporalData?.byDayOfWeek || []}
-                bestDay={temporalData?.bestDay || null}
-                worstDay={temporalData?.worstDay || null}
-                cheapestDay={temporalData?.cheapestDay || null}
-                mostExpensiveDay={temporalData?.mostExpensiveDay || null}
-                loading={temporalLoading}
+            {creativeView === 'ads' ? (
+              !selectedCampaignId ? (
+                <div className="flex items-center justify-center p-8 border rounded-lg border-dashed text-muted-foreground bg-muted/20">
+                  Selecione uma campanha no topo para visualizar anúncios.
+                </div>
+              ) : selectedCampaignHasDelivery ? (
+                <CreativePerformanceTable ads={adCreativeData} loading={adCreativeLoading} creativeLibraryData={creativeLibraryData} />
+              ) : (
+                <div className="flex items-center justify-center p-8 border rounded-lg border-dashed text-sm text-muted-foreground bg-muted/20">
+                  Sem dados de anúncios para esta campanha no período.
+                </div>
+              )
+            ) : (
+              <CreativeLibrary
+                data={creativeLibraryData}
+                loading={creativeLibraryLoading}
+                scope={creativeLibraryScope}
+                hasCampaignSelected={Boolean(selectedCampaignId)}
+                onScopeChange={setCreativeLibraryScope}
+                creativeCoverage={creativeCoverage}
+                creativeCoverageDetails={creativeCoverageDetails}
               />
-              <TemporalAnalysis
-                title="Última semana"
-                badgeLabel="Últimos 7 dias"
-                description="Resumo por dia da semana nos últimos 7 dias (dentro do intervalo selecionado)."
-                data={temporalLastWeekData?.byDayOfWeek || []}
-                bestDay={temporalLastWeekData?.bestDay || null}
-                worstDay={temporalLastWeekData?.worstDay || null}
-                cheapestDay={temporalLastWeekData?.cheapestDay || null}
-                mostExpensiveDay={temporalLastWeekData?.mostExpensiveDay || null}
-                loading={temporalLastWeekLoading}
-              />
-            </div>
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Análise Temporal</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <p>
-                    Sem dados suficientes para análise temporal da campanha{' '}
-                    <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
-                    <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
-                  </p>
-                  <p>Sem entrega, é esperado não haver padrões por dia da semana.</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Última semana</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <p>
-                    Sem dados suficientes na última semana (dentro do intervalo) para a campanha{' '}
-                    <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span>.
-                  </p>
-                  <p>Ajuste o período ou selecione outra campanha.</p>
-                </CardContent>
-              </Card>
-            </div>
-          ))}
+            )}
+          </TabsContent>
 
-        {selectedCampaignId &&
-          (selectedCampaignHasDelivery ? (
-            <BusinessMetricsCard data={businessData} loading={businessLoading} />
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Métricas de Negócio</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>
-                  Sem dados de negócio para a campanha <span className="font-medium text-foreground">{selectedCampaign?.campaignName ?? 'selecionada'}</span> no período{' '}
-                  <span className="font-medium text-foreground">{selectedPeriodLabel ?? 'selecionado'}</span>.
-                </p>
-                <p>Sem entrega e/ou sem tracking manual de funil, CAC e LTV não podem ser calculados.</p>
-              </CardContent>
-            </Card>
-          ))}
+          <TabsContent value="breakdowns" className="space-y-4">
+            {!selectedCampaignId ? (
+              <div className="flex items-center justify-center p-8 border rounded-lg border-dashed text-muted-foreground bg-muted/20">
+                Selecione uma campanha no topo para visualizar breakdowns.
+              </div>
+            ) : selectedCampaignHasDelivery ? (
+              <>
+                <DemographicsChart ageGenderData={ageGenderData} placementData={placementData} loading={breakdownLoading} />
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <TemporalAnalysis
+                    title="Análise Temporal"
+                    badgeLabel="Período selecionado"
+                    data={temporalData?.byDayOfWeek || []}
+                    bestDay={temporalData?.bestDay || null}
+                    worstDay={temporalData?.worstDay || null}
+                    cheapestDay={temporalData?.cheapestDay || null}
+                    mostExpensiveDay={temporalData?.mostExpensiveDay || null}
+                    loading={temporalLoading}
+                  />
+                  <TemporalAnalysis
+                    title="Última semana"
+                    badgeLabel="Últimos 7 dias"
+                    description="Resumo por dia da semana nos últimos 7 dias."
+                    data={temporalLastWeekData?.byDayOfWeek || []}
+                    bestDay={temporalLastWeekData?.bestDay || null}
+                    worstDay={temporalLastWeekData?.worstDay || null}
+                    cheapestDay={temporalLastWeekData?.cheapestDay || null}
+                    mostExpensiveDay={temporalLastWeekData?.mostExpensiveDay || null}
+                    loading={temporalLastWeekLoading}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center p-8 border rounded-lg border-dashed text-sm text-muted-foreground bg-muted/20">
+                Sem dados demográficos e temporais para esta campanha no período.
+              </div>
+            )}
+          </TabsContent>
 
-        {metricsLoading ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Carregando campanhas...</CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-center justify-center py-10">
-              <Activity className="h-6 w-6 animate-spin text-muted-foreground" />
-            </CardContent>
-          </Card>
-        ) : (
-          <CampaignTable campaigns={summary.campaigns} />
-        )}
+          <TabsContent value="funnel" className="space-y-4">
+            {selectedCampaignId && selectedCampaign ? (
+              <>
+                <LeadTrackingForm
+                  campaignId={selectedCampaignId}
+                  campaignName={selectedCampaign.campaignName}
+                  onSuccess={() => reloadLeadTracking()}
+                />
+                {leadTrackingData.length > 0 && <LeadTrackingHistory records={leadTrackingData} />}
+              </>
+            ) : (
+              <div className="flex items-center justify-center p-8 border rounded-lg border-dashed text-muted-foreground bg-muted/20">
+                Selecione uma campanha no topo para registrar dados do funil.
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="progress">
+            <BpmnProgressTracker progress={bpmnProgress} />
+          </TabsContent>
+        </Tabs>
+
+        <ReportGenerator open={openReportGenerator} onClose={() => setOpenReportGenerator(false)} clientId={summary.clientId} clientName={summary.clientName} />
       </div>
-
-      <ReportGenerator open={openReportGenerator} onClose={() => setOpenReportGenerator(false)} clientId={summary.clientId} clientName={summary.clientName} />
     </div>
   );
 }

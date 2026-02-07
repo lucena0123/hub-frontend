@@ -3,11 +3,19 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableCell, TableRow } from '@/components/ui/table';
-import type { AdCreativeMetric } from '@/types';
+import type { AdCreativeMetric, CreativeLibraryStatus } from '@/types';
 
-import { formatCta, formatCurrency, formatNumber, getDomainFromUrl } from '../creative-library/formatters';
+import { formatCta, formatCurrency, formatNumber, getDomainFromUrl, statusBadgeClass, statusLabel } from '../creative-library/formatters';
 
 import { formatCreativeType, rateColor, toStringArray } from './formatters';
+
+type AnalysisReason = { code: string; message: string; severity: 'info' | 'warning' | 'critical' };
+
+const reasonBadgeClass: Record<AnalysisReason['severity'], string> = {
+  info: 'bg-blue-100 text-blue-800 border-blue-200',
+  warning: 'bg-amber-100 text-amber-900 border-amber-200',
+  critical: 'bg-rose-100 text-rose-800 border-rose-200',
+};
 
 export const CreativePerformanceRow = (props: {
   ad: AdCreativeMetric;
@@ -16,8 +24,10 @@ export const CreativePerformanceRow = (props: {
   expanded: boolean;
   hasVideoData: boolean;
   onToggle: () => void;
+  status?: CreativeLibraryStatus;
+  reasons?: AnalysisReason[];
 }) => {
-  const { ad, rowKey, snapshotId, expanded, hasVideoData, onToggle } = props;
+  const { ad, rowKey, snapshotId, expanded, hasVideoData, onToggle, status, reasons } = props;
 
   const creative = ad.creative || null;
   const primaryText = creative?.primaryText || null;
@@ -60,6 +70,11 @@ export const CreativePerformanceRow = (props: {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-medium truncate max-w-[320px]">{ad.adName || creative?.headline || ad.adId}</p>
+                {status && (
+                  <Badge variant="outline" className={statusBadgeClass[status]}>
+                    {statusLabel[status]}
+                  </Badge>
+                )}
                 {ctaLabel && <Badge variant="outline">{ctaLabel}</Badge>}
                 {typeLabel && <Badge variant="secondary">{typeLabel}</Badge>}
                 {domain && <Badge variant="outline">{domain}</Badge>}
@@ -93,6 +108,22 @@ export const CreativePerformanceRow = (props: {
         <TableRow key={`${rowKey}:details`}>
           <TableCell colSpan={colSpan} className="bg-muted/30">
             <div className="space-y-3 py-2">
+              {reasons && reasons.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Por que este status?</p>
+                  <div className="mt-1 space-y-1">
+                    {reasons.slice(0, 3).map((reason) => (
+                      <div key={reason.code} className="flex flex-wrap items-start gap-2">
+                        <Badge variant="outline" className={reasonBadgeClass[reason.severity]}>
+                          {reason.severity}
+                        </Badge>
+                        <p className="text-sm text-muted-foreground">{reason.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {primaryText && (
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">Texto principal</p>
