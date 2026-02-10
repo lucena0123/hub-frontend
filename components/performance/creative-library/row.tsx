@@ -33,6 +33,11 @@ export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expan
   const listCtas = Array.isArray(creative.ctaTypes) ? creative.ctaTypes : [];
   const listUrls = Array.isArray(creative.destinationUrls) ? creative.destinationUrls : [];
   const visual = creative.visualAttributes ?? null;
+  const visualStyleLabel: Record<'text-heavy' | 'image-first' | 'mixed', string> = {
+    'text-heavy': 'texto pesado',
+    'image-first': 'imagem primeiro',
+    mixed: 'misto',
+  };
 
   return (
     <>
@@ -154,9 +159,34 @@ export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expan
                         Texto na imagem: {visual.textDetected ? 'Sim' : 'Não'}
                       </Badge>
                     )}
+                    {visual.visualStyle && (
+                      <Badge variant="outline">
+                        Estilo: {visualStyleLabel[visual.visualStyle]}
+                      </Badge>
+                    )}
+                    {visual.textDensity != null && (
+                      <Badge variant="outline">
+                        Densidade texto: {(visual.textDensity * 100).toFixed(1)}%
+                      </Badge>
+                    )}
+                    {visual.contrastRatio != null && (
+                      <Badge variant="outline">
+                        Contraste: {visual.contrastLevel ?? '—'} ({visual.contrastRatio.toFixed(2)}x)
+                      </Badge>
+                    )}
                     {visual.edgeDensity != null && (
                       <Badge variant="outline">
                         Edge density: {visual.edgeDensity.toFixed(2)}
+                      </Badge>
+                    )}
+                    {visual.faceDetected != null && (
+                      <Badge variant="outline">
+                        Faces/pele: {visual.faceDetected ? 'Provavel' : 'Nao'}
+                      </Badge>
+                    )}
+                    {visual.objectDetected != null && (
+                      <Badge variant="outline">
+                        Objetos: {visual.objectDetected ? 'Provavel' : 'Nao'}
                       </Badge>
                     )}
                   </div>

@@ -30,6 +30,12 @@ export interface CreativeLibraryItem {
     dominantColor?: string | null;
     textDetected?: boolean | null;
     edgeDensity?: number | null;
+    textDensity?: number | null;
+    contrastRatio?: number | null;
+    contrastLevel?: 'low' | 'medium' | 'high' | null;
+    faceDetected?: boolean | null;
+    objectDetected?: boolean | null;
+    visualStyle?: 'text-heavy' | 'image-first' | 'mixed' | null;
     width?: number | null;
     height?: number | null;
     sampledAt?: string | null;
