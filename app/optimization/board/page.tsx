@@ -4,10 +4,8 @@ import { useEffect, useState } from "react";
 import {
     DndContext,
     DragOverlay,
-    defaultDropAnimationSideEffects,
     DragStartEvent,
     DragEndEvent,
-    DragOverEvent,
     useSensor,
     useSensors,
     PointerSensor,
@@ -26,7 +24,7 @@ import { RuleLibrary } from "@/components/optimization/rule-library";
 import { ClientSelect } from "@/components/optimization/client-select";
 
 export default function OptimizationBoardPage() {
-    const { tasks, columns, mode, fetchTasks, moveTask, setMode, isLoading, runRule } = useOptimizationStore();
+    const { tasks, columns, mode, fetchTasks, moveTask, setMode, isLoading } = useOptimizationStore();
     const [activeTask, setActiveTask] = useState<OptimizationTask | null>(null);
     const [activeRule, setActiveRule] = useState<OptimizationRule | null>(null);
     const [selectedClientId, setSelectedClientId] = useState<string | undefined>(undefined);

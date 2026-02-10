@@ -24,6 +24,7 @@ import { WeeklySummary } from '@/components/performance/weekly-summary';
 import { LeadGenMetricsCard } from '@/components/performance/lead-gen-metrics-card';
 import { LeadTrackingForm } from '@/components/performance/lead-tracking-form';
 import { TemporalAnalysis } from '@/components/performance/temporal-analysis';
+import { AiInsightsPanel } from '@/components/performance/ai-insights-panel';
 import { ReportGenerator } from '@/components/reports/report-generator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -259,6 +260,14 @@ export default function ClientPerformancePage() {
           selectedCampaignId={selectedCampaignId}
         />
 
+        {/* ─── 3.1 INSIGHTS DE IA ─── */}
+        <AiInsightsPanel
+          campaignId={selectedCampaignId}
+          campaignName={selectedCampaign?.campaignName ?? null}
+          creativeLibraryData={creativeLibraryData}
+          periodRange={resolvedRange}
+        />
+
         {/* ─── Tracking Form (Conditional) ─── */}
         {showTrackingForm && selectedCampaignId && selectedCampaign && (
           <LeadTrackingForm
@@ -291,7 +300,7 @@ export default function ClientPerformancePage() {
                 </CardContent>
               </Card>
             ) : (
-              <CampaignTable campaigns={summary.campaigns} />
+              <CampaignTable campaigns={summary.campaigns} clientId={summary.clientId} />
             )}
           </TabsContent>
 
@@ -350,6 +359,7 @@ export default function ClientPerformancePage() {
                 onScopeChange={setCreativeLibraryScope}
                 creativeCoverage={creativeCoverage}
                 creativeCoverageDetails={creativeCoverageDetails}
+                campaignId={selectedCampaignId}
               />
             )}
           </TabsContent>

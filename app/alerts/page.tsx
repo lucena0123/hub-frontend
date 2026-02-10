@@ -6,7 +6,6 @@ import { getAlerts } from '@/lib/api/client';
 import type { AlertsResponse } from '@/types';
 import { AlertCard } from '@/components/alerts/alert-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 const categories = [

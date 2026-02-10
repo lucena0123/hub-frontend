@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { Check, DollarSign, Pause, Play, RefreshCw, TrendingDown, TrendingUp, Trash2, Wand2, X, Copy } from 'lucide-react';
+import { Check, DollarSign, Pause, Play, RefreshCw, TrendingDown, TrendingUp, Wand2, X, Copy } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

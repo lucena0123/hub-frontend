@@ -7,6 +7,12 @@ import type {
   OptimizationCenterPlaybook,
   OptimizationCenterResponse,
   TemporalAnalysisResponse,
+  AbTestSuggestionsResponse,
+  ZeroConversationsDiagnostic,
+  CampaignBenchmarksResponse,
+  CreativeBenchmarkResponse,
+  ComplianceRiskResponse,
+  AiInsightsResponse,
 } from '@/types';
 
 import { apiClient } from './http';
@@ -188,6 +194,137 @@ export const getAudienceInsights = async (
   const { data } = await apiClient.get<AudienceInsightsResponse>(
     `/api/clients/${clientId}/audience-insights`,
     { params }
+  );
+  return data;
+};
+
+export const getZeroConversationsDiagnostic = async (
+  clientId: string,
+  params: {
+    campaignId?: string;
+    adsetId?: string;
+    period?: string;
+    startDate?: string;
+    endDate?: string;
+  }
+): Promise<ZeroConversationsDiagnostic> => {
+  const { data } = await apiClient.get<ZeroConversationsDiagnostic>(
+    `/api/clients/${clientId}/diagnostics/zero-conversations`,
+    { params }
+  );
+  return data;
+};
+
+export const getAbTestSuggestions = async (
+  snapshotId: string,
+  params?: { period?: string; startDate?: string; endDate?: string; force?: boolean }
+): Promise<AbTestSuggestionsResponse> => {
+  const query = params
+    ? {
+        period: params.period,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        force: params.force ? 'true' : undefined,
+      }
+    : undefined;
+  const { data } = await apiClient.get<AbTestSuggestionsResponse>(
+    `/api/creative-snapshots/${snapshotId}/ab-test-suggestions`,
+    query ? { params: query } : undefined
+  );
+  return data;
+};
+
+export const getCampaignBenchmarks = async (
+  clientId: string,
+  params?: { period?: string; startDate?: string; endDate?: string; baselineDays?: number }
+): Promise<CampaignBenchmarksResponse> => {
+  const query = params
+    ? {
+        period: params.period,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        baselineDays: params.baselineDays != null ? String(params.baselineDays) : undefined,
+      }
+    : undefined;
+  const { data } = await apiClient.get<CampaignBenchmarksResponse>(
+    `/api/clients/${clientId}/benchmarks/campaigns`,
+    query ? { params: query } : undefined
+  );
+  return data;
+};
+
+export const getCreativeBenchmark = async (
+  snapshotId: string,
+  params?: { period?: string; startDate?: string; endDate?: string; baselineDays?: number }
+): Promise<CreativeBenchmarkResponse> => {
+  const query = params
+    ? {
+        period: params.period,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        baselineDays: params.baselineDays != null ? String(params.baselineDays) : undefined,
+      }
+    : undefined;
+  const { data } = await apiClient.get<CreativeBenchmarkResponse>(
+    `/api/creative-snapshots/${snapshotId}/benchmark`,
+    query ? { params: query } : undefined
+  );
+  return data;
+};
+
+export const getComplianceRisk = async (
+  clientId: string,
+  params?: { period?: string; startDate?: string; endDate?: string; campaignId?: string }
+): Promise<ComplianceRiskResponse> => {
+  const query = params
+    ? {
+        period: params.period,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        campaignId: params.campaignId,
+      }
+    : undefined;
+  const { data } = await apiClient.get<ComplianceRiskResponse>(
+    `/api/clients/${clientId}/compliance-risk`,
+    query ? { params: query } : undefined
+  );
+  return data;
+};
+
+export const getCampaignAiInsights = async (
+  campaignId: string,
+  params?: { period?: string; startDate?: string; endDate?: string; force?: boolean }
+): Promise<AiInsightsResponse> => {
+  const query = params
+    ? {
+        period: params.period,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        force: params.force ? 'true' : undefined,
+      }
+    : undefined;
+  const { data } = await apiClient.get<AiInsightsResponse>(
+    `/api/campaigns/${campaignId}/ai-insights`,
+    query ? { params: query } : undefined
+  );
+  return data;
+};
+
+export const getCreativeAiInsights = async (
+  snapshotId: string,
+  params?: { period?: string; startDate?: string; endDate?: string; force?: boolean }
+): Promise<AiInsightsResponse> => {
+  const query = params
+    ? {
+        period: params.period,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        force: params.force ? 'true' : undefined,
+      }
+    : undefined;
+  const { data } = await apiClient.get<AiInsightsResponse>(
+    `/api/creative-snapshots/${snapshotId}/ai-insights`,
+    query ? { params: query } : undefined
   );
   return data;
 };

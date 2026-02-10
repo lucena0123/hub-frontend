@@ -165,6 +165,148 @@ export interface AlertsResponse {
   alerts: PerformanceAlert[];
 }
 
+export type ZeroConversationsSeverity = 'critical' | 'warning' | 'info';
+
+export type ZeroConversationsCause = {
+  code: string;
+  title: string;
+  description: string;
+  action: string;
+  severity: ZeroConversationsSeverity;
+};
+
+export type ZeroConversationsDiagnostic = {
+  clientId: string;
+  entity: { type: 'campaign' | 'adset'; id: string; name: string | null };
+  period: { start: string; end: string };
+  metrics: {
+    spend: number;
+    impressions: number;
+    reach: number;
+    clicks: number;
+    linkClicks: number;
+    landingPageViews: number;
+    conversations: number;
+    leads: number;
+    conversions: number;
+  };
+  objective?: string | null;
+  status?: string | null;
+  adsetStatusSummary?: {
+    total: number;
+    active: number;
+    paused: number;
+    disapproved: number;
+    withIssues: number;
+    pendingReview: number;
+  };
+  causes: ZeroConversationsCause[];
+  eligible: boolean;
+  generatedAt: string;
+};
+
+export type AbTestSuggestionCategory = 'hook' | 'cta' | 'format' | 'visual';
+export type AbTestTargetMetric = 'conversations' | 'ctr' | 'cpl' | 'hook_rate' | 'hold_rate';
+
+export type AbTestSuggestion = {
+  id: string;
+  category: AbTestSuggestionCategory;
+  title: string;
+  hypothesis: string;
+  targetMetric: AbTestTargetMetric;
+};
+
+export type AbTestSuggestionsResponse = {
+  snapshotId: string;
+  clientId: string | null;
+  period: { start: string; end: string };
+  suggestions: AbTestSuggestion[];
+  model: string | null;
+  promptId: string | null;
+  promptVersion: string | null;
+  cached: boolean;
+  createdAt: string | null;
+};
+
+export type BenchmarkInsight = {
+  code: 'cpl_above_p75' | 'ctr_below_p25' | 'within_baseline';
+  message: string;
+  metric: 'cpl' | 'ctr';
+  currentValue: number;
+  baselineValue: number | null;
+};
+
+export type CampaignBenchmark = {
+  campaignId: string;
+  campaignName: string;
+  themeKey: string;
+  metrics: { cpl: number | null; ctr: number | null };
+  baseline: { cplMedian: number | null; cplP75: number | null; ctrMedian: number | null; ctrP25: number | null };
+  insights: BenchmarkInsight[];
+};
+
+export type CampaignBenchmarksResponse = {
+  clientId: string;
+  period: { start: string; end: string };
+  baselinePeriod: { start: string; end: string };
+  campaigns: CampaignBenchmark[];
+};
+
+export type CreativeBenchmarkResponse = {
+  snapshotId: string;
+  clientId: string;
+  themeKey: string;
+  period: { start: string; end: string };
+  baselinePeriod: { start: string; end: string };
+  metrics: { cpl: number | null; ctr: number | null };
+  baseline: { cplMedian: number | null; cplP75: number | null; ctrMedian: number | null; ctrP25: number | null };
+  insights: BenchmarkInsight[];
+};
+
+export type ComplianceRiskSeverity = 'low' | 'warning' | 'critical';
+
+export type ComplianceRiskCreative = {
+  snapshotId: string;
+  headline: string | null;
+  ctaType: string | null;
+  score: number;
+  severity: ComplianceRiskSeverity;
+  issues: Array<{
+    ruleId: string;
+    severity: 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+    suggestion?: string;
+  }>;
+  campaignIds: string[];
+};
+
+export type ComplianceRiskCampaign = {
+  campaignId: string;
+  total: number;
+  critical: number;
+  warning: number;
+  low: number;
+};
+
+export type ComplianceRiskResponse = {
+  clientId: string;
+  period: { start: string; end: string };
+  creatives: ComplianceRiskCreative[];
+  campaigns: ComplianceRiskCampaign[];
+  summary: { total: number; critical: number; warning: number; low: number };
+};
+
+export type AiInsightsResponse = {
+  entity: { type: 'campaign' | 'creative'; id: string; name?: string | null };
+  period: { start: string; end: string };
+  summary: string;
+  recommendations: string[];
+  confidence: number;
+  cached: boolean;
+  createdAt: string | null;
+};
+
 export interface HealthStatus {
   status: 'healthy' | 'unhealthy';
   timestamp: string;

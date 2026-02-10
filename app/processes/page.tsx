@@ -96,7 +96,7 @@ export default function ProcessesPage() {
               <p className="text-muted-foreground text-sm tracking-widest">NO_ACTIVE_INSTANCES</p>
             </div>
           ) : (
-            processes.map((process, i) => (
+            processes.map((process) => (
               <div key={process.id} className="relative group border border-border/50 bg-card/30 hover:bg-card/50 transition-all p-4 rounded-sm hover:border-primary/50 overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary/20 group-hover:bg-primary transition-colors" />
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">

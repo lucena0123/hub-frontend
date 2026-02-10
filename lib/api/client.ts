@@ -77,6 +77,13 @@ export {
   getAudienceInsights,
   type AudienceSegment,
   type AudienceInsightsResponse,
+  getZeroConversationsDiagnostic,
+  getAbTestSuggestions,
+  getCampaignBenchmarks,
+  getCreativeBenchmark,
+  getComplianceRisk,
+  getCampaignAiInsights,
+  getCreativeAiInsights,
 } from './client/analytics';
 
 export {

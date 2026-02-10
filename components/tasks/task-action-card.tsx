@@ -6,7 +6,7 @@ import { executeOptimizationAction } from '@/lib/api/optimization';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, Pause, DollarSign, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { Play, Pause, DollarSign, AlertTriangle, Loader2 } from 'lucide-react';
 
 interface TaskActionCardProps {
     task: Task;
@@ -28,8 +28,6 @@ export function TaskActionCard({ task, onActionComplete }: TaskActionCardProps) 
 
             // TODO: Get real tokens from context or settings
             const accessToken = 'PLACEHOLDER_TOKEN';
-            const adAccountId = 'PLACEHOLDER_AD_ACCOUNT';
-
             if (accessToken === 'PLACEHOLDER_TOKEN') {
                 // Mock success for now if we don't have real tokens in frontend yet
                 // In a real app, we might proxy this through our backend with stored tokens

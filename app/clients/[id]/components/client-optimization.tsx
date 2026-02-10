@@ -3,11 +3,6 @@
 import { useEffect, useState } from 'react';
 import {
     AlertTriangle,
-    CheckCircle,
-    Settings,
-    TrendingDown,
-    TrendingUp,
-    Activity,
     AlertOctagon,
     ShieldCheck,
     ShieldAlert,
@@ -24,7 +19,6 @@ import {
 } from '@/lib/api/client';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,

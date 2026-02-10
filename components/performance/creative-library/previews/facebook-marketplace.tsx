@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
@@ -47,7 +49,14 @@ export function FacebookMarketplace({
                     {videoUrl ? (
                         <video src={videoUrl} controls className="w-full h-full object-cover" />
                     ) : imageUrl ? (
-                        <img src={imageUrl} alt="Ad Visual" className="w-full h-full object-cover" />
+                        <Image
+                            src={imageUrl}
+                            alt="Ad Visual"
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 375px) 100vw, 375px"
+                            unoptimized
+                        />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-300">
                             No Media

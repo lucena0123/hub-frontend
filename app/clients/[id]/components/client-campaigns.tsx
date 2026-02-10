@@ -47,7 +47,7 @@ export const ClientCampaignsTable = (props: { campaigns: ClientCampaign[] }) => 
         }));
         options.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
         setThemeOptions(options);
-      } catch (err) {
+      } catch {
         if (!active) return;
         setThemeError('Falha ao carregar temas do playbook.');
       } finally {
@@ -95,7 +95,7 @@ export const ClientCampaignsTable = (props: { campaigns: ClientCampaign[] }) => 
 
       setThemeOverrides((prev) => ({ ...prev, [campaignId]: nextThemeKey }));
       setCampaignSaveState(campaignId, { status: 'idle' });
-    } catch (err) {
+    } catch {
       setCampaignSaveState(campaignId, { status: 'error', message: 'Falha ao salvar tema.' });
     }
   };
@@ -110,7 +110,7 @@ export const ClientCampaignsTable = (props: { campaigns: ClientCampaign[] }) => 
       setSubthemeOverrides((prev) => ({ ...prev, [campaignId]: nextSubtheme }));
       setSubthemeDrafts((prev) => ({ ...prev, [campaignId]: draft }));
       setCampaignSaveState(campaignId, { status: 'idle' });
-    } catch (err) {
+    } catch {
       setCampaignSaveState(campaignId, { status: 'error', message: 'Falha ao salvar subtema.' });
     }
   };

@@ -1,15 +1,25 @@
 'use client';
 
+import Image from 'next/image';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableCell, TableRow } from '@/components/ui/table';
-import type { CreativeLibraryItem } from '@/types';
+import type { ComplianceRiskCreative, CreativeLibraryItem } from '@/types';
 
 import { formatCta, formatCurrency, formatNumber, getDomainFromUrl, pctClass, statusBadgeClass, statusLabel } from './formatters';
 import { AdPreviewDialog } from './previews/ad-preview-dialog';
+import { CreativeAbTestSuggestions } from './ab-test-suggestions';
+import { CreativeBenchmarkInsight } from './benchmark-insight';
 
-export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expanded: boolean; onToggle: () => void }) => {
-  const { creative, expanded, onToggle } = props;
+export const CreativeLibraryRow = (props: {
+  creative: CreativeLibraryItem;
+  expanded: boolean;
+  onToggle: () => void;
+  period: { start: string; end: string };
+  complianceRisk: ComplianceRiskCreative | null;
+}) => {
+  const { creative, expanded, onToggle, period, complianceRisk } = props;
 
   const thumbnailUrl = creative.thumbnailUrl || creative.imageUrl || null;
   const domain = getDomainFromUrl(creative.destinationUrl);
@@ -28,6 +38,12 @@ export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expan
     critical: 'bg-rose-100 text-rose-800 border-rose-200',
   };
 
+  const complianceIssueBadgeClass: Record<'error' | 'warning' | 'info', string> = {
+    error: 'bg-rose-100 text-rose-800 border-rose-200',
+    warning: 'bg-amber-100 text-amber-900 border-amber-200',
+    info: 'bg-blue-100 text-blue-800 border-blue-200',
+  };
+
   const listHeadlines = Array.isArray(creative.headlines) ? creative.headlines : [];
   const listPrimaryTexts = Array.isArray(creative.primaryTexts) ? creative.primaryTexts : [];
   const listCtas = Array.isArray(creative.ctaTypes) ? creative.ctaTypes : [];
@@ -39,6 +55,18 @@ export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expan
     mixed: 'misto',
   };
 
+  const complianceSeverity = complianceRisk?.severity ?? null;
+  const complianceBadgeClass: Record<NonNullable<typeof complianceSeverity>, string> = {
+    critical: 'bg-rose-500 text-white',
+    warning: 'bg-amber-400 text-amber-950',
+    low: 'bg-emerald-500 text-white',
+  };
+  const complianceLabel: Record<NonNullable<typeof complianceSeverity>, string> = {
+    critical: 'Risco crítico',
+    warning: 'Risco alerta',
+    low: 'Compliance ok',
+  };
+
   return (
     <>
       <TableRow className="cursor-pointer" onClick={onToggle}>
@@ -47,12 +75,14 @@ export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expan
             <AdPreviewDialog creative={creative}>
               <div className="h-10 w-10 flex-none overflow-hidden rounded-md border bg-muted cursor-pointer hover:opacity-80 transition-opacity">
                 {thumbnailUrl ? (
-                  <img
+                  <Image
                     src={thumbnailUrl}
                     alt="Preview do criativo"
+                    width={40}
+                    height={40}
                     className="h-full w-full object-cover"
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
+                    sizes="40px"
+                    unoptimized
                   />
                 ) : null}
               </div>
@@ -63,6 +93,11 @@ export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expan
                 <Badge variant="outline" className={statusBadgeClass[creative.status]}>
                   {statusLabel[creative.status]}
                 </Badge>
+                {complianceSeverity && (
+                  <Badge className={complianceBadgeClass[complianceSeverity]}>
+                    {complianceLabel[complianceSeverity]}
+                  </Badge>
+                )}
                 {ctaLabel && <Badge variant="outline">{ctaLabel}</Badge>}
                 {domain && <Badge variant="outline">{domain}</Badge>}
                 {creative.isDynamic && <Badge variant="secondary">dynamic</Badge>}
@@ -120,6 +155,31 @@ export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expan
                   </div>
                 </div>
               )}
+
+              {complianceRisk && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Compliance ({complianceRisk.score}/100)
+                  </p>
+                  {complianceRisk.issues.length > 0 ? (
+                    <div className="mt-1 space-y-1">
+                      {complianceRisk.issues.slice(0, 4).map((issue) => (
+                        <div key={issue.ruleId} className="flex flex-wrap items-start gap-2">
+                          <Badge variant="outline" className={complianceIssueBadgeClass[issue.severity]}>
+                            {issue.severity}
+                          </Badge>
+                          <p className="text-sm text-muted-foreground">{issue.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">Sem alertas de compliance para este criativo.</p>
+                  )}
+                </div>
+              )}
+
+              <CreativeBenchmarkInsight snapshotId={creative.snapshotId} period={period} />
+              <CreativeAbTestSuggestions snapshotId={creative.snapshotId} period={period} />
 
               {showVideoMetrics && (
                 <div>

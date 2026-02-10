@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -74,12 +76,14 @@ export const CreativePerformanceRow = (props: {
           <div className="flex items-start gap-3">
             <div className="h-10 w-10 flex-none overflow-hidden rounded-md border bg-muted">
               {thumbnailUrl ? (
-                <img
+                <Image
                   src={thumbnailUrl}
                   alt="Preview do criativo"
+                  width={40}
+                  height={40}
                   className="h-full w-full object-cover"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
+                  sizes="40px"
+                  unoptimized
                 />
               ) : null}
             </div>

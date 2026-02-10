@@ -1,4 +1,4 @@
-import { ChevronLeft, MoreHorizontal } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { InstagramFeedAd as InstagramFeed } from './instagram-feed';
 
 interface InstagramExploreProps {

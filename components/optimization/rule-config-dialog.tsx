@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { OptimizationRule } from "@/types/optimization";
 import { useOptimizationStore } from "@/lib/stores/optimization-store";
 import Ajv from "ajv";
@@ -18,76 +18,53 @@ interface RuleConfigDialogProps {
     clientId?: string;
 }
 
+const ajv = new Ajv({ allErrors: true, strict: false });
+
+const formatSchemaError = (err: ErrorObject) => {
+    const path = err.instancePath ? err.instancePath : '(root)';
+    const message = err.message ?? 'invalid';
+    return `${path} ${message}`;
+};
+
 export function RuleConfigDialog({ open, onOpenChange, rule, clientId }: RuleConfigDialogProps) {
     const { updateRuleConfig, selectedClientId } = useOptimizationStore();
-    const [jsonParams, setJsonParams] = useState("{}");
-    const [isValid, setIsValid] = useState(true);
+    const [jsonParams, setJsonParams] = useState(() => {
+        if (rule?.parameters) {
+            return JSON.stringify(rule.parameters, null, 2);
+        }
+        return "{}";
+    });
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [schemaErrors, setSchemaErrors] = useState<string[]>([]);
 
-    const ajv = useMemo(() => new Ajv({ allErrors: true, strict: false }), []);
     const schemaValidator = useMemo(() => {
         if (!rule?.parametersSchema || typeof rule.parametersSchema !== 'object') return null;
         try {
             return ajv.compile(rule.parametersSchema as Record<string, unknown>);
-        } catch (err) {
+        } catch {
             return null;
-        }
-    }, [ajv, rule?.parametersSchema]);
-
-    useEffect(() => {
-        if (rule?.parameters) {
-            setJsonParams(JSON.stringify(rule.parameters, null, 2));
-            setIsValid(true);
-            setSchemaErrors([]);
-        } else {
-            setJsonParams("{}");
-            setIsValid(true);
-            setSchemaErrors([]);
         }
     }, [rule]);
 
-    useEffect(() => {
-        if (!open) return;
-        if (!schemaValidator) {
-            setSchemaErrors([]);
-            return;
-        }
+    const parsedJson = useMemo(() => {
         try {
-            const parsed = JSON.parse(jsonParams);
-            const valid = schemaValidator(parsed);
-            if (!valid) {
-                const errs = (schemaValidator.errors ?? []).map((e) => formatSchemaError(e));
-                setSchemaErrors(errs);
-            } else {
-                setSchemaErrors([]);
-            }
-        } catch (_) {
-            setSchemaErrors([]);
+            return { value: JSON.parse(jsonParams), isValid: true };
+        } catch {
+            return { value: null, isValid: false };
         }
-    }, [jsonParams, schemaValidator, open]);
+    }, [jsonParams]);
+
+    const schemaErrors = useMemo(() => {
+        if (!open || !schemaValidator || !parsedJson.isValid || parsedJson.value == null) return [];
+        const valid = schemaValidator(parsedJson.value);
+        if (valid) return [];
+        return (schemaValidator.errors ?? []).map((e) => formatSchemaError(e));
+    }, [open, parsedJson.isValid, parsedJson.value, schemaValidator]);
+
+    const isValid = parsedJson.isValid;
 
     const handleChange = (val: string) => {
         setJsonParams(val);
         setErrorMessage(null);
-        try {
-            const parsed = JSON.parse(val);
-            setIsValid(true);
-            if (schemaValidator) {
-                const valid = schemaValidator(parsed);
-                if (!valid) {
-                    const errs = (schemaValidator.errors ?? []).map((e) => formatSchemaError(e));
-                    setSchemaErrors(errs);
-                } else {
-                    setSchemaErrors([]);
-                }
-            } else {
-                setSchemaErrors([]);
-            }
-        } catch (e) {
-            setIsValid(false);
-            setSchemaErrors([]);
-        }
     };
 
     const handleSave = async () => {
@@ -98,16 +75,10 @@ export function RuleConfigDialog({ open, onOpenChange, rule, clientId }: RuleCon
             return;
         }
 
+        if (schemaErrors.length > 0) return;
+
         try {
-            const params = JSON.parse(jsonParams);
-            if (schemaValidator) {
-                const valid = schemaValidator(params);
-                if (!valid) {
-                    const errs = (schemaValidator.errors ?? []).map((e) => formatSchemaError(e));
-                    setSchemaErrors(errs);
-                    return;
-                }
-            }
+            const params = parsedJson.value ?? {};
             await updateRuleConfig(rule.id, params, effectiveClientId);
             // alert(`Regra ${rule.title ?? rule.name ?? rule.id} atualizada.`); // Optional feedback
             onOpenChange(false);
@@ -124,12 +95,6 @@ export function RuleConfigDialog({ open, onOpenChange, rule, clientId }: RuleCon
                 setErrorMessage(message);
             }
         }
-    };
-
-    const formatSchemaError = (err: ErrorObject) => {
-        const path = err.instancePath ? err.instancePath : '(root)';
-        const message = err.message ?? 'invalid';
-        return `${path} ${message}`;
     };
 
     if (!rule) return null;

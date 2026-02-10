@@ -95,7 +95,8 @@ type AutoApprovalConfigResponse = AutoApprovalConfig & { clientId: string };
 
 export const getAutoApprovalConfig = async (clientId: string): Promise<AutoApprovalConfig> => {
     const { data } = await apiClient.get<AutoApprovalConfigResponse>(`/api/clients/${clientId}/automation/config`);
-    const { clientId: _clientId, ...config } = data;
+    const { clientId: responseClientId, ...config } = data;
+    void responseClientId;
     return config;
 };
 
@@ -104,6 +105,7 @@ export const updateAutoApprovalConfig = async (
     config: Partial<AutoApprovalConfig>
 ): Promise<AutoApprovalConfig> => {
     const { data } = await apiClient.put<AutoApprovalConfigResponse>(`/api/clients/${clientId}/automation/config`, config);
-    const { clientId: _clientId, ...updated } = data;
+    const { clientId: responseClientId, ...updated } = data;
+    void responseClientId;
     return updated;
 };

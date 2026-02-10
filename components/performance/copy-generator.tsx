@@ -6,7 +6,7 @@ import { Copy, Check, Loader2, Sparkles, Zap, AlertTriangle } from 'lucide-react
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { generateCopySuggestions, validateCreativeCopy, type CopySuggestion, type CopyValidationResult } from '@/lib/api/client';
+import { generateCopySuggestions, validateCreativeCopy, type CopySuggestion } from '@/lib/api/client';
 import { PromptBadge } from '@/components/ui/prompt-badge';
 
 const THEME_OPTIONS = [

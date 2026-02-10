@@ -80,6 +80,8 @@ const severityBorder: Record<OptimizationCenterSeverity, string> = {
   info: 'border-l-slate-300',
 };
 
+const EMPTY_ITEMS: OptimizationCenterResponse['items'] = [];
+
 const actionIconMap: Record<string, typeof Wand2> = {
   pause: Pause,
   scale: TrendingUp,
@@ -233,7 +235,7 @@ export function DiagnosticsPanel({
 
   // --- Optimization data ---
   const summary = optimizationData?.summary ?? null;
-  const items = optimizationData?.items ?? [];
+  const items = optimizationData?.items ?? EMPTY_ITEMS;
   const theme = optimizationData?.theme ?? null;
   const visibleItems = useMemo(() => (showAll ? items : items.slice(0, 8)), [items, showAll]);
 

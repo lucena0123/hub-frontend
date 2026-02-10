@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Users, PlayCircle, Bell, LogOut, Settings, Sparkles, BarChart3, Kanban } from 'lucide-react';
+import { LayoutDashboard, Users, PlayCircle, Bell, LogOut, Sparkles, BarChart3, Kanban } from 'lucide-react';
 import { AlertBadge } from '@/components/alerts/alert-badge';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { useAuth } from '@/contexts/auth-context';

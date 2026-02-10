@@ -25,26 +25,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const refreshUser = useCallback(async () => {
+  const initAuth = useCallback(async () => {
+    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     try {
+      setLoading(true);
       const me = await authApi.getMe();
       setUser(me);
     } catch {
       localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
       setUser(null);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-    if (token) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      refreshUser().finally(() => setLoading(false));
-    } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoading(false);
+  const refreshUser = useCallback(async () => {
+    try {
+      await initAuth();
+    } catch {
+      // initAuth already handles error state
     }
-  }, [refreshUser]);
+  }, [initAuth]);
+
+  useEffect(() => {
+    void initAuth();
+  }, [initAuth]);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await authApi.login({ email, password });

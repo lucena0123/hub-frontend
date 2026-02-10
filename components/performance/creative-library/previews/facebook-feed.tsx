@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, ThumbsUp, MessageSquare, Share2, Globe } from 'lucide-react';
@@ -22,7 +24,6 @@ export function FacebookFeed({
     primaryText,
     headline,
     ctaText = 'WhatsApp',
-    ctaType,
 }: FacebookFeedProps) {
     const displayHeadline = headline || 'Saber agora';
     const displayCta = ctaText || 'WhatsApp';
@@ -62,7 +63,14 @@ export function FacebookFeed({
                 {videoUrl ? (
                     <video src={videoUrl} controls className="w-full h-auto object-cover" />
                 ) : imageUrl ? (
-                    <img src={imageUrl} alt="Ad Visual" className="w-full h-auto object-cover" />
+                    <Image
+                        src={imageUrl}
+                        alt="Ad Visual"
+                        width={1200}
+                        height={630}
+                        className="w-full h-auto object-cover"
+                        unoptimized
+                    />
                 ) : (
                     <div className="h-64 w-full flex items-center justify-center text-gray-400">
                         Mídia indisponível

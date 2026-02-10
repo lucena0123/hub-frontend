@@ -1,8 +1,8 @@
+import Image from 'next/image';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { Heart, MessageCircle, MoreHorizontal, Send, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SiWhatsapp } from 'react-icons/si';
 
 interface InstagramFeedAdProps {
     username?: string;
@@ -65,7 +65,14 @@ export function InstagramFeedAd({
                 {videoUrl ? (
                     <video src={videoUrl} controls className="w-full h-auto object-cover" />
                 ) : imageUrl ? (
-                    <img src={imageUrl} alt="Ad Visual" className="w-full h-auto object-cover" />
+                    <Image
+                        src={imageUrl}
+                        alt="Ad Visual"
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 375px) 100vw, 375px"
+                        unoptimized
+                    />
                 ) : (
                     <div className="flex flex-col items-center text-gray-400 gap-2 p-8 text-center">
                         <div className="h-12 w-12 bg-gray-200 rounded-lg animate-pulse" />

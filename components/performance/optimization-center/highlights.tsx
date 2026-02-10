@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { OptimizationCenterHighlight } from '@/types';
@@ -48,12 +50,14 @@ const HighlightCard = (props: { title: string; badge: string; items: Optimizatio
               <div className="flex items-center gap-3 min-w-0">
                 <div className="h-9 w-9 flex-none overflow-hidden rounded-md border bg-muted">
                   {thumbnailUrl ? (
-                    <img
+                    <Image
                       src={thumbnailUrl}
                       alt="Preview do criativo"
+                      width={36}
+                      height={36}
                       className="h-full w-full object-cover"
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
+                      sizes="36px"
+                      unoptimized
                     />
                   ) : null}
                 </div>
@@ -92,4 +96,3 @@ export const OptimizationHighlights = (props: {
     </div>
   );
 };
-

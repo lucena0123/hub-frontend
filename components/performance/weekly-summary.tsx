@@ -124,7 +124,6 @@ function KpiCard({
 
 export function WeeklySummary({ clientId }: { clientId: string }) {
   const [data, setData] = useState<WeeklySummaryData | null>(null);
-  const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [hasChecked, setHasChecked] = useState(false);
 

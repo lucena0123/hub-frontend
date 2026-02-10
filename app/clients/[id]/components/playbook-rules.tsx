@@ -209,7 +209,7 @@ const isExecutableCondition = (condition?: string | null) => {
   try {
     const parsed = JSON.parse(trimmed);
     return typeof parsed === 'object';
-  } catch (_error) {
+  } catch {
     return false;
   }
 };
@@ -276,7 +276,7 @@ function RuleEditorDialog(props: {
       setConditionValid(true);
       setConditionError(null);
       setConditionExecutable(true);
-    } catch (_error) {
+    } catch {
       setConditionValid(false);
       setConditionError('JSON Logic inválido.');
       setConditionExecutable(false);
@@ -578,7 +578,7 @@ function RuleEditorDialog(props: {
                 try {
                   if (event.target.value.trim()) JSON.parse(event.target.value);
                   setTemplateValid(true);
-                } catch (_) {
+                } catch {
                   setTemplateValid(false);
                 }
               }}
@@ -598,7 +598,7 @@ function RuleEditorDialog(props: {
                 try {
                   if (event.target.value.trim()) JSON.parse(event.target.value);
                   setSchemaValid(true);
-                } catch (_) {
+                } catch {
                   setSchemaValid(false);
                 }
               }}
@@ -639,7 +639,6 @@ export function ClientPlaybookRules({ clientId }: { clientId: string }) {
 
   useEffect(() => {
     let active = true;
-    setPlaybookLoading(true);
     getOptimizationCenterPlaybook()
       .then((data) => {
         if (active) setPlaybook(data);
@@ -657,7 +656,6 @@ export function ClientPlaybookRules({ clientId }: { clientId: string }) {
 
   useEffect(() => {
     let active = true;
-    setRulesLoading(true);
     fetchRules(clientId)
       .catch(() => undefined)
       .finally(() => {
@@ -748,7 +746,8 @@ export function ClientPlaybookRules({ clientId }: { clientId: string }) {
           if (editorMode === 'create') {
             await createRule(payload, clientId);
           } else if (editorRule) {
-            const { id: _id, ...rest } = payload;
+            const { id, ...rest } = payload;
+            void id;
             await updateRuleMeta(editorRule.id, rest, clientId);
           }
         }}

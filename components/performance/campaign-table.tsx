@@ -15,10 +15,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { getOptimizationCenterPlaybook, updateCampaign } from '@/lib/api/client';
-import type { PerformanceSummary } from '@/types';
+import { ZeroConversationsDialog } from '@/components/performance/zero-conversations-dialog';
+import { getCampaignBenchmarks, getComplianceRisk, getOptimizationCenterPlaybook, updateCampaign } from '@/lib/api/client';
+import type { CampaignBenchmark, ComplianceRiskCampaign, ComplianceRiskResponse, PerformanceSummary } from '@/types';
 
 interface CampaignTableProps {
+  clientId: string;
   campaigns: PerformanceSummary[];
 }
 
@@ -66,7 +68,7 @@ const formatPercent = (value: number) => {
   return `${value.toFixed(1)}%`;
 };
 
-export function CampaignTable({ campaigns }: CampaignTableProps) {
+export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
   const [themeOptions, setThemeOptions] = useState<ThemeOption[]>([]);
   const [themeLoading, setThemeLoading] = useState(true);
   const [themeError, setThemeError] = useState<string | null>(null);
@@ -74,6 +76,12 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
   const [subthemeOverrides, setSubthemeOverrides] = useState<Record<string, string | null>>({});
   const [subthemeDrafts, setSubthemeDrafts] = useState<Record<string, string>>({});
   const [saveState, setSaveState] = useState<Record<string, SaveState>>({});
+  const [benchmarkMap, setBenchmarkMap] = useState<Record<string, CampaignBenchmark>>({});
+  const [benchmarkPeriod, setBenchmarkPeriod] = useState<{ start: string; end: string } | null>(null);
+  const [benchmarkError, setBenchmarkError] = useState<string | null>(null);
+  const [complianceMap, setComplianceMap] = useState<Record<string, ComplianceRiskCampaign>>({});
+  const [complianceSummary, setComplianceSummary] = useState<ComplianceRiskResponse['summary'] | null>(null);
+  const [complianceError, setComplianceError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -90,7 +98,7 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
         }));
         options.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
         setThemeOptions(options);
-      } catch (err) {
+      } catch {
         if (!active) return;
         setThemeError('Falha ao carregar temas do playbook.');
       } finally {
@@ -116,6 +124,70 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
     });
   }, [campaigns]);
 
+  useEffect(() => {
+    if (!clientId || campaigns.length === 0) return;
+    const period = campaigns[0]?.period;
+    if (!period?.start || !period?.end) return;
+    let active = true;
+
+    const loadBenchmarks = async () => {
+      try {
+        setBenchmarkError(null);
+        const response = await getCampaignBenchmarks(clientId, {
+          startDate: period.start,
+          endDate: period.end,
+        });
+        if (!active) return;
+        const nextMap: Record<string, CampaignBenchmark> = {};
+        response.campaigns.forEach((item) => {
+          nextMap[item.campaignId] = item;
+        });
+        setBenchmarkMap(nextMap);
+        setBenchmarkPeriod(response.baselinePeriod ?? null);
+      } catch {
+        if (!active) return;
+        setBenchmarkError('Falha ao carregar baseline do cliente.');
+      }
+    };
+
+    void loadBenchmarks();
+    return () => {
+      active = false;
+    };
+  }, [campaigns, clientId]);
+
+  useEffect(() => {
+    if (!clientId || campaigns.length === 0) return;
+    const period = campaigns[0]?.period;
+    if (!period?.start || !period?.end) return;
+    let active = true;
+
+    const loadCompliance = async () => {
+      try {
+        setComplianceError(null);
+        const response = await getComplianceRisk(clientId, {
+          startDate: period.start,
+          endDate: period.end,
+        });
+        if (!active) return;
+        const nextMap: Record<string, ComplianceRiskCampaign> = {};
+        response.campaigns.forEach((item) => {
+          nextMap[item.campaignId] = item;
+        });
+        setComplianceMap(nextMap);
+        setComplianceSummary(response.summary ?? null);
+      } catch {
+        if (!active) return;
+        setComplianceError('Falha ao carregar compliance.');
+      }
+    };
+
+    void loadCompliance();
+    return () => {
+      active = false;
+    };
+  }, [campaigns, clientId]);
+
   const setCampaignSaveState = (campaignId: string, next: SaveState) => {
     setSaveState((prev) => ({ ...prev, [campaignId]: next }));
   };
@@ -138,7 +210,7 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
 
       setThemeOverrides((prev) => ({ ...prev, [campaignId]: nextThemeKey }));
       setCampaignSaveState(campaignId, { status: 'idle' });
-    } catch (err) {
+    } catch {
       setCampaignSaveState(campaignId, { status: 'error', message: 'Falha ao salvar tema.' });
     }
   };
@@ -153,7 +225,7 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
       setSubthemeOverrides((prev) => ({ ...prev, [campaignId]: nextSubtheme }));
       setSubthemeDrafts((prev) => ({ ...prev, [campaignId]: draft }));
       setCampaignSaveState(campaignId, { status: 'idle' });
-    } catch (err) {
+    } catch {
       setCampaignSaveState(campaignId, { status: 'error', message: 'Falha ao salvar subtema.' });
     }
   };
@@ -173,6 +245,31 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
         </CardTitle>
         {themeError && (
           <p className="text-xs text-rose-600">{themeError}</p>
+        )}
+        {benchmarkError && (
+          <p className="text-xs text-rose-600">{benchmarkError}</p>
+        )}
+        {benchmarkPeriod && (
+          <p className="text-xs text-muted-foreground">
+            Baseline interno: {benchmarkPeriod.start} → {benchmarkPeriod.end} (CPL/CTR)
+          </p>
+        )}
+        {complianceError && (
+          <p className="text-xs text-rose-600">{complianceError}</p>
+        )}
+        {complianceSummary && (
+          <div className="flex flex-wrap items-center gap-2">
+            {complianceSummary.critical > 0 && (
+              <Badge className="bg-rose-500 text-white text-xs">
+                compliance crítico: {complianceSummary.critical}
+              </Badge>
+            )}
+            {complianceSummary.warning > 0 && (
+              <Badge className="bg-amber-400 text-amber-950 text-xs">
+                compliance alerta: {complianceSummary.warning}
+              </Badge>
+            )}
+          </div>
         )}
       </CardHeader>
       <CardContent>
@@ -225,10 +322,49 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
                   const themeDisabled = themeLoading || themeOptions.length === 0 || isSaving;
                   const conversionRate =
                     campaign.totalClicks > 0 ? (campaign.totalConversions / campaign.totalClicks) * 100 : 0;
+                  const contacts =
+                    campaign.totalLeads > 0
+                      ? campaign.totalLeads
+                      : campaign.totalMessagingConversations > 0
+                        ? campaign.totalMessagingConversations
+                        : campaign.totalConversions;
+                  const showZeroConversations = (campaign.totalSpend ?? 0) > 0 && contacts === 0;
+                  const benchmark = benchmarkMap[campaign.campaignId];
+                  const benchmarkMessage = benchmark?.insights?.[0]?.message ?? null;
+                  const compliance = complianceMap[campaign.campaignId];
+                  const complianceBadge =
+                    compliance?.critical && compliance.critical > 0
+                      ? { label: 'Compliance crítico', className: 'bg-rose-500 text-white' }
+                      : compliance?.warning && compliance.warning > 0
+                        ? { label: 'Compliance alerta', className: 'bg-amber-400 text-amber-950' }
+                        : null;
 
                   return (
                     <TableRow key={campaign.campaignId}>
-                      <TableCell className="font-medium max-w-[200px] truncate">{campaign.campaignName}</TableCell>
+                      <TableCell className="font-medium max-w-[200px] truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate">{campaign.campaignName}</span>
+                          {showZeroConversations && (
+                            <ZeroConversationsDialog
+                              clientId={clientId}
+                              campaignId={campaign.campaignId}
+                              campaignName={campaign.campaignName}
+                              period={campaign.period}
+                            >
+                              <Button
+                                variant="outline"
+                                size="xs"
+                                className="border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                              >
+                                Sem conversas
+                              </Button>
+                            </ZeroConversationsDialog>
+                          )}
+                        </div>
+                        {benchmarkMessage && (
+                          <p className="text-[11px] text-muted-foreground mt-1">{benchmarkMessage}</p>
+                        )}
+                      </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {campaign.platform}
                         {campaign.budgetMode && campaign.budgetMode !== 'unknown' && (
@@ -347,9 +483,16 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
                         {formatPercent(campaign.budgetUtilization || 0)}
                       </TableCell>
                       <TableCell>
-                        <Badge className={statusColors[campaign.status] ?? 'bg-slate-500'}>
-                          {campaign.status}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge className={statusColors[campaign.status] ?? 'bg-slate-500'}>
+                            {campaign.status}
+                          </Badge>
+                          {complianceBadge && (
+                            <Badge className={`text-[10px] ${complianceBadge.className}`}>
+                              {complianceBadge.label}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

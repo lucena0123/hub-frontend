@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { AlertTriangle, BarChart3, Loader2, TrendingUp, Users, Zap, Activity } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiClient } from '@/lib/api/client/http';
 import { cn } from '@/lib/utils';
 

@@ -4,16 +4,11 @@ import { useEffect, useState } from 'react';
 import { getDashboardOverview } from '@/lib/api/client';
 import type { DashboardOverview } from '@/types';
 import {
-  Users,
-  PlayCircle,
   Activity,
-  Target,
-  TrendingUp,
   Cpu,
   Terminal,
   Wifi,
   Zap,
-  Clock,
   AlertTriangle,
   Server
 } from 'lucide-react';
@@ -22,13 +17,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Cell,
   AreaChart,
   Area
 } from 'recharts';
@@ -100,7 +92,7 @@ export default function DashboardPage() {
           // Fallback mock check or error
           setError("SYSTEM_FAILURE: INVALID_DATA_STREAM");
         }
-      } catch (err) {
+      } catch {
         setError("CONNECTION_SEVERED");
       } finally {
         setLoading(false);

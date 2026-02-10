@@ -5,7 +5,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { OptimizationTask } from "@/types/optimization";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertTriangle, PlayCircle } from "lucide-react";
 
 interface TaskCardProps {

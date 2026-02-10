@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { CreativeCoverage } from '@/app/clients/[id]/performance/use-client-performance-dashboard';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { MetaSyncDetails } from '@/lib/api/client';
-import type { CreativeLibraryResponse, CreativeLibraryStatus } from '@/types';
+import { getComplianceRisk } from '@/lib/api/client';
+import type { ComplianceRiskCreative, ComplianceRiskResponse, CreativeLibraryResponse, CreativeLibraryStatus } from '@/types';
 import { formatDate } from '@/lib/utils';
 
 import { statusBadgeClass } from './creative-library/formatters';
@@ -25,6 +26,7 @@ interface CreativeLibraryProps {
   onScopeChange: (value: 'campaign' | 'client') => void;
   creativeCoverage?: CreativeCoverage | null;
   creativeCoverageDetails?: MetaSyncDetails | null;
+  campaignId?: string | null;
 }
 
 type FilterStatus = 'all' | CreativeLibraryStatus;
@@ -45,13 +47,18 @@ export function CreativeLibrary({
   onScopeChange,
   creativeCoverage,
   creativeCoverageDetails,
+  campaignId,
 }: CreativeLibraryProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [sortKey, setSortKey] = useState<SortKey>('spend');
+  const [complianceMap, setComplianceMap] = useState<Record<string, ComplianceRiskCreative>>({});
+  const [complianceSummary, setComplianceSummary] = useState<ComplianceRiskResponse['summary'] | null>(null);
+  const [complianceError, setComplianceError] = useState<string | null>(null);
 
   const creatives = data?.creatives ?? EMPTY_CREATIVES;
   const insights = data?.insights ?? null;
+  const period = data?.period ?? null;
   const periodLabel = data?.period
     ? `${formatDate(data.period.start, 'dd/MM/yyyy', data.period.start)} – ${formatDate(data.period.end, 'dd/MM/yyyy', data.period.end)}`
     : null;
@@ -133,6 +140,37 @@ export function CreativeLibrary({
     });
     return sorted;
   }, [creatives, sortKey, statusFilter]);
+
+  useEffect(() => {
+    if (!data?.clientId || !period?.start || !period?.end) return;
+    let active = true;
+
+    const loadCompliance = async () => {
+      try {
+        setComplianceError(null);
+        const response = await getComplianceRisk(data.clientId, {
+          startDate: period.start,
+          endDate: period.end,
+          campaignId: scope === 'campaign' ? campaignId ?? undefined : undefined,
+        });
+        if (!active) return;
+        const nextMap: Record<string, ComplianceRiskCreative> = {};
+        response.creatives.forEach((item) => {
+          nextMap[item.snapshotId] = item;
+        });
+        setComplianceMap(nextMap);
+        setComplianceSummary(response.summary ?? null);
+      } catch {
+        if (!active) return;
+        setComplianceError('Falha ao carregar riscos de compliance.');
+      }
+    };
+
+    void loadCompliance();
+    return () => {
+      active = false;
+    };
+  }, [campaignId, data?.clientId, period?.end, period?.start, scope]);
 
   const toggleExpanded = (snapshotId: string) => {
     setExpanded((prev) => {
@@ -217,7 +255,29 @@ export function CreativeLibrary({
               </Badge>
             </div>
           ) : null}
+          {complianceSummary ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {complianceSummary.critical > 0 && (
+                <Badge className="bg-rose-500 text-white text-xs">
+                  compliance crítico: {complianceSummary.critical}
+                </Badge>
+              )}
+              {complianceSummary.warning > 0 && (
+                <Badge className="bg-amber-400 text-amber-950 text-xs">
+                  compliance alerta: {complianceSummary.warning}
+                </Badge>
+              )}
+              {complianceSummary.critical === 0 && complianceSummary.warning === 0 && (
+                <Badge variant="outline" className="text-xs">
+                  compliance ok
+                </Badge>
+              )}
+            </div>
+          ) : null}
         </div>
+        {complianceError && (
+          <p className="text-xs text-rose-600">{complianceError}</p>
+        )}
       </CardHeader>
       <CardContent className="space-y-6">
         <CreativeLibraryInsightsPanel insights={insights} />
@@ -290,6 +350,8 @@ export function CreativeLibrary({
                       creative={creative}
                       expanded={expanded.has(creative.snapshotId)}
                       onToggle={() => toggleExpanded(creative.snapshotId)}
+                      period={period ?? { start: '', end: '' }}
+                      complianceRisk={complianceMap[creative.snapshotId] ?? null}
                     />
                   ))
                 )}

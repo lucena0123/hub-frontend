@@ -91,6 +91,7 @@ export interface PerformanceSummary {
   totalImpressions: number;
   totalClicks: number;
   totalConversions: number;
+  totalLeads: number;
   totalSpend: number;
   totalRevenue: number;
   totalMessagingConversations: number;
@@ -141,6 +142,7 @@ export interface ClientPerformanceSummary {
   totalImpressions: number;
   totalClicks: number;
   totalConversions: number;
+  totalLeads: number;
   totalSpend: number;
   totalRevenue: number;
   totalMessagingConversations: number;
