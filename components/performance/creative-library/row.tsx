@@ -32,6 +32,7 @@ export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expan
   const listPrimaryTexts = Array.isArray(creative.primaryTexts) ? creative.primaryTexts : [];
   const listCtas = Array.isArray(creative.ctaTypes) ? creative.ctaTypes : [];
   const listUrls = Array.isArray(creative.destinationUrls) ? creative.destinationUrls : [];
+  const visual = creative.visualAttributes ?? null;
 
   return (
     <>
@@ -130,6 +131,33 @@ export const CreativeLibraryRow = (props: { creative: CreativeLibraryItem; expan
                     )}
                     {creative.metrics.videoThruplayTotal > 0 && (
                       <Badge variant="outline">thruplay: {formatNumber(creative.metrics.videoThruplayTotal)}</Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {visual && (visual.dominantColor || visual.textDetected != null) && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Atributos visuais</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {visual.dominantColor && (
+                      <Badge variant="outline" className="flex items-center gap-2">
+                        <span
+                          className="inline-block h-3 w-3 rounded-sm border"
+                          style={{ backgroundColor: visual.dominantColor }}
+                        />
+                        Cor dominante: {visual.dominantColor}
+                      </Badge>
+                    )}
+                    {visual.textDetected != null && (
+                      <Badge variant="outline">
+                        Texto na imagem: {visual.textDetected ? 'Sim' : 'Não'}
+                      </Badge>
+                    )}
+                    {visual.edgeDensity != null && (
+                      <Badge variant="outline">
+                        Edge density: {visual.edgeDensity.toFixed(2)}
+                      </Badge>
                     )}
                   </div>
                 </div>

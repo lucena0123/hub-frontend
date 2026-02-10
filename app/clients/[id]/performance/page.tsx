@@ -14,7 +14,14 @@ import { CreativeLibrary } from '@/components/performance/creative-library';
 import { CreativePerformanceTable } from '@/components/performance/creative-performance-table';
 import { DemographicsChart } from '@/components/performance/demographics-chart';
 import { DiagnosticsPanel } from '@/components/performance/diagnostics-panel';
+import { BusinessMetricsCard } from '@/components/performance/business-metrics-card';
+import { WinnerLibrary } from '@/components/performance/winner-library';
+import { CopyGenerator } from '@/components/performance/copy-generator';
+import { AudienceInsights } from '@/components/performance/audience-insights';
+import { CampaignHealthScores } from '@/components/performance/campaign-health-score';
 import { KpiOverviewStrip } from '@/components/performance/kpi-overview-strip';
+import { WeeklySummary } from '@/components/performance/weekly-summary';
+import { LeadGenMetricsCard } from '@/components/performance/lead-gen-metrics-card';
 import { LeadTrackingForm } from '@/components/performance/lead-tracking-form';
 import { TemporalAnalysis } from '@/components/performance/temporal-analysis';
 import { ReportGenerator } from '@/components/reports/report-generator';
@@ -71,6 +78,8 @@ export default function ClientPerformancePage() {
     optimizationLoading,
     ageGenderData,
     placementData,
+    regionData,
+    countryData,
     breakdownLoading,
     temporalData,
     temporalLoading,
@@ -190,6 +199,33 @@ export default function ClientPerformancePage() {
           loading={businessLoading || metricsLoading}
         />
 
+        {/* ─── 1.5 RESUMO SEMANAL ─── */}
+        <WeeklySummary clientId={clientId!} />
+
+        {/* ─── 1.6 FUNIL & NEGÓCIO ─── */}
+        {selectedCampaignId ? (
+          <div className="grid gap-6 lg:grid-cols-2">
+            <LeadGenMetricsCard
+              totalMessagingConversations={messagingMetrics.totalMessagingConversations}
+              totalMessagingFirstReply={messagingMetrics.totalMessagingFirstReply}
+              totalLinkClicks={messagingMetrics.totalLinkClicks}
+              totalSpend={messagingMetrics.totalSpend}
+              hasManualTracking={leadTrackingData.length > 0}
+              qualifiedLeads={aggregatedLeadData.qualifiedLeads}
+              disqualificationReasons={aggregatedLeadData.disqualificationReasons}
+              contractsClosed={aggregatedLeadData.contractsClosed}
+              totalRevenue={aggregatedLeadData.totalRevenue}
+            />
+            <BusinessMetricsCard data={businessData} loading={businessLoading} />
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="flex items-center justify-center p-8 text-muted-foreground">
+              Selecione uma campanha para visualizar métricas de funil e negócio.
+            </CardContent>
+          </Card>
+        )}
+
         {/* ─── 2. BUDGET PACING + TENDÊNCIA (2 cols) ─── */}
         <div className="grid gap-6 lg:grid-cols-5">
           <div className="lg:col-span-2">
@@ -210,6 +246,9 @@ export default function ClientPerformancePage() {
             />
           </div>
         </div>
+
+        {/* ─── 2.5 HEALTH SCORE ─── */}
+        <CampaignHealthScores clientId={clientId!} />
 
         {/* ─── 3. DIAGNÓSTICO & AÇÕES ─── */}
         <DiagnosticsPanel
@@ -238,6 +277,7 @@ export default function ClientPerformancePage() {
             <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
             <TabsTrigger value="adsets">Conjuntos</TabsTrigger>
             <TabsTrigger value="creatives">Criativos</TabsTrigger>
+            <TabsTrigger value="winners">Winners</TabsTrigger>
             <TabsTrigger value="breakdowns">Público & Tempo</TabsTrigger>
             <TabsTrigger value="funnel">Funil</TabsTrigger>
             <TabsTrigger value="progress">Progresso</TabsTrigger>
@@ -314,6 +354,11 @@ export default function ClientPerformancePage() {
             )}
           </TabsContent>
 
+          <TabsContent value="winners" className="space-y-4">
+            <WinnerLibrary clientId={clientId!} />
+            <CopyGenerator clientId={clientId!} />
+          </TabsContent>
+
           <TabsContent value="breakdowns" className="space-y-4">
             {!selectedCampaignId ? (
               <div className="flex items-center justify-center p-8 border rounded-lg border-dashed text-muted-foreground bg-muted/20">
@@ -321,7 +366,14 @@ export default function ClientPerformancePage() {
               </div>
             ) : selectedCampaignHasDelivery ? (
               <>
-                <DemographicsChart ageGenderData={ageGenderData} placementData={placementData} loading={breakdownLoading} />
+                <AudienceInsights clientId={clientId!} campaignId={selectedCampaignId} />
+                <DemographicsChart
+                  ageGenderData={ageGenderData}
+                  placementData={placementData}
+                  regionData={regionData}
+                  countryData={countryData}
+                  loading={breakdownLoading}
+                />
                 <div className="grid gap-4 lg:grid-cols-2">
                   <TemporalAnalysis
                     title="Análise Temporal"

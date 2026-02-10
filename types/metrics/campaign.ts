@@ -82,6 +82,8 @@ export interface PerformanceSummary {
   campaignId: string;
   campaignName: string;
   platform: string;
+  optimizationThemeKey?: string | null;
+  optimizationSubthemeKey?: string | null;
   period: {
     start: string;
     end: string;
@@ -164,4 +166,3 @@ export interface MetricsQuery {
   platform?: string;
   campaignId?: string;
 }
-

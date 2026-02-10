@@ -1,5 +1,5 @@
 export type OptimizationCenterSeverity = 'critical' | 'warning' | 'info' | 'opportunity';
-export type OptimizationCenterCategory = 'campaign' | 'creative' | 'qualification' | 'data';
+export type OptimizationCenterCategory = 'campaign' | 'creative' | 'adset' | 'qualification' | 'data';
 export type OptimizationCenterAction = 'review' | 'pause' | 'refresh' | 'scale' | 'track' | 'sync';
 
 export interface OptimizationCenterThemeTargets {
@@ -42,7 +42,7 @@ export interface OptimizationCenterThemeConfig {
 
 export interface OptimizationCenterRuleConfig {
   id: string;
-  level: 'campaign' | 'creative' | 'qualification' | 'data';
+  level: 'campaign' | 'creative' | 'adset' | 'qualification' | 'data';
   severity: OptimizationCenterSeverity;
   category: OptimizationCenterCategory;
   action: OptimizationCenterAction;
@@ -66,6 +66,7 @@ export interface OptimizationCenterPlaybook {
       enabled: boolean;
       requiresEnv: 'OPENAI_API_KEY';
       model: string;
+      promptId?: string;
       promptVersion: string;
     };
   };
@@ -97,6 +98,7 @@ export interface CreativeCopyInsightsResponse {
   themeName: string | null;
   status: 'success' | 'failed' | 'pending';
   model: string | null;
+  promptId?: string | null;
   promptVersion: string | null;
   analysis: CreativeCopyInsightsAnalysis | null;
   errorMessage: string | null;
@@ -113,7 +115,7 @@ export interface OptimizationCenterItem {
   title: string;
   description: string;
   theme?: { key: string; name: string; matchedBy: string; matchedValue: string | null };
-  entity?: { type: 'campaign' | 'creative'; id: string; name?: string | null };
+  entity?: { type: 'campaign' | 'creative' | 'adset'; id: string; name?: string | null };
   metrics?: Record<string, number | string | null>;
   thresholds?: Record<string, number | string | null>;
 }
@@ -139,7 +141,7 @@ export interface OptimizationCenterResponse {
   theme?: {
     themeKey: string;
     themeName: string;
-    matchedBy: 'tag' | 'keyword' | 'default';
+    matchedBy: 'tag' | 'keyword' | 'default' | 'manual';
     matchedValue: string | null;
     targets: OptimizationCenterThemeTargets;
   };

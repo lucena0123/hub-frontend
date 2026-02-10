@@ -2,11 +2,21 @@ import type { LeadTrackingData } from '@/types';
 
 import { apiClient } from './http';
 
+export type UpsertLeadTrackingPayload = {
+  campaignId: string;
+  date: string;
+  qualifiedLeads?: number;
+  disqualificationReasons?: Record<string, number>;
+  contractsClosed?: number;
+  averageTicket?: number;
+  revenueGenerated?: number;
+  leadsResponded?: number;
+  responseTimeHours?: number | null;
+  notes?: string | null;
+};
+
 export const upsertLeadTracking = async (
-  payload: Omit<
-    LeadTrackingData,
-    'id' | 'leadQualificationRate' | 'closingRate' | 'roi' | 'costPerContract' | 'createdAt' | 'updatedAt'
-  >
+  payload: UpsertLeadTrackingPayload
 ): Promise<LeadTrackingData> => {
   const { data } = await apiClient.post<LeadTrackingData>('/api/lead-tracking', payload);
   return data;
@@ -45,4 +55,3 @@ export const getLeadSummary = async (
 export const deleteLeadTracking = async (campaignId: string, date: string): Promise<void> => {
   await apiClient.delete(`/api/campaigns/${campaignId}/lead-tracking`, { params: { date } });
 };
-

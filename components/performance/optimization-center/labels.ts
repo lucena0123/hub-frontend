@@ -17,7 +17,7 @@ export const severityBadgeClass: Record<OptimizationCenterSeverity, string> = {
 export const categoryLabel: Record<OptimizationCenterCategory, string> = {
   campaign: 'campanha',
   creative: 'criativo',
+  adset: 'conjunto',
   qualification: 'qualificação',
   data: 'dados',
 };
-

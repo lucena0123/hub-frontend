@@ -56,7 +56,7 @@ export const generateCreativeCopyInsights = async (
 
 export const getBreakdowns = async (
   campaignId: string,
-  type: 'age_gender' | 'platform_position' | 'device',
+  type: 'age_gender' | 'platform_position' | 'device' | 'region' | 'country',
   query?: MetricsQueryInput
 ): Promise<BreakdownResponse> => {
   const params = normalizeMetricsQuery(query);
@@ -69,6 +69,125 @@ export const getTemporalAnalysis = async (campaignId: string, query?: MetricsQue
   const { data } = await apiClient.get<TemporalAnalysisResponse>(
     `/api/campaigns/${campaignId}/temporal-analysis`,
     params ? { params } : undefined
+  );
+  return data;
+};
+
+export type CreativeWinnerPattern = {
+  headline: string | null;
+  primaryText: string | null;
+  ctaType: string | null;
+  imageUrl: string | null;
+  totalSpend: number;
+  totalConversations: number;
+  cpl: number | null;
+  campaigns: string[];
+  variantCount: number;
+};
+
+export type CreativeWinnersResponse = {
+  clientId: string;
+  period: { start: string; end: string };
+  total: number;
+  winners: CreativeWinnerPattern[];
+};
+
+export const getCreativeWinners = async (
+  clientId: string,
+  params?: { period?: string; limit?: string }
+): Promise<CreativeWinnersResponse> => {
+  const { data } = await apiClient.get<CreativeWinnersResponse>(
+    `/api/clients/${clientId}/creative-winners`,
+    params ? { params } : undefined
+  );
+  return data;
+};
+
+export type CopyValidationIssue = {
+  ruleId: string;
+  severity: 'error' | 'warning' | 'info';
+  title: string;
+  message: string;
+  suggestion?: string;
+};
+
+export type CopyValidationResult = {
+  valid: boolean;
+  score: number;
+  issues: CopyValidationIssue[];
+  summary: { errors: number; warnings: number; info: number };
+  theme: { themeKey: string; themeName: string } | null;
+};
+
+export const validateCreativeCopy = async (input: {
+  headline?: string;
+  primaryText?: string;
+  description?: string;
+  ctaType?: string;
+  themeKey?: string;
+}): Promise<CopyValidationResult> => {
+  const { data } = await apiClient.post<CopyValidationResult>('/api/creative-linter/validate', input);
+  return data;
+};
+
+export type CopySuggestion = {
+  headline: string;
+  primaryText: string;
+  cta: string;
+  angle: string;
+};
+
+export type CopyGeneratorResponse = {
+  clientId: string;
+  themeKey: string;
+  themeName: string;
+  aiUsed: boolean;
+  promptId?: string;
+  promptVersion?: string;
+  suggestions: CopySuggestion[];
+  winnerContext: { count: number; avgCpl: number | null; topHeadlines: string[] };
+};
+
+export const generateCopySuggestions = async (
+  clientId: string,
+  input?: { themeKey?: string; campaignId?: string; count?: number }
+): Promise<CopyGeneratorResponse> => {
+  const { data } = await apiClient.post<CopyGeneratorResponse>(
+    `/api/clients/${clientId}/copy-suggestions`,
+    input ?? {}
+  );
+  return data;
+};
+
+export type AudienceSegment = {
+  segment: string;
+  spend: number;
+  conversations: number;
+  cpl: number | null;
+  spendShare: number;
+  impressions: number;
+};
+
+export type AudienceInsightsResponse = {
+  clientId: string;
+  campaignId: string;
+  period: { start: string; end: string };
+  totalSpend: number;
+  totalConversations: number;
+  avgCpl: number | null;
+  bestSegments: AudienceSegment[];
+  wastefulSegments: AudienceSegment[];
+  allSegments: AudienceSegment[];
+  recommendation: string | null;
+};
+
+export const getAudienceInsights = async (
+  clientId: string,
+  params: { campaignId: string; period?: string }
+): Promise<AudienceInsightsResponse> => {
+  const { data } = await apiClient.get<AudienceInsightsResponse>(
+    `/api/clients/${clientId}/audience-insights`,
+    { params }
   );
   return data;
 };
@@ -96,4 +215,3 @@ export const getBusinessMetrics = async (
   const { data } = await apiClient.get(`/api/campaigns/${campaignId}/business-metrics`, params ? { params } : undefined);
   return data;
 };
-

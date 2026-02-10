@@ -28,6 +28,8 @@ export interface Campaign {
   platform?: 'meta' | 'google' | 'linkedin' | 'tiktok' | 'other';
   externalId?: string;
   objective?: string;
+  optimizationThemeKey?: string | null;
+  optimizationSubthemeKey?: string | null;
   targetAudience?: string;
   spent?: number;
   createdAt?: string;
@@ -40,6 +42,7 @@ export interface ProcessInstance {
   id: string;
   processId: string;
   clientId: string;
+  clientName?: string;
   campaignId?: string;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'suspended' | 'paused';
   priority: number;
@@ -50,37 +53,48 @@ export interface ProcessInstance {
   currentTask?: string;
   progress?: number;
   metadata?: Record<string, unknown>;
-  createdAt?: string;
-  updatedAt?: string;
-  clientName?: string;
-  clientTier?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+
+
+export interface OptimizationActionPayload {
+  type: 'pause_ad' | 'resume_ad' | 'set_adset_budget' | 'set_campaign_budget';
+  entityId: string;
+  amount?: number;
+  reason: string;
 }
 
 export interface Task {
   id: string;
+  taskId: string; // Business ID (e.g., opt_123)
   processInstanceId: string;
-  taskName: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
-  assignedTo?: string;
+  name: string; // Was taskName, backend sends 'name'
+  status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'suspended';
+  lane?: string;
   priority: number;
+  input?: {
+    uniqueKey?: string;
+    insightId?: string;
+    description?: string;
+    severity?: string;
+    entityName?: string;
+    autoAction?: OptimizationActionPayload;
+    [key: string]: unknown;
+  };
   startedAt: string;
   completedAt?: string;
-  duration?: number;
-  output?: Record<string, unknown>;
-  error?: string;
+  processInstance?: {
+    processId: string;
+    client?: {
+      name: string;
+      id?: string;
+    };
+  };
   createdAt: string;
   updatedAt: string;
-  processId?: string;
   clientName?: string;
-}
-
-export interface DashboardStats {
-  totalClients: number;
-  activeClients: number;
-  runningProcesses: number;
-  pendingTasks: number;
-  completedTasksToday: number;
-  timestamp: string;
 }
 
 export interface DashboardOverview {
@@ -118,6 +132,15 @@ export interface DashboardOverview {
     description: string;
     timestamp: string;
   }>;
+}
+
+export interface DashboardStats {
+  totalClients: number;
+  activeClients: number;
+  runningProcesses: number;
+  pendingTasks: number;
+  completedTasksToday: number;
+  timestamp: string;
 }
 
 export interface PerformanceAlert {

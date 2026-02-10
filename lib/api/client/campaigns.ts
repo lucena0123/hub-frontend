@@ -3,8 +3,27 @@ import type { BPMNProgress, Campaign, ClientPerformanceSummary, DailyMetric, Per
 import { apiClient } from './http';
 import { normalizeMetricsQuery, type MetricsQueryInput } from './metrics-query';
 
-export const getCampaigns = async (): Promise<Campaign[]> => {
-  const { data } = await apiClient.get<Campaign[]>('/api/campaigns');
+// Basic filter interface
+interface CampaignFilters {
+  clientId?: string;
+  platform?: string;
+  status?: string;
+}
+
+export const getCampaigns = async (filters?: CampaignFilters): Promise<Campaign[]> => {
+  const { data } = await apiClient.get<Campaign[]>('/api/campaigns', {
+    params: filters
+  });
+  return data;
+};
+
+export type CampaignUpdatePayload = {
+  optimizationThemeKey?: string | null;
+  optimizationSubthemeKey?: string | null;
+};
+
+export const updateCampaign = async (campaignId: string, payload: CampaignUpdatePayload): Promise<Campaign> => {
+  const { data } = await apiClient.put<Campaign>(`/api/campaigns/${campaignId}`, payload);
   return data;
 };
 
@@ -67,4 +86,3 @@ export const getBPMNProgress = async (clientId: string): Promise<BPMNProgress> =
 export const updateBPMNProgress = async (clientId: string, updates: Partial<BPMNProgress>): Promise<BPMNProgress> => {
   return updateClientBpmnProgress(clientId, updates);
 };
-

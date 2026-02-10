@@ -1,6 +1,7 @@
 'use client';
 
 import { useOptimizationPlaybook } from './use-playbook';
+import { PromptBadge } from '@/components/ui/prompt-badge';
 
 export const PlaybookPanel = (props: { open: boolean }) => {
   const { open } = props;
@@ -26,6 +27,15 @@ export const PlaybookPanel = (props: { open: boolean }) => {
           <p className="text-xs text-muted-foreground">
             Temas: {playbook.themes.length} · Regras: {playbook.rules.length}
           </p>
+          {playbook.ai?.copySuggestions ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>IA Copy: {playbook.ai.copySuggestions.model}</span>
+              <PromptBadge
+                promptVersion={playbook.ai.copySuggestions.promptVersion}
+                promptId={playbook.ai.copySuggestions.promptId}
+              />
+            </div>
+          ) : null}
           <pre className="max-h-[420px] overflow-auto rounded-md bg-background p-3 text-xs">
             {JSON.stringify(playbook, null, 2)}
           </pre>
@@ -36,4 +46,3 @@ export const PlaybookPanel = (props: { open: boolean }) => {
     </div>
   );
 };
-

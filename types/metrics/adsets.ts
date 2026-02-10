@@ -4,6 +4,8 @@ export interface AdSetMetric {
   totalImpressions: number;
   totalReach: number;
   totalClicks: number;
+  totalLinkClicks: number;
+  totalLandingPageViews: number;
   totalSpend: number;
   totalConversions: number;
   totalMessagingConversations: number;
@@ -20,4 +22,3 @@ export interface AdSetMetricsResponse {
   total: number;
   adsets: AdSetMetric[];
 }
-

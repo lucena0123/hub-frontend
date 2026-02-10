@@ -26,6 +26,15 @@ export interface CreativeLibraryItem {
   descriptions: unknown;
   ctaTypes: unknown;
   destinationUrls: unknown;
+  visualAttributes?: {
+    dominantColor?: string | null;
+    textDetected?: boolean | null;
+    edgeDensity?: number | null;
+    width?: number | null;
+    height?: number | null;
+    sampledAt?: string | null;
+    algorithm?: { version?: string | null; notes?: string | null } | null;
+  } | null;
   campaigns: string[];
   adNames: string[];
   adsets: CreativeLibraryAdset[];

@@ -20,7 +20,8 @@ export function NotificationBell() {
   }, []);
 
   useEffect(() => {
-    refreshCount();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refreshCount();
     const interval = setInterval(refreshCount, 30000);
     return () => clearInterval(interval);
   }, [refreshCount]);

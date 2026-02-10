@@ -17,6 +17,16 @@ const reasonBadgeClass: Record<AnalysisReason['severity'], string> = {
   critical: 'bg-rose-100 text-rose-800 border-rose-200',
 };
 
+const formatOptionalNumber = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return '—';
+  return value.toLocaleString('pt-BR');
+};
+
+const formatPercent = (value: number, decimals = 1) => {
+  if (!Number.isFinite(value) || value <= 0) return '—';
+  return `${value.toFixed(decimals)}%`;
+};
+
 export const CreativePerformanceRow = (props: {
   ad: AdCreativeMetric;
   rowKey: string;
@@ -41,7 +51,13 @@ export const CreativePerformanceRow = (props: {
   const ctas = toStringArray(creative?.ctaTypes);
   const urls = toStringArray(creative?.destinationUrls);
 
-  const colSpan = hasVideoData ? 8 : 6;
+  const clicks = ad.totalClicks || 0;
+  const conversions = ad.totalConversions || 0;
+  const cpc = clicks > 0 ? ad.totalSpend / clicks : 0;
+  const cpa = conversions > 0 ? ad.totalSpend / conversions : 0;
+  const conversionRate = clicks > 0 ? (conversions / clicks) * 100 : 0;
+
+  const colSpan = hasVideoData ? 14 : 12;
   const canExpand = Boolean(snapshotId);
 
   return (
@@ -89,7 +105,13 @@ export const CreativePerformanceRow = (props: {
         </TableCell>
         <TableCell className="text-right">{formatNumber(ad.totalMessagingConversations)}</TableCell>
         <TableCell className="text-right">{formatCurrency(ad.cpl)}</TableCell>
-        <TableCell className="text-right">{ad.avgCtr.toFixed(2)}%</TableCell>
+        <TableCell className="text-right">{formatNumber(ad.totalClicks)}</TableCell>
+        <TableCell className="text-right">{formatOptionalNumber(ad.totalLinkClicks)}</TableCell>
+        <TableCell className="text-right">{formatOptionalNumber(ad.totalLandingPageViews)}</TableCell>
+        <TableCell className="text-right">{formatPercent(ad.avgCtr, 2)}</TableCell>
+        <TableCell className="text-right">{formatCurrency(cpc)}</TableCell>
+        <TableCell className="text-right">{formatCurrency(cpa)}</TableCell>
+        <TableCell className="text-right">{formatPercent(conversionRate)}</TableCell>
         <TableCell className="text-right">{formatCurrency(ad.avgCpm)}</TableCell>
         {hasVideoData && (
           <>
@@ -208,4 +230,3 @@ export const CreativePerformanceRow = (props: {
     </>
   );
 };
-

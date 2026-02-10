@@ -14,6 +14,7 @@ export { getClients, getClientById, createClient, updateClient, deleteClient, ty
 
 export {
   getCampaigns,
+  updateCampaign,
   getCampaignMetrics,
   getCampaignPerformanceSummary,
   getClientPerformanceSummary,
@@ -47,8 +48,10 @@ export {
   rejectActionProposal,
   executeActionProposal,
   getActionProposalExecutions,
+  getActionHistory,
   type GenerateActionProposalsInput,
   type ListActionProposalsParams,
+  type ListActionHistoryParams,
 } from './client/action-proposals';
 
 export {
@@ -62,6 +65,18 @@ export {
   getBreakdowns,
   getTemporalAnalysis,
   getBusinessMetrics,
+  getCreativeWinners,
+  validateCreativeCopy,
+  generateCopySuggestions,
+  type CreativeWinnerPattern,
+  type CreativeWinnersResponse,
+  type CopyValidationResult,
+  type CopyValidationIssue,
+  type CopySuggestion,
+  type CopyGeneratorResponse,
+  getAudienceInsights,
+  type AudienceSegment,
+  type AudienceInsightsResponse,
 } from './client/analytics';
 
 export {
@@ -74,6 +89,12 @@ export {
 } from './client/meta-sync';
 
 export {
+  listMetaAdAccounts,
+  type MetaAdAccount,
+  type MetaAdAccountsResponse,
+} from './client/meta-discovery';
+
+export {
   listNotifications,
   getUnreadCount,
   markNotificationAsRead,
@@ -81,4 +102,25 @@ export {
   type Notification,
   type NotificationsResponse,
 } from './client/notifications';
+
+export {
+  login,
+  register,
+  updateProfile,
+  changePassword,
+} from './client/auth';
+
+export {
+  getAnomalies,
+  getGlobalAnomalies,
+  getCampaignHealth,
+  getAutoApprovalConfig,
+  updateAutoApprovalConfig,
+  type AnomalyDetection,
+  type AnomalyType,
+  type CampaignHealthResult,
+  type HealthFactor,
+  type AutoApprovalConfig,
+  type AutoApprovalRuleConfig,
+} from './client/optimization';
 

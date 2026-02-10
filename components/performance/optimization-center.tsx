@@ -50,6 +50,13 @@ const getSyncErrorMessage = (details: MetaSyncDetails | null | undefined) => {
   return null;
 };
 
+const matchedByLabel: Record<'tag' | 'keyword' | 'default' | 'manual', string> = {
+  tag: 'tag',
+  keyword: 'palavra-chave',
+  default: 'padrão',
+  manual: 'definido manualmente',
+};
+
 export function OptimizationCenter({ data, loading, creativeCoverage, creativeCoverageDetails }: OptimizationCenterProps) {
   const [showAll, setShowAll] = useState(false);
   const [showPlaybook, setShowPlaybook] = useState(false);
@@ -158,7 +165,9 @@ export function OptimizationCenter({ data, loading, creativeCoverage, creativeCo
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">Tema: {theme.themeName}</Badge>
               <Badge variant="secondary">
-                detectado por {theme.matchedBy}
+                {theme.matchedBy === 'manual'
+                  ? matchedByLabel.manual
+                  : `detectado por ${matchedByLabel[theme.matchedBy] ?? theme.matchedBy}`}
                 {theme.matchedValue ? `: ${theme.matchedValue}` : ''}
               </Badge>
               <Badge variant="outline">playbook: {data?.playbookVersion ?? '—'}</Badge>

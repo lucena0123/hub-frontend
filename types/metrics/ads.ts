@@ -16,6 +16,15 @@ export interface AdCreativeSnapshot {
   primaryTexts: unknown;
   ctaTypes: unknown;
   destinationUrls: unknown;
+  visualAttributes?: {
+    dominantColor?: string | null;
+    textDetected?: boolean | null;
+    edgeDensity?: number | null;
+    width?: number | null;
+    height?: number | null;
+    sampledAt?: string | null;
+    algorithm?: { version?: string | null; notes?: string | null } | null;
+  } | null;
 }
 
 export interface AdCreativeMetric {
@@ -28,6 +37,8 @@ export interface AdCreativeMetric {
   totalImpressions: number;
   totalReach: number;
   totalClicks: number;
+  totalLinkClicks: number;
+  totalLandingPageViews: number;
   totalSpend: number;
   totalConversions: number;
   totalMessagingConversations: number;
@@ -49,4 +60,3 @@ export interface AdMetricsResponse {
   total: number;
   ads: AdCreativeMetric[];
 }
-

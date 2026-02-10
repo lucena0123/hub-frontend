@@ -17,6 +17,8 @@ import { ClientEditForm } from './components/client-edit';
 import { ClientHeader } from './components/client-header';
 import { ClientOverview } from './components/client-overview';
 import { ClientProcessesTable } from './components/client-processes';
+import { ClientOptimization } from './components/client-optimization';
+import { ClientLeadTracking } from './components/client-lead-tracking';
 
 export default function ClientDetailsPage() {
   const params = useParams();
@@ -119,6 +121,8 @@ export default function ClientDetailsPage() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+            <TabsTrigger value="optimization">Optimization</TabsTrigger>
+            <TabsTrigger value="lead-tracking">Lead Tracking</TabsTrigger>
             <TabsTrigger value="processes">Processes</TabsTrigger>
             <TabsTrigger value="edit">Edit</TabsTrigger>
           </TabsList>
@@ -133,6 +137,14 @@ export default function ClientDetailsPage() {
 
           <TabsContent value="processes">
             <ClientProcessesTable processes={processes} />
+          </TabsContent>
+
+          <TabsContent value="optimization">
+            <ClientOptimization clientId={String(clientId)} />
+          </TabsContent>
+
+          <TabsContent value="lead-tracking">
+            <ClientLeadTracking clientId={String(clientId)} />
           </TabsContent>
 
           <TabsContent value="edit">

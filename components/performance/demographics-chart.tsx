@@ -31,6 +31,8 @@ interface BreakdownSegment {
 interface DemographicsChartProps {
   ageGenderData: BreakdownSegment[];
   placementData: BreakdownSegment[];
+  regionData: BreakdownSegment[];
+  countryData: BreakdownSegment[];
   loading?: boolean;
 }
 
@@ -49,18 +51,32 @@ const COLORS = [
   '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1',
 ];
 
-function BreakdownBarChart({ data, title, description }: { data: BreakdownSegment[]; title: string; description: string }) {
+function BreakdownBarChart({
+  data,
+  title,
+  description,
+  emptyMessage,
+  metricKey = 'conversions',
+  metricLabel = 'Conv.',
+}: {
+  data: BreakdownSegment[];
+  title: string;
+  description: string;
+  emptyMessage?: string;
+  metricKey?: keyof BreakdownSegment;
+  metricLabel?: string;
+}) {
   const chartData = useMemo(() => {
     return data.slice(0, 10).map(seg => ({
       name: seg.label.length > 20 ? seg.label.slice(0, 18) + '...' : seg.label,
       fullName: seg.label,
       spend: Number(seg.spend.toFixed(2)),
-      conversions: seg.conversions,
+      metricValue: typeof seg[metricKey] === 'number' ? (seg[metricKey] as number) : 0,
       impressions: seg.impressions,
       ctr: Number(seg.ctr.toFixed(2)),
       share: Number(seg.shareOfSpend.toFixed(1)),
     }));
-  }, [data]);
+  }, [data, metricKey]);
 
   if (data.length === 0) {
     return (
@@ -69,7 +85,7 @@ function BreakdownBarChart({ data, title, description }: { data: BreakdownSegmen
           <CardTitle className="text-base">{title}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground text-center py-8">
-          Sem dados demográficos no período. Rode um sync full para preencher.
+          {emptyMessage ?? 'Sem dados no período. Rode um sync full para preencher.'}
         </CardContent>
       </Card>
     );
@@ -90,15 +106,15 @@ function BreakdownBarChart({ data, title, description }: { data: BreakdownSegmen
             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
             <XAxis type="number" tickFormatter={(v) => `R$ ${v}`} />
             <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 12 }} />
-            <Tooltip
-              formatter={(value: number | undefined, name: string | undefined) => {
-                const safeValue = value ?? 0;
-                if (name === 'spend') return [formatCurrency(safeValue), 'Investimento'];
-                if (name === 'conversions') return [formatNumber(safeValue), 'Conversões'];
-                return [safeValue, name || ''];
-              }}
-            />
-            <Legend formatter={(value) => value === 'spend' ? 'Investimento' : 'Conversões'} />
+          <Tooltip
+            formatter={(value: number | undefined, name: string | undefined) => {
+              const safeValue = value ?? 0;
+              if (name === 'spend') return [formatCurrency(safeValue), 'Investimento'];
+              if (name === 'metricValue') return [formatNumber(safeValue), metricLabel];
+              return [safeValue, name || ''];
+            }}
+          />
+          <Legend formatter={(value) => value === 'spend' ? 'Investimento' : 'Conversões'} />
             <Bar dataKey="spend" fill="#3b82f6" radius={[0, 4, 4, 0]}>
               {chartData.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -117,7 +133,7 @@ function BreakdownBarChart({ data, title, description }: { data: BreakdownSegmen
               </div>
               <div className="flex gap-4 text-muted-foreground">
                 <span>{formatCurrency(seg.spend)}</span>
-                <span>{seg.conversions} conv.</span>
+                <span>{typeof seg[metricKey] === 'number' ? (seg[metricKey] as number) : 0} {metricLabel.toLowerCase()}</span>
                 <span>{seg.shareOfSpend.toFixed(1)}%</span>
               </div>
             </div>
@@ -128,7 +144,34 @@ function BreakdownBarChart({ data, title, description }: { data: BreakdownSegmen
   );
 }
 
-export function DemographicsChart({ ageGenderData, placementData, loading }: DemographicsChartProps) {
+const resolveMetricConfig = (
+  data: BreakdownSegment[],
+  preferredKey: keyof BreakdownSegment,
+  preferredLabel: string,
+  fallbackKey: keyof BreakdownSegment,
+  fallbackLabel: string
+) => {
+  const preferredTotal = data.reduce((sum, seg) => sum + (typeof seg[preferredKey] === 'number' ? (seg[preferredKey] as number) : 0), 0);
+  if (preferredTotal > 0) {
+    return { key: preferredKey, label: preferredLabel, isFallback: false };
+  }
+  const fallbackTotal = data.reduce((sum, seg) => sum + (typeof seg[fallbackKey] === 'number' ? (seg[fallbackKey] as number) : 0), 0);
+  if (fallbackTotal > 0) {
+    return { key: fallbackKey, label: fallbackLabel, isFallback: true };
+  }
+  return { key: preferredKey, label: preferredLabel, isFallback: false };
+};
+
+export function DemographicsChart({ ageGenderData, placementData, regionData, countryData, loading }: DemographicsChartProps) {
+  const regionMetric = useMemo(
+    () => resolveMetricConfig(regionData, 'conversions', 'Conv.', 'clicks', 'Cliques'),
+    [regionData]
+  );
+  const countryMetric = useMemo(
+    () => resolveMetricConfig(countryData, 'conversions', 'Conv.', 'clicks', 'Cliques'),
+    [countryData]
+  );
+
   if (loading) {
     return (
       <div className="grid gap-6 md:grid-cols-2">
@@ -144,6 +187,18 @@ export function DemographicsChart({ ageGenderData, placementData, loading }: Dem
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </CardContent>
         </Card>
+        <Card className="border-l-4 border-l-cyan-500">
+          <CardHeader className="pb-3"><CardTitle className="text-base">Estados</CardTitle></CardHeader>
+          <CardContent className="flex items-center justify-center py-10">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-cyan-500">
+          <CardHeader className="pb-3"><CardTitle className="text-base">País</CardTitle></CardHeader>
+          <CardContent className="flex items-center justify-center py-10">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -154,11 +209,29 @@ export function DemographicsChart({ ageGenderData, placementData, loading }: Dem
         data={ageGenderData}
         title="Demografia (Idade + Gênero)"
         description="Performance por faixa etária e gênero"
+        emptyMessage="Sem dados demográficos no período. Rode um sync full para preencher."
       />
       <BreakdownBarChart
         data={placementData}
         title="Posicionamentos"
         description="Performance por plataforma e posição"
+        emptyMessage="Sem dados de posicionamento no período. Rode um sync full para preencher."
+      />
+      <BreakdownBarChart
+        data={regionData}
+        title="Estados"
+        description={regionMetric.isFallback ? 'Performance por estado (cliques)' : 'Performance por estado'}
+        emptyMessage="Sem dados de localização (estado) no período. Rode um sync full para preencher."
+        metricKey={regionMetric.key}
+        metricLabel={regionMetric.label}
+      />
+      <BreakdownBarChart
+        data={countryData}
+        title="País"
+        description={countryMetric.isFallback ? 'Performance por país (cliques)' : 'Performance por país'}
+        emptyMessage="Sem dados de localização (país) no período. Rode um sync full para preencher."
+        metricKey={countryMetric.key}
+        metricLabel={countryMetric.label}
       />
     </div>
   );

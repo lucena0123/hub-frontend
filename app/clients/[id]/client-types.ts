@@ -8,6 +8,8 @@ export type ClientCampaign = {
   budget?: number;
   spent?: number;
   externalId?: string;
+  optimizationThemeKey?: string | null;
+  optimizationSubthemeKey?: string | null;
 };
 
 export type ClientProcess = {
@@ -30,4 +32,3 @@ export type ClientDetails = Client & {
     metrics?: number;
   };
 };
-

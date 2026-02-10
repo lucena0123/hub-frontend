@@ -53,6 +53,8 @@ export const useCampaignData = (params: {
 
   const [ageGenderData, setAgeGenderData] = useState<BreakdownSegment[]>([]);
   const [placementData, setPlacementData] = useState<BreakdownSegment[]>([]);
+  const [regionData, setRegionData] = useState<BreakdownSegment[]>([]);
+  const [countryData, setCountryData] = useState<BreakdownSegment[]>([]);
   const [breakdownLoading, setBreakdownLoading] = useState(false);
 
   const [temporalData, setTemporalData] = useState<TemporalAnalysisResponse | null>(null);
@@ -99,12 +101,14 @@ export const useCampaignData = (params: {
       const lastWeekRange = getLastWeekRange(query, period);
       const leadRange = resolveLeadTrackingRange(query);
 
-      const [metrics, adsets, ads, agBreak, plBreak, temporal, temporalLastWeek, business, leadTracking] = await Promise.allSettled([
+      const [metrics, adsets, ads, agBreak, plBreak, regionBreak, countryBreak, temporal, temporalLastWeek, business, leadTracking] = await Promise.allSettled([
         getCampaignMetrics(campaignId, query),
         getAdSetMetrics(campaignId, query),
         getAdMetrics(campaignId, query),
         getBreakdowns(campaignId, 'age_gender', query),
         getBreakdowns(campaignId, 'platform_position', query),
+        getBreakdowns(campaignId, 'region', query),
+        getBreakdowns(campaignId, 'country', query),
         getTemporalAnalysis(campaignId, query),
         getTemporalAnalysis(campaignId, lastWeekRange),
         getBusinessMetrics(campaignId, query),
@@ -127,6 +131,8 @@ export const useCampaignData = (params: {
 
       setAgeGenderData(agBreak.status === 'fulfilled' ? agBreak.value.segments : []);
       setPlacementData(plBreak.status === 'fulfilled' ? plBreak.value.segments : []);
+      setRegionData(regionBreak.status === 'fulfilled' ? regionBreak.value.segments : []);
+      setCountryData(countryBreak.status === 'fulfilled' ? countryBreak.value.segments : []);
 
       if (temporal.status === 'fulfilled') setTemporalData(temporal.value);
       else setTemporalData(null);
@@ -161,6 +167,8 @@ export const useCampaignData = (params: {
       setAdCreativeData([]);
       setAgeGenderData([]);
       setPlacementData([]);
+      setRegionData([]);
+      setCountryData([]);
       setTemporalData(null);
       setTemporalLastWeekData(null);
       setBusinessData(null);
@@ -220,6 +228,8 @@ export const useCampaignData = (params: {
     adCreativeLoading,
     ageGenderData,
     placementData,
+    regionData,
+    countryData,
     breakdownLoading,
     temporalData,
     temporalLoading,
@@ -230,4 +240,3 @@ export const useCampaignData = (params: {
     refreshCampaignData,
   };
 };
-

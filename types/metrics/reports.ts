@@ -12,6 +12,11 @@ export interface MonthlyReport {
     insights: string[];
     recommendations: string[];
     highlights: string[];
+    aiMeta?: {
+      promptId?: string | null;
+      promptVersion?: string | null;
+      model?: string | null;
+    };
   };
   filePath?: string;
   fileSize?: number;
@@ -24,4 +29,3 @@ export interface MonthlyReport {
   createdAt: string;
   updatedAt: string;
 }
-

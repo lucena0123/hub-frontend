@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input';
 import {
   approveActionProposal,
   executeActionProposal,
+  getActionHistory,
   generateActionProposals,
   listActionProposals,
   rejectActionProposal,
@@ -34,7 +35,9 @@ import {
   type ListActionProposalsParams,
 } from '@/lib/api/client';
 import { formatDate } from '@/lib/utils';
+import { resolveMetricsRange } from '@/app/clients/[id]/performance/dashboard/utils';
 import type {
+  ActionHistoryItem,
   ActionProposal,
   ActionProposalStatus,
   MetricsQuery,
@@ -47,7 +50,7 @@ import type {
 /*  Constants & helpers                                                */
 /* ------------------------------------------------------------------ */
 
-type Tab = 'recommendations' | 'queue';
+type Tab = 'recommendations' | 'queue' | 'history';
 
 const severityIcon: Record<OptimizationCenterSeverity, typeof AlertTriangle> = {
   critical: AlertTriangle,
@@ -122,6 +125,20 @@ const statusLabel: Record<ActionProposalStatus, string> = {
   expired: 'Expirado',
 };
 
+const executionStatusLabel: Record<string, string> = {
+  success: 'Sucesso',
+  failed: 'Falhou',
+  running: 'Executando',
+  queued: 'Na fila',
+};
+
+const executionStatusClass: Record<string, string> = {
+  success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  failed: 'border-rose-200 bg-rose-50 text-rose-800',
+  running: 'border-blue-200 bg-blue-50 text-blue-800',
+  queued: 'border-slate-200 bg-slate-50 text-slate-700',
+};
+
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null;
 
@@ -134,6 +151,46 @@ const getApiError = (err: unknown, fallback: string) => {
     if (isRecord(d) && typeof d.message === 'string') return d.message;
   }
   return err instanceof Error ? err.message : fallback;
+};
+
+const formatCurrency = (value: number | null | undefined) => {
+  if (value == null || !Number.isFinite(value) || value === 0) return null;
+  return `R$ ${value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`;
+};
+
+const buildHistorySummary = (item: ActionHistoryItem) => {
+  const meta = item.metaResponse as Record<string, unknown> | null;
+  if (!meta || typeof meta !== 'object') return null;
+
+  const from = typeof meta.from === 'number'
+    ? meta.from
+    : typeof meta.currentBudget === 'number'
+      ? meta.currentBudget
+      : null;
+  const to = typeof meta.to === 'number'
+    ? meta.to
+    : typeof meta.nextBudget === 'number'
+      ? meta.nextBudget
+      : typeof meta.amount === 'number'
+        ? meta.amount
+        : null;
+
+  if (from != null && to != null) {
+    const fromLabel = formatCurrency(from);
+    const toLabel = formatCurrency(to);
+    if (fromLabel && toLabel) return `Budget: ${fromLabel} → ${toLabel}`;
+  }
+
+  if (to != null) {
+    const toLabel = formatCurrency(to);
+    if (toLabel) return `Budget definido: ${toLabel}`;
+  }
+
+  if (typeof meta.operation === 'string') {
+    return `Operação: ${meta.operation}`;
+  }
+
+  return null;
 };
 
 /* ------------------------------------------------------------------ */
@@ -170,6 +227,9 @@ export function DiagnosticsPanel({
   const [actingId, setActingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [historyItems, setHistoryItems] = useState<ActionHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   // --- Optimization data ---
   const summary = optimizationData?.summary ?? null;
@@ -202,6 +262,37 @@ export function DiagnosticsPanel({
     () => proposals.filter((p) => p.status === 'pending').length,
     [proposals],
   );
+
+  const historyRange = useMemo(() => {
+    if (!metricsQuery) return null;
+    return resolveMetricsRange(metricsQuery, '30d');
+  }, [metricsQuery]);
+
+  const loadHistory = useCallback(async () => {
+    if (!clientId) return;
+    try {
+      setHistoryLoading(true);
+      setHistoryError(null);
+      const params = {
+        limit: 50,
+        campaignId: selectedCampaignId ?? undefined,
+        startDate: historyRange?.startDate,
+        endDate: historyRange?.endDate,
+      };
+      const result = await getActionHistory(String(clientId), params);
+      setHistoryItems(Array.isArray(result.history) ? result.history : []);
+    } catch (err) {
+      setHistoryItems([]);
+      setHistoryError(getApiError(err, 'Falha ao carregar histórico.'));
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [clientId, historyRange?.endDate, historyRange?.startDate, selectedCampaignId]);
+
+  useEffect(() => {
+    if (tab !== 'history') return;
+    void loadHistory();
+  }, [tab, loadHistory]);
 
   const handleGenerate = async () => {
     if (!clientId) return;
@@ -326,6 +417,14 @@ export function DiagnosticsPanel({
               </Badge>
             )}
           </Button>
+          <Button
+            variant={tab === 'history' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setTab('history')}
+            className="text-xs"
+          >
+            Histórico
+          </Button>
         </div>
       </CardHeader>
 
@@ -439,6 +538,91 @@ export function DiagnosticsPanel({
             )}
           </>
         )}
+
+        {/* ---- TAB: History ---- */}
+        {tab === 'history' && (
+          <>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {selectedCampaignId ? 'Filtrado pela campanha selecionada.' : 'Mostrando todas as campanhas.'}
+                {historyRange ? ` · ${historyRange.startDate} → ${historyRange.endDate}` : ''}
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={loadHistory}
+                disabled={historyLoading}
+                className="text-xs"
+              >
+                <RefreshCw className={`h-3 w-3 ${historyLoading ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
+            </div>
+
+            {historyError && (
+              <p className="text-sm text-destructive">{historyError}</p>
+            )}
+
+            {historyLoading ? (
+              <p className="text-sm text-muted-foreground py-4">Carregando histórico...</p>
+            ) : historyItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4">
+                Nenhuma ação executada encontrada no período.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {historyItems.map((item) => {
+                  const actionKey = item.action ?? '';
+                  const ActionIcon = actionIconMap[actionKey] ?? Wand2;
+                  const actionLabel = actionLabelMap[actionKey] ?? item.action ?? 'Ação executada';
+                  const statusKey = String(item.status || '').toLowerCase();
+                  const statusClass = executionStatusClass[statusKey] ?? 'border-slate-200 bg-slate-50 text-slate-700';
+                  const statusText = executionStatusLabel[statusKey] ?? item.status;
+                  const summary = buildHistorySummary(item);
+                  const entityLabel = item.entity?.name ?? item.entity?.id ?? null;
+
+                  return (
+                    <div key={item.executionId} className="rounded-lg border p-3 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className={`text-[10px] ${statusClass}`}>
+                          {statusText}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px] flex items-center gap-1">
+                          <ActionIcon className="h-3 w-3" />
+                          {actionLabel}
+                        </Badge>
+                        {item.dryRun && (
+                          <Badge variant="outline" className="text-[10px]">
+                            dry-run
+                          </Badge>
+                        )}
+                        {entityLabel && (
+                          <span className="text-xs text-muted-foreground truncate max-w-[320px]">
+                            {entityLabel}
+                          </span>
+                        )}
+                      </div>
+                      {item.title && <p className="text-sm font-medium">{item.title}</p>}
+                      {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
+                      {summary && <p className="text-xs text-muted-foreground">{summary}</p>}
+                      {item.error && (
+                        <p className="text-xs text-rose-700">
+                          Erro: {item.error.message}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground">
+                        {item.completedAt
+                          ? `Executado em ${formatDate(item.completedAt, 'dd/MM/yyyy HH:mm', '—')}`
+                          : `Criado em ${formatDate(item.createdAt, 'dd/MM/yyyy HH:mm', '—')}`}
+                        {item.executedBy?.type ? ` · origem: ${item.executedBy.type}` : ''}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
       </CardContent>
     </Card>
   );
@@ -518,6 +702,11 @@ function ProposalItem({
               <Badge variant="outline" className="text-[10px] flex items-center gap-1">
                 <ActionIcon className="h-3 w-3" />
                 {actionLabel}
+              </Badge>
+            )}
+            {proposal.status === 'approved' && proposal.lastDecision?.decidedByUserId == null && (
+              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400">
+                Auto-executado
               </Badge>
             )}
           </div>

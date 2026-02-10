@@ -12,6 +12,7 @@ import type { CreativeLibraryResponse, CreativeLibraryStatus } from '@/types';
 import { formatDate } from '@/lib/utils';
 
 import { statusBadgeClass } from './creative-library/formatters';
+import { CreativeLibraryInsightsPanel } from './creative-library/insights';
 import { CreativeLibraryRow } from './creative-library/row';
 
 const EMPTY_CREATIVES: CreativeLibraryResponse['creatives'] = [];
@@ -219,6 +220,7 @@ export function CreativeLibrary({
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        <CreativeLibraryInsightsPanel insights={insights} />
         {showCreativeCallout ? (
           <div className={`rounded-lg border p-4 ${creativeCalloutBaseClass}`}>
             <div className="space-y-1">

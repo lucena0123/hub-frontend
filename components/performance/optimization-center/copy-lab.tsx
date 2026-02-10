@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { OptimizationCenterHighlight } from '@/types';
+import { PromptBadge } from '@/components/ui/prompt-badge';
 
 import { useCopyLab } from './use-copy-lab';
 
@@ -35,6 +36,11 @@ export const CopyLab = (props: {
           <Badge variant="outline">Copy Lab</Badge>
         </CardTitle>
         <CardDescription>Baseado no snapshot do criativo (headline/texto/CTA). Gera variações de copy para você testar.</CardDescription>
+        {copyInsights?.promptVersion ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <PromptBadge promptVersion={copyInsights.promptVersion} promptId={copyInsights.promptId} />
+          </div>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -177,4 +183,3 @@ export const CopyLab = (props: {
     </Card>
   );
 };
-

@@ -36,7 +36,7 @@ apiClient.interceptors.request.use((config) => {
     if (typeof headers.Authorization === 'string' && headers.Authorization.trim()) return config;
 
     headers.Authorization = token.toLowerCase().startsWith('bearer ') ? token : `Bearer ${token}`;
-    config.headers = headers as any;
+    config.headers = headers as typeof config.headers;
   } catch {
     // ignore
   }
@@ -54,6 +54,15 @@ apiClient.interceptors.response.use(
 
     return response;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    if (
+      error?.response?.status === 401 &&
+      typeof window !== 'undefined' &&
+      !window.location.pathname.startsWith('/login')
+    ) {
+      window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
 );
-

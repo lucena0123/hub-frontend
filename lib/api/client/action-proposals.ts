@@ -1,4 +1,5 @@
 import type {
+  ActionHistoryResponse,
   ActionProposalDetailsResponse,
   ActionProposalExecutionsResponse,
   ApproveActionProposalResponse,
@@ -63,5 +64,28 @@ export const executeActionProposal = async (proposalId: string, payload?: { dryR
 
 export const getActionProposalExecutions = async (proposalId: string): Promise<ActionProposalExecutionsResponse> => {
   const { data } = await apiClient.get<ActionProposalExecutionsResponse>(`/api/action-proposals/${proposalId}/executions`);
+  return data;
+};
+
+export type ListActionHistoryParams = {
+  status?: string;
+  action?: string;
+  entityType?: string;
+  entityId?: string;
+  campaignId?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export const getActionHistory = async (
+  clientId: string,
+  params?: ListActionHistoryParams
+): Promise<ActionHistoryResponse> => {
+  const { data } = await apiClient.get<ActionHistoryResponse>(
+    `/api/clients/${clientId}/action-history`,
+    params ? { params } : undefined
+  );
   return data;
 };

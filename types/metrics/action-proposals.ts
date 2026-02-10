@@ -75,6 +75,38 @@ export interface ActionProposalExecutionsResponse {
   executions: ActionExecution[];
 }
 
+export interface ActionHistoryItem {
+  executionId: string;
+  proposalId: string;
+  clientId: string;
+  status: ActionExecutionStatus;
+  attempts: number;
+  dryRun: boolean;
+  requestPayload: Record<string, unknown> | null;
+  metaResponse: Record<string, unknown> | null;
+  error: { message: string; stack: string | null } | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  executedBy: { type: 'system' | 'user' | string; userId: string | null };
+  action: string | null;
+  title: string | null;
+  description: string | null;
+  category: string | null;
+  severity: string | null;
+  entity: { type: string; id: string; name?: string | null } | null;
+  source: string | null;
+  proposalCreatedAt: string | null;
+  proposalUpdatedAt: string | null;
+}
+
+export interface ActionHistoryResponse {
+  clientId: string;
+  total: number;
+  history: ActionHistoryItem[];
+}
+
 export interface GenerateActionProposalsResponse {
   clientId: string;
   playbookVersion: string | null;

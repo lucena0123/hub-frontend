@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { z } from 'zod';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +16,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { getApiErrorMessage } from '@/lib/api/client/error';
+import { listMetaAdAccounts, type MetaAdAccount } from '@/lib/api/client';
 
 const tierOptions = [
   { value: 'basic', label: 'Basic', helper: 'Até R$ 5.000' },
@@ -93,6 +96,7 @@ export function ClientForm({
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
@@ -111,8 +115,46 @@ export function ClientForm({
 
   const budgetValue = useWatch({ control, name: 'budget' });
   const selectedTier = useWatch({ control, name: 'tier' });
+  const metaAdAccountValue = useWatch({ control, name: 'metaAdAccountId' });
 
   const tierPreview = getTierPreview(budgetValue ?? 0);
+  const normalizedMetaValue = normalizeMetaAdAccountId(metaAdAccountValue ?? '');
+
+  const [metaLoading, setMetaLoading] = useState(false);
+  const [metaError, setMetaError] = useState<string | null>(null);
+  const [metaAccounts, setMetaAccounts] = useState<MetaAdAccount[]>([]);
+  const [metaLoaded, setMetaLoaded] = useState(false);
+
+  const handleLoadMetaAccounts = async () => {
+    try {
+      setMetaLoading(true);
+      setMetaError(null);
+      const data = await listMetaAdAccounts();
+      setMetaAccounts(data.accounts ?? []);
+      setMetaLoaded(true);
+      if (!data.accounts || data.accounts.length === 0) {
+        setMetaError('Nenhuma conta de anúncio encontrada para este token.');
+      }
+    } catch (err) {
+      setMetaError(getApiErrorMessage(err, 'Falha ao carregar contas da Meta. Verifique o token no backend.'));
+      setMetaAccounts([]);
+      setMetaLoaded(true);
+    } finally {
+      setMetaLoading(false);
+    }
+  };
+
+  const handleSelectMetaAccount = (value: string) => {
+    setValue('metaAdAccountId', value, { shouldDirty: true, shouldValidate: true });
+  };
+
+  const selectedMetaAccount = metaAccounts.find((account) => {
+    const rawAccountId = String(account.accountId ?? account.id ?? '');
+    return normalizeMetaAdAccountId(rawAccountId) === normalizedMetaValue;
+  });
+  const selectedMetaAccountId = selectedMetaAccount
+    ? normalizeMetaAdAccountId(String(selectedMetaAccount.accountId ?? selectedMetaAccount.id ?? ''))
+    : '';
 
   return (
     <form
@@ -146,13 +188,66 @@ export function ClientForm({
 
         <div className="space-y-2">
           <Label htmlFor="metaAdAccountId">Meta Ad Account ID</Label>
-          <Input
-            id="metaAdAccountId"
-            placeholder="3781226838794313"
-            {...register('metaAdAccountId')}
-          />
+          <div className="flex flex-col gap-2">
+            <Input
+              id="metaAdAccountId"
+              placeholder="3781226838794313"
+              {...register('metaAdAccountId')}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleLoadMetaAccounts}
+                disabled={metaLoading}
+              >
+                {metaLoading ? 'Carregando BM...' : 'Buscar contas na BM'}
+              </Button>
+              {selectedMetaAccount && (
+                <span className="text-xs text-muted-foreground">
+                  Selecionado: {selectedMetaAccount.name ?? 'Conta'} (act_{selectedMetaAccountId})
+                </span>
+              )}
+            </div>
+          </div>
           {errors.metaAdAccountId && (
             <p className="text-xs text-destructive">{errors.metaAdAccountId.message}</p>
+          )}
+          {metaError && (
+            <p className="text-xs text-destructive">{metaError}</p>
+          )}
+          {metaLoaded && metaAccounts.length > 0 && (
+            <div className="rounded-lg border bg-muted/40 p-3 space-y-2">
+              <Label className="text-xs text-muted-foreground">Contas encontradas</Label>
+              <Select
+                value={normalizedMetaValue || undefined}
+                onValueChange={handleSelectMetaAccount}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a conta de anúncio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {metaAccounts.map((account) => {
+                    const accountId = normalizeMetaAdAccountId(String(account.accountId ?? account.id ?? ''));
+                    return (
+                      <SelectItem key={account.id ?? accountId} value={accountId}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{account.name ?? 'Conta sem nome'}</span>
+                          <span className="text-xs text-muted-foreground">
+                            act_{accountId}
+                            {account.businessName ? ` • ${account.businessName}` : ''}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                A lista usa o token global do backend (<code className="text-xs">META_ACCESS_TOKEN</code>).
+              </p>
+            </div>
           )}
         </div>
 

@@ -65,7 +65,13 @@ export function CreativePerformanceTable({ ads, loading, creativeLibraryData }: 
                 <TableHead>Criativo</TableHead>
                 <TableHead className="text-right">Conversas</TableHead>
                 <TableHead className="text-right">CPL</TableHead>
+                <TableHead className="text-right">Cliques</TableHead>
+                <TableHead className="text-right">Link clicks</TableHead>
+                <TableHead className="text-right">LP views</TableHead>
                 <TableHead className="text-right">CTR</TableHead>
+                <TableHead className="text-right">CPC</TableHead>
+                <TableHead className="text-right">CPA</TableHead>
+                <TableHead className="text-right">Conv %</TableHead>
                 <TableHead className="text-right">CPM</TableHead>
                 {hasVideoData ? (
                   <>
@@ -79,7 +85,7 @@ export function CreativePerformanceTable({ ads, loading, creativeLibraryData }: 
             <TableBody>
               {sortedAds.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={hasVideoData ? 8 : 6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={hasVideoData ? 14 : 12} className="text-center text-muted-foreground">
                     Nenhum dado de criativos no período selecionado. Se a campanha não teve entrega, isso é esperado; caso contrário, execute o sync com syncLevel &quot;ad&quot; ou &quot;full&quot;.
                   </TableCell>
                 </TableRow>
