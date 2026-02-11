@@ -5,8 +5,10 @@ import { Activity, AlertTriangle, AlertOctagon, Terminal } from 'lucide-react';
 import { getAlerts } from '@/lib/api/client';
 import type { AlertsResponse } from '@/types';
 import { AlertCard } from '@/components/alerts/alert-card';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { PageShell } from '@/components/layout/page-shell';
+import { Reveal } from '@/components/layout/reveal';
+import { SectionHeader } from '@/components/performance/section-header';
 
 const categories = [
   { value: 'all', label: 'ALL_SYSTEMS' },
@@ -57,7 +59,7 @@ export default function AlertsPage() {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
           <Activity className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground font-mono text-sm tracking-widest">SCANNING_SYSTEM_ALERTS...</p>
+          <p className="text-muted-foreground text-sm tracking-[0.3em] uppercase">Varredura de alertas...</p>
         </div>
       </div>
     );
@@ -66,99 +68,113 @@ export default function AlertsPage() {
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <Card className="w-full max-w-md border-destructive/50 bg-destructive/5">
-          <CardHeader>
-            <CardTitle className="text-destructive font-mono">SYSTEM_ERROR</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground font-mono">{error}</p>
-          </CardContent>
-        </Card>
+        <div className="edge-card w-full max-w-md p-6 text-center space-y-3">
+          <AlertTriangle className="h-8 w-8 text-destructive mx-auto" />
+          <p className="text-sm text-destructive uppercase tracking-[0.2em]">Falha no sistema</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8 font-mono text-foreground">
-      <div className="max-w-[1600px] mx-auto space-y-8">
-
-        {/* Header HUD */}
-        <div className="flex flex-col md:flex-row items-end justify-between gap-4 border-b border-primary/20 pb-6 relative">
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 text-primary/50 text-xs tracking-[0.3em] mb-1">
-              <Terminal className="h-3 w-3" />
-              <span>TERMINAL_ID: SYSTEM_ALERTS</span>
-            </div>
-            <h1 className="text-3xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50">
-              ALERT_LOGS
-            </h1>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
-              Automated Performance & BPMN Monitoring
-            </p>
+    <PageShell
+      eyebrow="Monitoramento / Alertas"
+      title="Sala de Incidentes"
+      description="Leituras críticas de performance e compliance com prioridade de ação."
+      meta={
+        data ? (
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <div className="signal-chip">Críticos {data.critical}</div>
+            <div className="signal-chip">Alertas {data.warning}</div>
+            <div className="signal-chip">Total {data.total}</div>
           </div>
+        ) : null
+      }
+    >
+      <div className="space-y-8">
+        <SectionHeader
+          title="Resumo de Incidentes"
+          subtitle="Distribuição de alertas críticos e operacionais."
+          icon={AlertTriangle}
+        />
 
-          {data && (
-            <div className="flex items-center gap-4">
-              <div className="flex flex-col items-center border border-rose-500/30 bg-rose-500/10 p-2 rounded-sm min-w-[80px]">
-                <span className="text-[10px] text-rose-500 uppercase font-bold flex items-center gap-1">
-                  <AlertOctagon className="h-3 w-3" /> CRITICAL
-                </span>
-                <span className="text-xl font-black text-rose-500 drop-shadow-[0_0_5px_rgba(244,63,94,0.5)]">
-                  {data.critical}
-                </span>
+        {data && (
+          <Reveal>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.6fr)]">
+              <div className="edge-card hover-lift p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Críticos</p>
+                  <p className="text-3xl font-semibold text-destructive">{data.critical}</p>
+                </div>
+                <AlertOctagon className="h-6 w-6 text-destructive" />
               </div>
-              <div className="flex flex-col items-center border border-amber-500/30 bg-amber-500/10 p-2 rounded-sm min-w-[80px]">
-                <span className="text-[10px] text-amber-500 uppercase font-bold flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" /> WARNING
-                </span>
-                <span className="text-xl font-black text-amber-500 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]">
-                  {data.warning}
-                </span>
+              <div className="edge-card hover-lift p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Atenção</p>
+                  <p className="text-3xl font-semibold text-amber-400">{data.warning}</p>
+                </div>
+                <AlertTriangle className="h-6 w-6 text-amber-400" />
               </div>
-              <div className="flex flex-col items-center border border-border/50 bg-card/30 p-2 rounded-sm min-w-[80px]">
-                <span className="text-[10px] text-muted-foreground uppercase font-bold">TOTAL</span>
-                <span className="text-xl font-black text-foreground">{data.total}</span>
+              <div className="edge-card hover-lift p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Total</p>
+                  <p className="text-3xl font-semibold">{data.total}</p>
+                </div>
+                <Terminal className="h-6 w-6 text-primary" />
               </div>
+            </div>
+          </Reveal>
+        )}
+
+        <SectionHeader
+          title="Filtros de Alerta"
+          subtitle="Selecione o subsistema para investigação."
+          icon={Terminal}
+        />
+
+        <Reveal delayMs={80}>
+          <div className="edge-card p-3 overflow-x-auto">
+            <div className="flex gap-1">
+              {categories.map((item) => (
+                <button
+                  key={item.value}
+                  onClick={() => setCategory(item.value)}
+                  className={cn(
+                    "px-4 py-2 rounded-[2px] text-[11px] font-semibold uppercase tracking-[0.2em] transition-all border shrink-0 hover-lift",
+                    category === item.value
+                      ? 'bg-primary/10 border-primary text-primary'
+                      : 'bg-card/30 border-border/50 text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+
+        <Reveal delayMs={160}>
+          {filteredAlerts.length === 0 ? (
+            <div className="edge-card p-12 text-center text-muted-foreground">
+              Nenhum alerta para este filtro.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredAlerts.map((alert, index) => (
+                <div key={alert.id} className="relative pl-6">
+                  <div className="absolute left-2 top-0 bottom-0 w-[1px] bg-border/50" />
+                  <div className={cn(
+                    "absolute left-0 top-6 h-2 w-2 rounded-full",
+                    index % 2 === 0 ? "bg-primary" : "bg-emerald-500"
+                  )} />
+                  <AlertCard alert={alert} />
+                </div>
+              ))}
             </div>
           )}
-        </div>
-
-        {/* Filter Scroll Area */}
-        <div className="w-full overflow-x-auto pb-2 no-scrollbar mask-horizontal-fade">
-          <div className="flex gap-1">
-            {categories.map((item) => (
-              <button
-                key={item.value}
-                onClick={() => setCategory(item.value)}
-                className={cn(
-                  "px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider transition-all border shrink-0",
-                  category === item.value
-                    ? 'bg-primary/10 border-primary text-primary shadow-[0_0_10px_-4px_var(--color-primary)]'
-                    : 'bg-card/30 border-border/50 text-muted-foreground hover:bg-card/50 hover:text-foreground'
-                )}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {filteredAlerts.length === 0 ? (
-          <div className="p-12 text-center border border-dashed border-border/50 rounded-lg opacity-50">
-            <p className="text-muted-foreground text-sm tracking-widest">NO_ALERTS_DETECTED_FOR_FILTER</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredAlerts.map((alert) => (
-              <div key={alert.id} className="relative pl-4">
-                <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-border/50" />
-                <div className="absolute left-[-2px] top-6 w-[5px] h-[5px] rounded-full bg-primary" />
-                <AlertCard alert={alert} />
-              </div>
-            ))}
-          </div>
-        )}
+        </Reveal>
       </div>
-    </div>
+    </PageShell>
   );
 }

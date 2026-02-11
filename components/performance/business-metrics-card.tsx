@@ -35,9 +35,9 @@ const formatCurrency = (value: number) => {
 
 const healthColors: Record<string, string> = {
   excellent: 'bg-emerald-500',
-  good: 'bg-blue-500',
+  good: 'bg-primary',
   fair: 'bg-yellow-500',
-  poor: 'bg-rose-500',
+  poor: 'bg-destructive',
 };
 
 const healthLabels: Record<string, string> = {
@@ -52,8 +52,8 @@ function GaugeIndicator({ ratio, health }: { ratio: number; health: string }) {
   const percentage = Math.min((ratio / maxRatio) * 100, 100);
 
   const bgColor = health === 'excellent' ? 'bg-emerald-500' :
-    health === 'good' ? 'bg-blue-500' :
-    health === 'fair' ? 'bg-yellow-500' : 'bg-rose-500';
+    health === 'good' ? 'bg-primary' :
+    health === 'fair' ? 'bg-yellow-500' : 'bg-destructive';
 
   return (
     <div className="space-y-2">
@@ -80,7 +80,7 @@ function GaugeIndicator({ ratio, health }: { ratio: number; health: string }) {
 export function BusinessMetricsCard({ data, loading }: BusinessMetricsCardProps) {
   if (loading) {
     return (
-      <Card className="border-l-4 border-l-blue-500">
+      <Card className="edge-card border-l-2 border-l-primary">
         <CardHeader>
           <CardTitle className="text-base">Métricas de Negócio</CardTitle>
         </CardHeader>
@@ -93,7 +93,7 @@ export function BusinessMetricsCard({ data, loading }: BusinessMetricsCardProps)
 
   if (!data) {
     return (
-      <Card className="border-l-4 border-l-blue-500">
+      <Card className="edge-card border-l-2 border-l-primary">
         <CardHeader>
           <CardTitle className="text-base">Métricas de Negócio</CardTitle>
         </CardHeader>
@@ -105,7 +105,7 @@ export function BusinessMetricsCard({ data, loading }: BusinessMetricsCardProps)
   }
 
   return (
-    <Card className="border-l-4 border-l-blue-500">
+    <Card className="edge-card border-l-2 border-l-primary">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base">
           Métricas de Negócio
@@ -118,20 +118,20 @@ export function BusinessMetricsCard({ data, loading }: BusinessMetricsCardProps)
       <CardContent className="space-y-4">
         {/* Key Metrics Grid */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+          <div className="p-3 rounded-[2px] bg-primary/10 border border-primary/30">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">CAC</p>
             <p className="text-lg font-bold mt-0.5">{formatCurrency(data.cac)}</p>
           </div>
-          <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+          <div className="p-3 rounded-[2px] bg-emerald-500/10 border border-emerald-500/30">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">LTV</p>
             <p className="text-lg font-bold mt-0.5">{formatCurrency(data.ltv)}</p>
             <p className="text-[10px] text-muted-foreground">{data.config.lifetimeMonths} meses</p>
           </div>
-          <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
+          <div className="p-3 rounded-[2px] bg-amber-500/10 border border-amber-500/30">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">CPL</p>
             <p className="text-lg font-bold mt-0.5">{formatCurrency(data.costPerLead)}</p>
           </div>
-          <div className="p-3 rounded-lg bg-violet-500/5 border border-violet-500/10">
+          <div className="p-3 rounded-[2px] bg-secondary/60 border border-border/60">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">ROI</p>
             <p className={`text-lg font-bold mt-0.5 ${data.roi > 0 ? 'text-emerald-600' : data.roi < 0 ? 'text-rose-600' : ''}`}>
               {data.roi !== 0 ? `${data.roi.toFixed(0)}%` : '-'}
@@ -163,7 +163,7 @@ export function BusinessMetricsCard({ data, loading }: BusinessMetricsCardProps)
         </div>
 
         {/* Health insight */}
-        <div className="p-3 rounded-lg bg-muted/50 text-xs space-y-0.5">
+        <div className="p-3 rounded-[2px] bg-muted/50 text-xs space-y-0.5">
           <p className="font-medium">
             {data.ltvCacRatio >= 3
               ? 'Negócio saudável.'

@@ -33,16 +33,16 @@ const rankingLabel: Record<string, string> = {
 };
 
 const rankingColor: Record<string, string> = {
-  ABOVE_AVERAGE_10: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200',
-  ABOVE_AVERAGE_20: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200',
-  ABOVE_AVERAGE_35: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200',
-  ABOVE_AVERAGE: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200',
-  AVERAGE: 'border-slate-500/40 bg-slate-500/15 text-slate-200',
-  BELOW_AVERAGE_10: 'border-rose-500/40 bg-rose-500/15 text-rose-200',
-  BELOW_AVERAGE_20: 'border-rose-500/40 bg-rose-500/15 text-rose-200',
-  BELOW_AVERAGE_35: 'border-orange-500/40 bg-orange-500/15 text-orange-200',
-  BELOW_AVERAGE: 'border-orange-500/40 bg-orange-500/15 text-orange-200',
-  UNKNOWN: 'border-amber-500/40 bg-amber-500/15 text-amber-200',
+  ABOVE_AVERAGE_10: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700',
+  ABOVE_AVERAGE_20: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700',
+  ABOVE_AVERAGE_35: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700',
+  ABOVE_AVERAGE: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700',
+  AVERAGE: 'border-slate-500/40 bg-slate-500/15 text-slate-700',
+  BELOW_AVERAGE_10: 'border-rose-500/40 bg-rose-500/15 text-rose-700',
+  BELOW_AVERAGE_20: 'border-rose-500/40 bg-rose-500/15 text-rose-700',
+  BELOW_AVERAGE_35: 'border-orange-500/40 bg-orange-500/15 text-orange-700',
+  BELOW_AVERAGE: 'border-orange-500/40 bg-orange-500/15 text-orange-700',
+  UNKNOWN: 'border-amber-500/40 bg-amber-500/15 text-amber-700',
 };
 
 const fmtNum = (v: number) => {

@@ -63,7 +63,7 @@ export function LeadGenMetricsCard({
     topDisqualification.length > 0;
 
   return (
-    <Card className="border-l-4 border-l-emerald-500">
+    <Card className="edge-card border-l-2 border-l-primary">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base">
           Performance de Leads
@@ -76,7 +76,7 @@ export function LeadGenMetricsCard({
       <CardContent>
         <div className="grid grid-cols-2 gap-3">
           {/* Automatic Metrics (from Meta API) */}
-          <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+          <div className="p-3 rounded-[2px] bg-emerald-500/10 border border-emerald-500/30">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Conversas</p>
             <p className="text-lg font-bold mt-0.5">{totalMessagingConversations}</p>
             <p className="text-[10px] text-muted-foreground">
@@ -84,7 +84,7 @@ export function LeadGenMetricsCard({
             </p>
           </div>
 
-          <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+          <div className="p-3 rounded-[2px] bg-primary/10 border border-primary/30">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Com Resposta</p>
             <p className="text-lg font-bold mt-0.5">{totalMessagingFirstReply}</p>
             <p className="text-[10px] text-muted-foreground">
@@ -92,7 +92,7 @@ export function LeadGenMetricsCard({
             </p>
           </div>
 
-          <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
+          <div className="p-3 rounded-[2px] bg-amber-500/10 border border-amber-500/30">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Cliques</p>
             <p className="text-lg font-bold mt-0.5">{totalLinkClicks}</p>
             <p className="text-[10px] text-muted-foreground">
@@ -100,7 +100,7 @@ export function LeadGenMetricsCard({
             </p>
           </div>
 
-          <div className="p-3 rounded-lg bg-violet-500/5 border border-violet-500/10">
+          <div className="p-3 rounded-[2px] bg-secondary/60 border border-border/60">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Investimento</p>
             <p className="text-lg font-bold mt-0.5">R$ {totalSpend.toLocaleString('pt-BR', {maximumFractionDigits: 0})}</p>
           </div>
@@ -145,7 +145,7 @@ export function LeadGenMetricsCard({
 
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">ROI Real</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-2xl font-bold text-emerald-500">
                   {roi > 0 ? `${roi.toFixed(0)}%` : '—'}
                 </p>
                 <p className="text-xs text-muted-foreground">

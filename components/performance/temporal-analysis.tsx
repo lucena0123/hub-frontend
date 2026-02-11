@@ -48,9 +48,9 @@ const formatCurrency = (value: number) => {
 
 const COLORS_BY_PERFORMANCE = {
   best: '#10b981',
-  good: '#3b82f6',
+  good: '#f59e0b',
   average: '#6b7280',
-  poor: '#f59e0b',
+  poor: '#f97316',
   worst: '#ef4444',
 };
 
@@ -97,7 +97,7 @@ export function TemporalAnalysis({
 
   if (loading) {
     return (
-      <Card className="border-l-4 border-l-teal-500">
+      <Card className="edge-card border-l-2 border-l-primary">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">{title}</CardTitle>
         </CardHeader>
@@ -110,7 +110,7 @@ export function TemporalAnalysis({
 
   if (!data || data.length === 0) {
     return (
-      <Card className="border-l-4 border-l-teal-500">
+      <Card className="edge-card border-l-2 border-l-primary">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">{title}</CardTitle>
         </CardHeader>
@@ -122,7 +122,7 @@ export function TemporalAnalysis({
   }
 
   return (
-    <Card className="border-l-4 border-l-teal-500">
+    <Card className="edge-card border-l-2 border-l-primary">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base">
           {title}
@@ -139,7 +139,7 @@ export function TemporalAnalysis({
             <Badge className="bg-emerald-500">Melhor dia: {bestDay}</Badge>
           )}
           {cheapestDay && (
-            <Badge className="bg-blue-500">CPL mais baixo: {cheapestDay}</Badge>
+            <Badge className="bg-primary">CPL mais baixo: {cheapestDay}</Badge>
           )}
           {worstDay && worstDay !== bestDay && (
             <Badge variant="outline" className="text-rose-600 border-rose-300">
@@ -183,7 +183,7 @@ export function TemporalAnalysis({
         {/* Day details table */}
         <div className="mt-4 grid grid-cols-7 gap-2 border-t pt-4">
           {data.map((d) => (
-            <div key={d.dayOfWeek} className="text-center p-2 rounded-lg bg-teal-500/5 border border-teal-500/10">
+            <div key={d.dayOfWeek} className="text-center p-2 rounded-[2px] bg-primary/10 border border-primary/20">
               <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{d.dayName.slice(0, 3)}</p>
               <p className="text-lg font-bold mt-0.5">{d.totalConversations}</p>
               <p className="text-[10px] text-muted-foreground">

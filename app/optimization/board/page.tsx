@@ -22,6 +22,8 @@ import { LayoutDashboard, Users, Loader2 } from "lucide-react";
 import { RuleLibrary } from "@/components/optimization/rule-library";
 
 import { ClientSelect } from "@/components/optimization/client-select";
+import { PageShell } from "@/components/layout/page-shell";
+import { SectionHeader } from "@/components/performance/section-header";
 
 export default function OptimizationBoardPage() {
     const { tasks, columns, mode, fetchTasks, moveTask, setMode, isLoading } = useOptimizationStore();
@@ -129,78 +131,80 @@ export default function OptimizationBoardPage() {
     }
 
     return (
-        <div className="flex bg-background h-screen overflow-hidden">
-            {/* Sidebar */}
-            <RuleLibrary />
+        <PageShell
+            eyebrow="Intervention"
+            title="Optimization Board"
+            description="Painel tático para priorização de regras e intervenção em campanhas."
+        >
+            <div className="flex gap-6">
+                <RuleLibrary />
 
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
-                {/* Header */}
-                <header className="flex items-center justify-between p-4 border-b">
-                    <div className="flex items-center gap-2">
-                        <LayoutDashboard className="w-5 h-5 text-primary" />
-                        <h1 className="text-xl font-bold">Optimization Board</h1>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <ClientSelect
-                            value={selectedClientId}
-                            onChange={(id) => {
-                                const clientId = id === 'all' ? undefined : id;
-                                setSelectedClientId(clientId);
-                                fetchTasks(clientId);
-                            }}
-                        />
-                        <Select
-                            value={mode}
-                            onValueChange={(value) => {
-                                if (value === 'workflow' || value === 'campaign') {
-                                    setMode(value);
-                                }
-                            }}
-                        >
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="View Mode" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="workflow">
-                                    <div className="flex items-center gap-2"><LayoutDashboard className="w-4 h-4" /> Workflow View</div>
-                                </SelectItem>
-                                <SelectItem value="campaign">
-                                    <div className="flex items-center gap-2"><Users className="w-4 h-4" /> Campaign View</div>
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Button onClick={() => fetchTasks(selectedClientId)} variant="outline" size="sm">
-                            Refresh
-                        </Button>
-                    </div>
-                </header>
-
-                {/* Board Canvas */}
-                <DndContext
-                    sensors={sensors}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                >
-                    <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 bg-muted/10">
-                        <div className="flex h-full gap-4 min-w-max">
-                            {columns.map(col => (
-                                <BoardColumn key={col.id} column={col} tasks={col.tasks} />
-                            ))}
-                        </div>
-                    </div>
-
-                    <DragOverlay>
-                        {activeTask ? <TaskCard task={activeTask} /> : null}
-                        {activeRule ? (
-                            <div className="w-[200px] p-2 bg-background border rounded shadow-lg opacity-80 cursor-grabbing">
-                                {activeRule.title ?? activeRule.name ?? activeRule.id}
+                <div className="flex-1 space-y-4">
+                    <SectionHeader
+                        title="Fluxo de Otimização"
+                        subtitle="Arraste tarefas entre colunas ou aplique regras por campanha."
+                        icon={LayoutDashboard}
+                        action={(
+                            <div className="flex flex-wrap items-center gap-3">
+                                <ClientSelect
+                                    value={selectedClientId}
+                                    onChange={(id) => {
+                                        const clientId = id === 'all' ? undefined : id;
+                                        setSelectedClientId(clientId);
+                                        fetchTasks(clientId);
+                                    }}
+                                />
+                                <Select
+                                    value={mode}
+                                    onValueChange={(value) => {
+                                        if (value === 'workflow' || value === 'campaign') {
+                                            setMode(value);
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger className="w-[180px]">
+                                        <SelectValue placeholder="View Mode" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="workflow">
+                                            <div className="flex items-center gap-2"><LayoutDashboard className="w-4 h-4" /> Workflow View</div>
+                                        </SelectItem>
+                                        <SelectItem value="campaign">
+                                            <div className="flex items-center gap-2"><Users className="w-4 h-4" /> Campaign View</div>
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Button onClick={() => fetchTasks(selectedClientId)} variant="outline" size="sm">
+                                    Refresh
+                                </Button>
                             </div>
-                        ) : null}
-                    </DragOverlay>
-                </DndContext>
+                        )}
+                    />
+
+                    <DndContext
+                        sensors={sensors}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <div className="min-h-[520px] overflow-x-auto overflow-y-hidden p-4 bg-muted/10 rounded-[16px] border border-border/60">
+                            <div className="flex h-full gap-4 min-w-max">
+                                {columns.map(col => (
+                                    <BoardColumn key={col.id} column={col} tasks={col.tasks} />
+                                ))}
+                            </div>
+                        </div>
+
+                        <DragOverlay>
+                            {activeTask ? <TaskCard task={activeTask} /> : null}
+                            {activeRule ? (
+                                <div className="w-[200px] p-2 bg-background border rounded shadow-lg opacity-80 cursor-grabbing">
+                                    {activeRule.title ?? activeRule.name ?? activeRule.id}
+                                </div>
+                            ) : null}
+                        </DragOverlay>
+                    </DndContext>
+                </div>
             </div>
-        </div>
+        </PageShell>
     );
 }

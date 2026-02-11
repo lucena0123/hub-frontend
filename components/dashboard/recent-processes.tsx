@@ -16,16 +16,16 @@ interface RecentProcessesProps {
 
 const statusColors = {
   pending: 'bg-gray-500',
-  running: 'bg-blue-500',
+  running: 'bg-primary',
   paused: 'bg-slate-500',
-  completed: 'bg-green-500',
+  completed: 'bg-emerald-500',
   failed: 'bg-red-500',
   suspended: 'bg-yellow-500',
 };
 
 export function RecentProcesses({ processes }: RecentProcessesProps) {
   return (
-    <div className="rounded-md border">
+    <div className="edge-card">
       <Table>
         <TableHeader>
           <TableRow>

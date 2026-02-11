@@ -45,7 +45,7 @@ export function AlertBadge({ className }: AlertBadgeProps) {
     <Badge
       className={cn(
         'ml-2 px-2 py-0.5 text-xs',
-        hasCritical ? 'bg-rose-500 text-white' : 'bg-amber-400 text-amber-950',
+        hasCritical ? 'bg-destructive text-destructive-foreground' : 'bg-primary text-primary-foreground',
         className
       )}
       title={`${total} alertas ativos`}

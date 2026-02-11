@@ -21,10 +21,10 @@ const statusLabels = {
 };
 
 const statusColors = {
-  not_started: 'bg-slate-200 text-slate-700',
-  in_progress: 'bg-blue-100 text-blue-700',
-  completed: 'bg-emerald-100 text-emerald-700',
-  blocked: 'bg-rose-100 text-rose-700',
+  not_started: 'bg-muted text-muted-foreground',
+  in_progress: 'bg-primary/10 text-primary',
+  completed: 'bg-emerald-500/10 text-emerald-300',
+  blocked: 'bg-destructive/10 text-destructive',
 };
 
 interface BpmnProgressTrackerProps {
@@ -41,7 +41,7 @@ export function BpmnProgressTracker({ progress }: BpmnProgressTrackerProps) {
   const pendingTasks = progress?.pendingTasks ?? [];
 
   return (
-    <Card className="border-l-4 border-l-indigo-500">
+    <Card className="edge-card border-l-2 border-l-primary">
       <CardHeader className="flex flex-row items-start justify-between pb-3">
         <div>
           <CardTitle className="text-base">Progresso BPMN</CardTitle>
@@ -61,7 +61,7 @@ export function BpmnProgressTracker({ progress }: BpmnProgressTrackerProps) {
             <div
               className={cn(
                 'h-2.5 rounded-full transition-all duration-500',
-                percent >= 80 ? 'bg-emerald-500' : percent >= 40 ? 'bg-indigo-500' : 'bg-amber-500'
+                percent >= 80 ? 'bg-emerald-500' : percent >= 40 ? 'bg-primary' : 'bg-amber-500'
               )}
               style={{ width: `${Math.min(percent, 100)}%` }}
             />
@@ -84,7 +84,7 @@ export function BpmnProgressTracker({ progress }: BpmnProgressTrackerProps) {
                   status === 'blocked' ? (
                     <AlertTriangle className="h-4 w-4 text-rose-500" />
                   ) : (
-                    <Clock className="h-4 w-4 text-blue-500" />
+                    <Clock className="h-4 w-4 text-primary" />
                   )
                 ) : (
                   <Circle className="h-3.5 w-3.5 text-muted-foreground" />
@@ -99,7 +99,7 @@ export function BpmnProgressTracker({ progress }: BpmnProgressTrackerProps) {
           })}
         </div>
 
-        <div className="rounded-lg border bg-indigo-500/5 border-indigo-500/10 p-3 text-sm">
+        <div className="rounded-[2px] border border-primary/20 bg-primary/10 p-3 text-sm">
           <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Tarefas pendentes</p>
           {pendingTasks.length === 0 ? (
             <p className="mt-2 text-xs text-muted-foreground">Nenhuma tarefa pendente.</p>

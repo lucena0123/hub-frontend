@@ -8,10 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 const tierColors: Record<string, string> = {
-  basic: 'bg-gray-500',
-  premium: 'bg-blue-500',
-  enterprise: 'bg-purple-500',
-  standard: 'bg-slate-500',
+  basic: 'bg-muted-foreground',
+  premium: 'bg-primary',
+  enterprise: 'bg-amber-500',
+  standard: 'bg-muted-foreground',
 };
 
 const statusColors: Record<string, string> = {
@@ -70,4 +70,3 @@ export const ClientHeader = (props: { client: Client }) => {
     </div>
   );
 };
-

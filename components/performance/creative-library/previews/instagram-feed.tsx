@@ -46,7 +46,7 @@ export function InstagramFeedAd({
                 <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8 cursor-pointer">
                         <AvatarImage src={avatarUrl} />
-                        <AvatarFallback className="bg-gradient-to-tr from-yellow-400 to-fuchsia-600 text-[10px] text-white font-bold">
+                        <AvatarFallback className="bg-gradient-to-tr from-amber-400 to-orange-600 text-[10px] text-white font-bold">
                             {username.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                     </Avatar>
@@ -82,9 +82,9 @@ export function InstagramFeedAd({
             </div>
 
             {/* CTA Bar (Native-like) */}
-            <div className="bg-blue-50/50 dark:bg-gray-50 border-t border-b border-gray-100 px-3 py-2.5 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
+            <div className="bg-secondary/60 border-t border-b border-gray-100 px-3 py-2.5 flex items-center justify-between cursor-pointer hover:bg-secondary transition-colors">
                 <div className="flex items-center gap-2">
-                    <span className={cn("text-xs font-medium", isWhatsApp ? "text-emerald-600" : "text-blue-600")}>
+                    <span className={cn("text-xs font-medium", isWhatsApp ? "text-emerald-600" : "text-primary")}>
                         {headline || displayCta}
                     </span>
                 </div>

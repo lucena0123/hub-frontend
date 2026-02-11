@@ -24,7 +24,7 @@ const severityIcon = {
 const severityDot = {
   critical: 'bg-rose-500',
   warning: 'bg-amber-500',
-  info: 'bg-sky-500',
+  info: 'bg-primary',
 };
 
 export function NotificationList({ onRead }: NotificationListProps) {
@@ -71,7 +71,7 @@ export function NotificationList({ onRead }: NotificationListProps) {
 
   return (
     <div className="flex flex-col max-h-[420px]">
-      <div className="px-4 py-3 flex items-center justify-between border-b">
+      <div className="px-4 py-3 flex items-center justify-between border-b border-border/60">
         <h3 className="font-semibold text-sm">Notificações</h3>
         {unreadCount > 0 && (
           <button
@@ -99,13 +99,13 @@ export function NotificationList({ onRead }: NotificationListProps) {
                 <div
                   key={notification.id}
                   className={`px-4 py-3 hover:bg-accent/50 transition-colors ${
-                    !notification.read ? 'bg-sky-50/50' : ''
+                    !notification.read ? 'bg-primary/5' : ''
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${
                       notification.severity === 'critical' ? 'text-rose-500' :
-                      notification.severity === 'warning' ? 'text-amber-500' : 'text-sky-500'
+                      notification.severity === 'warning' ? 'text-amber-500' : 'text-primary'
                     }`} />
 
                     <div className="flex-1 min-w-0 space-y-0.5">

@@ -58,47 +58,47 @@ export function Navigation() {
   const { user, logout } = useAuth();
 
   return (
-    <nav className="border-b border-primary/20 bg-background/80 backdrop-blur-md sticky top-0 z-50">
-      <div className="max-w-[1600px] mx-auto px-4 md:px-8">
-        <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="font-black text-2xl italic tracking-tighter hover:text-primary transition-colors flex items-center gap-2 group">
-              <span className="text-primary group-hover:animate-pulse">{'>'}</span> Hub
-            </Link>
-            <div className="flex gap-1 overflow-x-auto no-scrollbar mask-horizontal-fade">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      'flex items-center gap-2 px-3 py-1.5 rounded-sm text-xs font-mono tracking-wider transition-all relative overflow-hidden group',
-                      isActive
-                        ? 'text-primary bg-primary/10 border-b-2 border-primary'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                    )}
-                  >
-                    {isActive && <div className="absolute inset-0 bg-primary/5 animate-pulse" />}
-                    <Icon className={cn("h-3 w-3", isActive && "text-primary shadow-[0_0_5px_var(--color-primary)]")} />
-                    <span>{item.label}</span>
-                    {item.showBadge && <AlertBadge />}
-                  </Link>
-                );
-              })}
-            </div>
+    <nav className="premium-nav">
+      <div className="premium-nav-inner">
+        <div className="premium-nav-grid">
+          <Link href="/" className="premium-nav-brand">
+            <span className="premium-nav-kicker">Agency Console</span>
+            <span className="premium-nav-title">
+              Hub<span className="text-primary">.</span>
+            </span>
+          </Link>
+
+          <div className="premium-nav-links no-scrollbar">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "premium-nav-link",
+                    isActive && "premium-nav-link-active"
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{item.label}</span>
+                  {item.showBadge && <AlertBadge />}
+                </Link>
+              );
+            })}
           </div>
-          <div className="flex items-center gap-4 border-l border-border/50 pl-4">
+
+          <div className="premium-nav-user">
             <NotificationBell />
             {user && (
               <>
                 <Link
                   href="/settings"
-                  className="flex items-center gap-2 text-xs font-mono text-muted-foreground hover:text-primary transition-colors group"
+                  className="flex items-center gap-3 text-xs text-muted-foreground hover:text-primary transition-colors"
                 >
                   <div className="relative">
-                    <Avatar className="h-8 w-8 border border-primary/30 group-hover:border-primary transition-colors">
+                    <Avatar className="h-9 w-9 border border-primary/40">
                       <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
                         {user.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
@@ -106,14 +106,14 @@ export function Navigation() {
                     <div className="absolute -bottom-1 -right-1 h-2 w-2 bg-emerald-500 rounded-full border border-background" />
                   </div>
                   <div className="hidden sm:flex flex-col items-start leading-none">
-                    <span className="text-[10px] uppercase tracking-widest opacity-50">OPERATOR</span>
-                    <span className="font-bold">{user.name}</span>
+                    <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Operador</span>
+                    <span className="font-semibold">{user.name}</span>
                   </div>
                 </Link>
                 <button
                   type="button"
                   onClick={logout}
-                  className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-sm transition-colors"
+                  className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-[2px] transition-colors"
                   title="Sair"
                 >
                   <LogOut className="h-4 w-4" />

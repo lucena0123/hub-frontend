@@ -16,9 +16,9 @@ export const CreativeLibraryInsightsPanel = (props: { insights?: CreativeLibrary
   if (!hasCtas && !hasHeadlines) return null;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-4">
       {hasCtas && (
-        <Card className="border-dashed border-l-4 border-l-violet-400">
+        <Card className="edge-card border-l-2 border-l-primary">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Melhores botões de ação (CTA)</CardTitle>
             <CardDescription>
@@ -48,7 +48,7 @@ export const CreativeLibraryInsightsPanel = (props: { insights?: CreativeLibrary
       )}
 
       {hasHeadlines && (
-        <Card className="border-dashed border-l-4 border-l-violet-400">
+        <Card className="edge-card border-l-2 border-l-primary">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Melhores títulos</CardTitle>
             <CardDescription>
@@ -79,4 +79,3 @@ export const CreativeLibraryInsightsPanel = (props: { insights?: CreativeLibrary
     </div>
   );
 };
-

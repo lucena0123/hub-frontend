@@ -182,7 +182,7 @@ export function CreativeLibrary({
   };
 
   return (
-    <Card className="border-l-4 border-l-violet-500">
+    <Card className="edge-card border-l-2 border-l-primary">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base">
           Biblioteca de Criativos

@@ -33,7 +33,7 @@ type HealthResponse = {
 
 const GRADE_COLORS: Record<string, string> = {
   A: 'text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/40',
-  B: 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950/40',
+  B: 'text-primary bg-primary/10',
   C: 'text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/40',
   D: 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/40',
   F: 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/40',
@@ -41,13 +41,13 @@ const GRADE_COLORS: Record<string, string> = {
 
 const SCORE_COLOR = (score: number) =>
   score >= 85 ? 'text-emerald-600 dark:text-emerald-400'
-    : score >= 70 ? 'text-blue-600 dark:text-blue-400'
+    : score >= 70 ? 'text-primary'
       : score >= 50 ? 'text-amber-600 dark:text-amber-400'
         : 'text-red-600 dark:text-red-400';
 
 const BAR_COLOR = (score: number) =>
   score >= 80 ? 'bg-emerald-500'
-    : score >= 60 ? 'bg-blue-500'
+    : score >= 60 ? 'bg-primary'
       : score >= 40 ? 'bg-amber-500'
         : 'bg-red-500';
 
@@ -73,7 +73,7 @@ function CampaignHealthCard({ health }: { health: CampaignHealth }) {
 
   return (
     <div
-      className="rounded-lg border p-4 space-y-3 cursor-pointer hover:bg-muted/30 transition-colors"
+      className="rounded-[2px] border p-4 space-y-3 cursor-pointer hover:bg-muted/30 transition-colors"
       onClick={() => setExpanded(!expanded)}
     >
       <div className="flex items-center justify-between">

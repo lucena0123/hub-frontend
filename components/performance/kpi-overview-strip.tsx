@@ -21,9 +21,9 @@ const fmt = (value: number, style: 'currency' | 'decimal' | 'percent' = 'decimal
 };
 
 const frequencyColor = (freq: number) => {
-  if (freq < 3) return 'text-emerald-600';
-  if (freq < 5) return 'text-amber-600';
-  return 'text-rose-600';
+  if (freq < 3) return 'text-emerald-400';
+  if (freq < 5) return 'text-amber-400';
+  return 'text-rose-400';
 };
 
 const frequencyLabel = (freq: number) => {
@@ -48,54 +48,58 @@ export function KpiOverviewStrip({
       label: 'Investimento',
       value: fmt(totalSpend, 'currency'),
       icon: DollarSign,
-      color: 'text-blue-600',
-      bg: 'bg-blue-50',
+      color: 'text-primary',
+      bg: 'bg-primary/10 border border-primary/20',
     },
     {
       label: 'Conversas',
       value: totalConversations > 0 ? totalConversations.toLocaleString('pt-BR') : '—',
       icon: MessageCircle,
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-50',
+      color: 'text-emerald-400',
+      bg: 'bg-emerald-500/10 border border-emerald-500/20',
     },
     {
       label: 'Custo/Lead',
       value: fmt(cpl, 'currency'),
       icon: TrendingUp,
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
+      color: 'text-amber-400',
+      bg: 'bg-amber-500/10 border border-amber-500/20',
     },
     {
       label: 'Frequência',
       value: avgFrequency > 0 ? `${avgFrequency.toFixed(1)}x` : '—',
       icon: Radio,
       color: frequencyColor(avgFrequency),
-      bg: avgFrequency >= 5 ? 'bg-rose-50' : avgFrequency >= 3 ? 'bg-amber-50' : 'bg-emerald-50',
+      bg: avgFrequency >= 5
+        ? 'bg-rose-500/10 border border-rose-500/20'
+        : avgFrequency >= 3
+          ? 'bg-amber-500/10 border border-amber-500/20'
+          : 'bg-emerald-500/10 border border-emerald-500/20',
       subtitle: avgFrequency > 0 ? frequencyLabel(avgFrequency) : undefined,
     },
     {
       label: 'Taxa de Resposta',
       value: fmt(replyRate, 'percent'),
       icon: Reply,
-      color: 'text-sky-600',
-      bg: 'bg-sky-50',
+      color: 'text-primary',
+      bg: 'bg-primary/10 border border-primary/20',
     },
     {
       label: 'ROI',
       value: roi != null && Number.isFinite(roi) && roi !== 0 ? `${roi.toFixed(0)}%` : '—',
       icon: BarChart3,
-      color: roi != null && roi > 0 ? 'text-violet-600' : 'text-rose-600',
-      bg: roi != null && roi > 0 ? 'bg-violet-50' : 'bg-slate-50',
+      color: roi != null && roi > 0 ? 'text-emerald-500' : 'text-destructive',
+      bg: roi != null && roi > 0 ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-destructive/10 border border-destructive/30',
     },
   ];
 
   if (loading) {
     return (
-      <Card>
+      <Card className="edge-card">
         <CardContent className="py-4">
           <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-16 rounded-lg bg-muted animate-pulse" />
+              <div key={i} className="h-16 rounded-[2px] bg-muted animate-pulse" />
             ))}
           </div>
         </CardContent>
@@ -104,13 +108,13 @@ export function KpiOverviewStrip({
   }
 
   return (
-    <Card>
+    <Card className="edge-card">
       <CardContent className="py-4">
         <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
           {kpis.map((kpi) => {
             const Icon = kpi.icon;
             return (
-              <div key={kpi.label} className={`rounded-lg ${kpi.bg} p-3 space-y-1`}>
+              <div key={kpi.label} className={`rounded-[2px] ${kpi.bg} p-3 space-y-1`}>
                 <div className="flex items-center gap-1.5">
                   <Icon className={`h-3.5 w-3.5 ${kpi.color}`} />
                   <span className="text-[11px] text-muted-foreground font-medium">{kpi.label}</span>

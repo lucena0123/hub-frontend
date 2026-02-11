@@ -47,8 +47,8 @@ const formatNumber = (value: number) => {
 };
 
 const COLORS = [
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-  '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1',
+  '#f97316', '#10b981', '#f59e0b', '#ef4444', '#eab308',
+  '#84cc16', '#f43f5e', '#fb7185', '#22c55e', '#a3e635',
 ];
 
 function BreakdownBarChart({
@@ -80,7 +80,7 @@ function BreakdownBarChart({
 
   if (data.length === 0) {
     return (
-      <Card className="border-l-4 border-l-cyan-500">
+      <Card className="edge-card border-l-2 border-l-primary">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">{title}</CardTitle>
         </CardHeader>
@@ -92,7 +92,7 @@ function BreakdownBarChart({
   }
 
   return (
-    <Card className="border-l-4 border-l-cyan-500">
+    <Card className="edge-card border-l-2 border-l-primary">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center justify-between">
           {title}
@@ -115,7 +115,7 @@ function BreakdownBarChart({
             }}
           />
           <Legend formatter={(value) => value === 'spend' ? 'Investimento' : 'Conversões'} />
-            <Bar dataKey="spend" fill="#3b82f6" radius={[0, 4, 4, 0]}>
+            <Bar dataKey="spend" fill="#f97316" radius={[0, 4, 4, 0]}>
               {chartData.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
@@ -175,25 +175,25 @@ export function DemographicsChart({ ageGenderData, placementData, regionData, co
   if (loading) {
     return (
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="border-l-4 border-l-cyan-500">
+        <Card className="edge-card border-l-2 border-l-primary">
           <CardHeader className="pb-3"><CardTitle className="text-base">Demografia</CardTitle></CardHeader>
           <CardContent className="flex items-center justify-center py-10">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-cyan-500">
+        <Card className="edge-card border-l-2 border-l-primary">
           <CardHeader className="pb-3"><CardTitle className="text-base">Posicionamentos</CardTitle></CardHeader>
           <CardContent className="flex items-center justify-center py-10">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-cyan-500">
+        <Card className="edge-card border-l-2 border-l-primary">
           <CardHeader className="pb-3"><CardTitle className="text-base">Estados</CardTitle></CardHeader>
           <CardContent className="flex items-center justify-center py-10">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-cyan-500">
+        <Card className="edge-card border-l-2 border-l-primary">
           <CardHeader className="pb-3"><CardTitle className="text-base">País</CardTitle></CardHeader>
           <CardContent className="flex items-center justify-center py-10">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

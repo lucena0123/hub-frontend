@@ -20,10 +20,10 @@ const THEME_OPTIONS = [
 const ANGLE_COLORS: Record<string, string> = {
   dor: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400',
   urgência: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400',
-  'prova social': 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400',
+  'prova social': 'bg-primary/10 text-primary',
   benefício: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
-  autoridade: 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400',
-  curiosidade: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-400',
+  autoridade: 'bg-secondary/60 text-foreground',
+  curiosidade: 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400',
   informativo: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
 };
 
@@ -167,7 +167,7 @@ export function CopyGenerator({ clientId }: { clientId: string }) {
               <select
                 value={themeKey}
                 onChange={(e) => setThemeKey(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="flex h-9 w-full rounded-[2px] border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 {THEME_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -191,7 +191,7 @@ export function CopyGenerator({ clientId }: { clientId: string }) {
                 <span>CPL médio: <strong>R$ {winnerContext.avgCpl.toFixed(2)}</strong></span>
               )}
               {aiUsed ? (
-                <Badge variant="outline" className="text-[10px] bg-violet-50 text-violet-600 dark:bg-violet-950/30 dark:text-violet-400">
+                <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary">
                   IA (OpenAI)
                 </Badge>
               ) : (

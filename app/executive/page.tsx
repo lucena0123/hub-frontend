@@ -3,11 +3,14 @@
 import { useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, BarChart3, Loader2, TrendingUp, Users, Zap, Activity } from 'lucide-react';
+import { AlertTriangle, Loader2, TrendingUp, Users, Zap } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/api/client/http';
 import { cn } from '@/lib/utils';
+import { PageShell } from '@/components/layout/page-shell';
+import { Reveal } from '@/components/layout/reveal';
+import { SectionHeader } from '@/components/performance/section-header';
 
 type ClientSummary = {
   clientId: string;
@@ -37,15 +40,15 @@ type ExecutiveData = {
 };
 
 const GRADE_COLORS: Record<string, string> = {
-  A: 'text-emerald-500 border-emerald-500/50 shadow-[0_0_10px_var(--color-emerald-500)]',
-  B: 'text-blue-500 border-blue-500/50 shadow-[0_0_10px_var(--color-blue-500)]',
-  C: 'text-amber-500 border-amber-500/50 shadow-[0_0_10px_var(--color-amber-500)]',
-  D: 'text-orange-500 border-orange-500/50 shadow-[0_0_10px_var(--color-orange-500)]',
-  F: 'text-red-500 border-red-500/50 shadow-[0_0_10px_var(--color-red-500)]',
+  A: 'text-emerald-400 border-emerald-500/50',
+  B: 'text-primary border-primary/50',
+  C: 'text-amber-400 border-amber-500/50',
+  D: 'text-orange-400 border-orange-500/50',
+  F: 'text-destructive border-destructive/50',
 };
 
 const TIER_COLORS: Record<string, string> = {
-  premium: 'text-violet-400 border-violet-500/30 bg-violet-500/10',
+  premium: 'text-primary border-primary/40 bg-primary/10',
   basic: 'text-muted-foreground border-border bg-muted/10',
 };
 
@@ -55,22 +58,24 @@ function KpiModule({
   icon: Icon,
   subtitle,
   color = 'text-primary',
+  className,
 }: {
   title: string;
   value: string;
   icon: ComponentType<{ className?: string }>;
   subtitle?: string;
   color?: string;
+  className?: string;
 }) {
   return (
-    <div className="relative group border border-border/50 bg-card/30 hover:bg-card/50 transition-all p-4 rounded-sm overflow-hidden">
+    <div className={cn("edge-card hover-lift relative overflow-hidden p-4 group", className)}>
       <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
         <Icon className="h-16 w-16" />
       </div>
       <div className="relative z-10">
-        <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">{title}</p>
-        <p className={cn("text-2xl font-black tracking-tight drop-shadow-md", color)}>{value}</p>
-        {subtitle && <p className="text-[10px] font-mono text-muted-foreground mt-1 border-t border-border/30 pt-1 inline-block">{subtitle}</p>}
+        <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-1">{title}</p>
+        <p className={cn("text-2xl font-semibold tracking-tight", color)}>{value}</p>
+        {subtitle && <p className="text-[10px] text-muted-foreground mt-2 border-t border-border/30 pt-2 inline-block">{subtitle}</p>}
       </div>
     </div>
   );
@@ -110,132 +115,153 @@ export default function ExecutiveDashboardPage() {
     : data.clients.filter(c => c.tier === filterTier);
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8 font-mono text-foreground">
-      <div className="max-w-[1600px] mx-auto space-y-8">
-        {/* Header HUD */}
-        <div className="flex flex-col md:flex-row items-end justify-between gap-4 border-b border-primary/20 pb-6 relative overflow-hidden">
-          <div className="absolute right-0 top-0 p-4 opacity-10 pointer-events-none">
-            <BarChart3 className="h-32 w-32 text-primary" />
-          </div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 text-primary/50 text-xs tracking-[0.3em] mb-1">
-              <Activity className="h-3 w-3" />
-              <span>TERMINAL_ID: EXECUTIVE_OVERVIEW</span>
-            </div>
-            <h1 className="text-3xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50">
-              EXECUTIVE_DASHBOARD
-            </h1>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
-              Global Client Consolidation
-            </p>
-          </div>
-
-          {/* Filter */}
-          <div className="relative z-10 flex items-center gap-2 bg-card/50 p-1 rounded-sm border border-border/50">
-            <span className="text-[10px] uppercase text-muted-foreground px-2">FILTER_TIER:</span>
-            {['all', 'premium', 'basic'].map(tier => (
-              <button
-                key={tier}
-                onClick={() => setFilterTier(tier)}
-                className={cn(
-                  "px-3 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider transition-all",
-                  filterTier === tier
-                    ? 'bg-primary/20 text-primary shadow-[0_0_10px_var(--color-primary)]'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                )}
-              >
-                {tier}
-              </button>
-            ))}
-          </div>
+    <PageShell
+      eyebrow="Agência / Executivo"
+      title="Panorama Executivo"
+      description="Consolidação global de performance e saúde das contas para decisão rápida."
+      meta={
+        <div className="space-y-2 text-xs text-muted-foreground">
+          <div className="signal-chip">Clientes {data.kpi.totalClients}</div>
+          <div className="signal-chip">Atenção {data.kpi.clientsNeedingAttention}</div>
+          <div className="signal-chip">Anomalias {data.kpi.totalAnomalies}</div>
         </div>
-
-        {/* KPI Strip */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <KpiModule
-            title="Total Spend (7d)"
-            value={`R$ ${data.kpi.totalSpend7d.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-            icon={TrendingUp}
-            color="text-emerald-400"
-          />
-          <KpiModule
-            title="Total Conversations (7d)"
-            value={String(data.kpi.totalConversations7d)}
-            icon={Users}
-            subtitle={data.kpi.avgCpl != null ? `Avg CPL: R$ ${data.kpi.avgCpl.toFixed(2)}` : undefined}
-            color="text-blue-400"
-          />
-          <KpiModule
-            title="Attention Required"
-            value={`${data.kpi.clientsNeedingAttention}/${data.kpi.totalClients}`}
-            icon={AlertTriangle}
-            subtitle="Health Score < 50"
-            color="text-orange-400"
-          />
-          <KpiModule
-            title="Active Anomalies"
-            value={String(data.kpi.totalAnomalies)}
-            icon={Zap}
-            color="text-rose-500 neon-text"
-          />
-        </div>
-
-        {/* Client Grid/List */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-widest px-4">
-            <span>Client Entity</span>
-            <span className="hidden md:inline">Perf_Metrics</span>
-          </div>
-
-          {filteredClients.map((client) => (
-            <div key={client.clientId} className="group relative border border-border/50 bg-card/20 hover:bg-card/40 transition-all p-4 rounded-sm hover:border-primary/30 flex flex-col md:flex-row items-center gap-4">
-              {/* Status Indicator */}
-              <div className={cn("w-1 h-full absolute left-0 top-0 bottom-0 transition-all", client.anomalyCount > 0 ? "bg-rose-500" : "bg-primary/20 group-hover:bg-primary")} />
-
-              <div className="flex items-center gap-4 flex-1 w-full">
-                <div className="flex items-center justify-center w-10 h-10">
-                  {client.healthGrade ? (
-                    <div className={cn("flex items-center justify-center w-8 h-8 rounded-full border text-xs font-black", GRADE_COLORS[client.healthGrade] || "border-border text-muted-foreground")}>
-                      {client.healthGrade}
-                    </div>
-                  ) : <span className="text-muted-foreground">-</span>}
-                </div>
-
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Link href={`/clients/${client.clientId}/performance`} className="font-bold text-lg hover:text-primary transition-colors">
-                      {client.clientName}
-                    </Link>
-                    <Badge variant="outline" className={cn("text-[8px] uppercase tracking-wider rounded-none px-1 py-0 border-0", TIER_COLORS[client.tier])}>
-                      {client.tier}
-                    </Badge>
-                  </div>
-                  <div className="flex gap-4 text-xs text-muted-foreground mt-1">
-                    <span>Anomalies: <span className={cn(client.anomalyCount > 0 ? "text-rose-500 font-bold" : "")}>{client.anomalyCount}</span></span>
-                    <span>Proposals: <span className={cn(client.pendingProposals > 0 ? "text-amber-500 font-bold" : "")}>{client.pendingProposals}</span></span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-8 w-full md:w-auto text-right md:pr-8">
-                <div>
-                  <p className="text-[9px] text-muted-foreground uppercase">Spend 7d</p>
-                  <p className="font-mono text-sm">R$ {client.spend7d.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-muted-foreground uppercase">CPL</p>
-                  <p className="font-mono text-sm">{client.cpl7d != null ? `R$ ${client.cpl7d.toFixed(2)}` : '-'}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-muted-foreground uppercase">Conv.</p>
-                  <p className="font-mono text-sm">{client.conversations7d}</p>
-                </div>
-              </div>
-            </div>
-
+      }
+      actions={
+        <div className="flex flex-wrap gap-2">
+          {['all', 'premium', 'basic'].map(tier => (
+            <button
+              key={tier}
+              onClick={() => setFilterTier(tier)}
+              className={cn(
+                "px-3 py-2 rounded-[2px] text-[10px] font-semibold uppercase tracking-[0.3em] transition-all border hover-lift",
+                filterTier === tier
+                  ? 'bg-primary/10 border-primary text-primary'
+                  : 'border-border/50 text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {tier}
+            </button>
           ))}
         </div>
-      </div >
-    </div >
+      }
+    >
+      <div className="space-y-8">
+        <SectionHeader
+          title="KPIs Executivos"
+          subtitle="Sinais principais de investimento e risco."
+          icon={TrendingUp}
+        />
+
+        <Reveal>
+          <div className="flex flex-wrap gap-4">
+            <KpiModule
+              title="Total Spend (7d)"
+              value={`R$ ${data.kpi.totalSpend7d.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+              icon={TrendingUp}
+              color="text-emerald-400"
+              className="flex-[1.4_1_260px]"
+            />
+            <KpiModule
+              title="Conversas (7d)"
+              value={String(data.kpi.totalConversations7d)}
+              icon={Users}
+              subtitle={data.kpi.avgCpl != null ? `CPL médio: R$ ${data.kpi.avgCpl.toFixed(2)}` : undefined}
+              color="text-primary"
+              className="flex-[1_1_220px]"
+            />
+            <KpiModule
+              title="Atenção"
+              value={`${data.kpi.clientsNeedingAttention}/${data.kpi.totalClients}`}
+              icon={AlertTriangle}
+              subtitle="Health < 50"
+              color="text-amber-400"
+              className="flex-[1_1_200px]"
+            />
+            <KpiModule
+              title="Anomalias"
+              value={String(data.kpi.totalAnomalies)}
+              icon={Zap}
+              color="text-destructive"
+              className="flex-[0.9_1_180px]"
+            />
+          </div>
+        </Reveal>
+
+        <SectionHeader
+          title="Carteira Monitorada"
+          subtitle="Clientes com indicadores críticos ou oportunidades."
+          icon={Users}
+        />
+
+        <Reveal delayMs={120}>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-[0.3em] px-2">
+              <span>Cliente</span>
+              <span className="hidden md:inline">Operação 7d</span>
+            </div>
+
+            {filteredClients.map((client, index) => {
+              const offset =
+                index % 3 === 0 ? "lg:translate-x-6" : index % 3 === 1 ? "lg:-translate-x-4" : "";
+
+              return (
+                <div
+                  key={client.clientId}
+                  className={cn(
+                    "group relative edge-card hover-lift p-4 flex flex-col lg:flex-row items-start lg:items-center gap-4",
+                    offset
+                  )}
+                >
+                  <div className={cn(
+                    "absolute left-0 top-0 bottom-0 w-[2px] transition-all",
+                    client.anomalyCount > 0 ? "bg-destructive" : "bg-primary/40"
+                  )} />
+
+                  <div className="flex items-center gap-4 flex-1 w-full">
+                    <div className="flex items-center justify-center w-10 h-10">
+                      {client.healthGrade ? (
+                        <div className={cn("flex items-center justify-center w-9 h-9 rounded-full border text-xs font-semibold", GRADE_COLORS[client.healthGrade] || "border-border text-muted-foreground")}>
+                          {client.healthGrade}
+                        </div>
+                      ) : <span className="text-muted-foreground">-</span>}
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <Link href={`/clients/${client.clientId}/performance`} className="font-semibold text-lg hover:text-primary transition-colors">
+                          {client.clientName}
+                        </Link>
+                        <Badge variant="outline" className={cn("text-[9px] uppercase tracking-[0.25em] px-2 py-0.5 border", TIER_COLORS[client.tier])}>
+                          {client.tier}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mt-1">
+                        <span>Anomalias: <span className={cn(client.anomalyCount > 0 ? "text-destructive font-semibold" : "")}>{client.anomalyCount}</span></span>
+                        <span>Propostas: <span className={cn(client.pendingProposals > 0 ? "text-amber-400 font-semibold" : "")}>{client.pendingProposals}</span></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-6 w-full lg:w-auto text-right">
+                    <div>
+                      <p className="text-[9px] text-muted-foreground uppercase">Spend 7d</p>
+                      <p className="text-sm">R$ {client.spend7d.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-muted-foreground uppercase">CPL</p>
+                      <p className="text-sm">{client.cpl7d != null ? `R$ ${client.cpl7d.toFixed(2)}` : '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-muted-foreground uppercase">Conv.</p>
+                      <p className="text-sm">{client.conversations7d}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Reveal>
+      </div>
+    </PageShell>
   );
 }

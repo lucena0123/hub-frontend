@@ -7,14 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { ZeroConversationsDialog } from '@/components/performance/zero-conversations-dialog';
 import { getCampaignBenchmarks, getComplianceRisk, getOptimizationCenterPlaybook, updateCampaign } from '@/lib/api/client';
 import type { CampaignBenchmark, ComplianceRiskCampaign, ComplianceRiskResponse, PerformanceSummary } from '@/types';
@@ -26,7 +18,7 @@ interface CampaignTableProps {
 
 const statusColors: Record<string, string> = {
   excellent: 'bg-emerald-500',
-  good: 'bg-blue-500',
+  good: 'bg-primary',
   fair: 'bg-yellow-500',
   poor: 'bg-rose-500',
 };
@@ -43,19 +35,10 @@ type SaveState = {
   message?: string;
 };
 
-const formatNumber = (value: number) => {
-  if (!Number.isFinite(value)) return '-';
-  return value.toLocaleString('pt-BR');
-};
 
 const formatCurrency = (value: number) => {
   if (!Number.isFinite(value)) return '-';
   return `R$ ${value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`;
-};
-
-const formatOptionalNumber = (value: number) => {
-  if (!Number.isFinite(value) || value <= 0) return '—';
-  return value.toLocaleString('pt-BR');
 };
 
 const formatOptionalCurrency = (value: number) => {
@@ -66,6 +49,590 @@ const formatOptionalCurrency = (value: number) => {
 const formatPercent = (value: number) => {
   if (!Number.isFinite(value) || value <= 0) return '—';
   return `${value.toFixed(1)}%`;
+};
+
+
+type RankingKind = 'quality' | 'engagement' | 'conversion';
+
+const rankingContext: Record<RankingKind, { label: string; description: string }> = {
+  quality: { label: 'Qualidade do anúncio', description: 'feedback negativo e percepção de qualidade' },
+  engagement: { label: 'Engajamento esperado', description: 'chance de engajamento com o criativo' },
+  conversion: { label: 'Conversão esperada', description: 'chance de conversão após o clique' },
+};
+
+const getRankingMeta = (value?: string | null, kind: RankingKind = 'quality') => {
+  const context = rankingContext[kind];
+  if (!value) {
+    return {
+      label: 'Sem ranking',
+      tone: 'border-muted text-muted-foreground',
+      hint: `Sem referência de ${context.label.toLowerCase()} informada pela Meta.`,
+    };
+  }
+
+  const normalized = value.toLowerCase();
+  if (normalized.includes('above')) {
+    return {
+      label: 'Acima da média',
+      tone: 'border-emerald-500/30 text-emerald-300',
+      hint: `Acima da média para ${context.label.toLowerCase()} (${context.description}).`,
+    };
+  }
+  if (normalized.includes('average')) {
+    return {
+      label: 'Média',
+      tone: 'border-amber-400/30 text-amber-200',
+      hint: `Dentro do padrão esperado para ${context.label.toLowerCase()} (${context.description}).`,
+    };
+  }
+  if (normalized.includes('below')) {
+    return {
+      label: 'Abaixo da média',
+      tone: 'border-rose-500/40 text-rose-300',
+      hint: `Abaixo da média para ${context.label.toLowerCase()} (${context.description}).`,
+    };
+  }
+
+  return {
+    label: value,
+    tone: 'border-muted text-muted-foreground',
+    hint: `Ranking informado pela plataforma para ${context.label.toLowerCase()}.`,
+  };
+};
+
+const getStepRate = (numerator: number, denominator: number) => {
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return null;
+  return (numerator / denominator) * 100;
+};
+
+const resolveInsight = (params: {
+  ctr: number;
+  cpl: number;
+  conversionRate: number;
+  clickToLpRate: number | null;
+  lpToConvRate: number | null;
+  benchmark?: CampaignBenchmark;
+}) => {
+  const { ctr, cpl, conversionRate, clickToLpRate, lpToConvRate, benchmark } = params;
+  const ctrBaseline = benchmark?.baseline?.ctrP25 ?? benchmark?.baseline?.ctrMedian ?? null;
+  const cplBaseline = benchmark?.baseline?.cplP75 ?? benchmark?.baseline?.cplMedian ?? null;
+
+  if (ctrBaseline && ctr > 0 && ctr < ctrBaseline) {
+    return 'CTR abaixo do baseline: provável problema de criativo ou audiência.';
+  }
+  if (cplBaseline && cpl > 0 && cpl > cplBaseline) {
+    return 'CPL acima do baseline: ajuste de segmentação ou oferta.';
+  }
+  if (clickToLpRate !== null && clickToLpRate < 20) {
+    return 'Baixa taxa de LP Views: possível lentidão ou tracking da página.';
+  }
+  if (lpToConvRate !== null && lpToConvRate < 5) {
+    return 'Conversão baixa após LP: revisar página, oferta e formulário.';
+  }
+  if (conversionRate > 0 && conversionRate < 2) {
+    return 'Conversão baixa: revisar funil e qualificação.';
+  }
+  return 'Dentro do esperado para o período.';
+};
+
+type PyramidMetric = {
+  label: string;
+  value: string;
+};
+
+type PyramidLayer = {
+  key: string;
+  title: string;
+  primary: string;
+  metrics: PyramidMetric[];
+};
+
+type KpiCard = {
+  label: string;
+  value: string;
+  helper: string;
+};
+
+type KpiGroup = {
+  title: string;
+  items: KpiCard[];
+};
+
+const formatOptionalNumber = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return '—';
+  return value.toLocaleString('pt-BR');
+};
+
+const resolveObjectiveKey = (campaign: PerformanceSummary) => {
+  const raw = (campaign.objective ?? '').toLowerCase();
+  const metaDestination = (campaign.objectiveMeta?.destinationType ?? '').toLowerCase();
+  const metaOptimization = (campaign.objectiveMeta?.optimizationGoal ?? '').toLowerCase();
+
+  if (metaDestination.includes('message') || metaDestination.includes('messaging') || metaDestination.includes('whatsapp')) {
+    return 'messages';
+  }
+  if (metaOptimization.includes('message') || metaOptimization.includes('messaging') || metaOptimization.includes('conversation')) {
+    return 'messages';
+  }
+
+  if (raw.includes('message') || raw.includes('messaging')) return 'messages';
+  if (raw.includes('lead')) return 'lead';
+  if (raw.includes('traffic')) return 'traffic';
+  if (raw.includes('video')) return 'video';
+  if (raw.includes('engagement')) return 'engagement';
+  if (raw.includes('awareness') || raw.includes('reach') || raw.includes('brand')) return 'awareness';
+  if (raw.includes('conversion') || raw.includes('sales') || raw.includes('purchase')) return 'conversion';
+
+  if ((campaign.totalMessagingConversations ?? 0) > 0) return 'messages';
+  if ((campaign.totalLeads ?? 0) > 0) return 'lead';
+  if ((campaign.totalLandingPageViews ?? 0) > 0) return 'traffic';
+  return 'conversion';
+};
+
+const buildPyramidLayers = (campaign: PerformanceSummary) => {
+  const objectiveKey = resolveObjectiveKey(campaign);
+  const clickRate = getStepRate(campaign.totalClicks, campaign.totalImpressions);
+  const lpRate = getStepRate(campaign.totalLandingPageViews || 0, campaign.totalClicks);
+  const messageRate = getStepRate(campaign.totalMessagingConversations || 0, campaign.totalClicks);
+  const responseRate = getStepRate(campaign.totalMessagingFirstReply || 0, campaign.totalMessagingConversations || 0);
+  const conversionRate = getStepRate(campaign.totalConversions, campaign.totalClicks);
+  const budgetPercent = formatPercent(campaign.budgetUtilization || 0);
+  const hasRevenue = Number.isFinite(campaign.totalRevenue) && campaign.totalRevenue > 0;
+  const hasResponseTime = campaign.avgResponseTimeHours != null && Number.isFinite(campaign.avgResponseTimeHours);
+
+  const baseLayer: PyramidLayer = {
+    key: 'base',
+    title: 'Base — Entrega',
+    primary: formatOptionalNumber(campaign.totalImpressions),
+    metrics: [
+      { label: 'Impressões', value: formatOptionalNumber(campaign.totalImpressions) },
+      { label: 'Alcance', value: formatOptionalNumber(campaign.totalReach) },
+      { label: 'Frequência', value: `${(campaign.avgFrequency || 0).toFixed(1)}x` },
+      { label: 'CPM', value: formatOptionalCurrency(campaign.avgCpm || 0) },
+      { label: '% orçamento', value: budgetPercent },
+    ],
+  };
+
+  const interactionLayer: PyramidLayer = {
+    key: 'interaction',
+    title: 'Interação — Interesse inicial',
+    primary: formatOptionalNumber(campaign.totalClicks),
+    metrics: [
+      { label: 'Cliques', value: formatOptionalNumber(campaign.totalClicks) },
+      { label: 'Link clicks', value: formatOptionalNumber(campaign.totalLinkClicks || 0) },
+      { label: 'CTR', value: formatPercent(campaign.avgCtr || 0) },
+      { label: 'CPC', value: formatOptionalCurrency(campaign.avgCpc || 0) },
+    ],
+  };
+
+  const actionLayer: PyramidLayer = (() => {
+    if (objectiveKey === 'messages') {
+      return {
+        key: 'action',
+        title: 'Ação — Conversas',
+        primary: formatOptionalNumber(campaign.totalMessagingConversations || 0),
+        metrics: [
+          { label: 'Conversas', value: formatOptionalNumber(campaign.totalMessagingConversations || 0) },
+          { label: 'Cliques→Conversas', value: formatPercent(messageRate ?? 0) },
+          { label: 'Custo por conversa', value: formatOptionalCurrency(campaign.avgCpl || 0) },
+          { label: 'Resposta inicial', value: formatOptionalNumber(campaign.totalMessagingFirstReply || 0) },
+        ],
+      };
+    }
+    if (objectiveKey === 'traffic') {
+      return {
+        key: 'action',
+        title: 'Ação — LP Views',
+        primary: formatOptionalNumber(campaign.totalLandingPageViews || 0),
+        metrics: [
+          { label: 'LP Views', value: formatOptionalNumber(campaign.totalLandingPageViews || 0) },
+          { label: 'Cliques→LP', value: formatPercent(lpRate ?? 0) },
+          { label: 'CPL', value: formatOptionalCurrency(campaign.avgCpl || 0) },
+          { label: 'CPC', value: formatOptionalCurrency(campaign.avgCpc || 0) },
+        ],
+      };
+    }
+    if (objectiveKey === 'lead') {
+      return {
+        key: 'action',
+        title: 'Ação — Leads',
+        primary: formatOptionalNumber(campaign.totalLeads || 0),
+        metrics: [
+          { label: 'Leads', value: formatOptionalNumber(campaign.totalLeads || 0) },
+          { label: 'Cliques→Lead', value: formatPercent(conversionRate ?? 0) },
+          { label: 'CPL', value: formatOptionalCurrency(campaign.avgCpl || 0) },
+          { label: 'CPA', value: formatOptionalCurrency(campaign.avgCpa || 0) },
+        ],
+      };
+    }
+
+    return {
+      key: 'action',
+      title: 'Ação — Conversões',
+      primary: formatOptionalNumber(campaign.totalConversions || 0),
+      metrics: [
+        { label: 'Conversões', value: formatOptionalNumber(campaign.totalConversions || 0) },
+        { label: 'Cliques→Conv', value: formatPercent(conversionRate ?? 0) },
+        { label: 'CPA', value: formatOptionalCurrency(campaign.avgCpa || 0) },
+        { label: 'CPL', value: formatOptionalCurrency(campaign.avgCpl || 0) },
+      ],
+    };
+  })();
+
+  const qualificationLayer: PyramidLayer = {
+    key: 'qualification',
+    title: 'Qualificação — Intenção real',
+    primary: formatOptionalNumber(campaign.totalMessagingFirstReply || 0),
+    metrics: [
+      { label: 'Resposta inicial', value: formatOptionalNumber(campaign.totalMessagingFirstReply || 0) },
+      { label: 'Taxa de resposta', value: formatPercent(responseRate ?? 0) },
+      { label: 'Conversas', value: formatOptionalNumber(campaign.totalMessagingConversations || 0) },
+      { label: 'Leads', value: formatOptionalNumber(campaign.totalLeads || 0) },
+    ],
+  };
+
+  const revenueLayer: PyramidLayer = {
+    key: 'revenue',
+    title: 'Receita — Resultado financeiro',
+    primary: hasRevenue ? formatOptionalCurrency(campaign.totalRevenue || 0) : '—',
+    metrics: hasRevenue
+      ? [
+          { label: 'Receita', value: formatOptionalCurrency(campaign.totalRevenue || 0) },
+          { label: 'ROAS', value: Number.isFinite(campaign.roas) ? campaign.roas.toFixed(2) : '—' },
+          { label: 'CPA', value: formatOptionalCurrency(campaign.avgCpa || 0) },
+          { label: 'CPL', value: formatOptionalCurrency(campaign.avgCpl || 0) },
+        ]
+      : [
+          { label: 'CPA', value: formatOptionalCurrency(campaign.avgCpa || 0) },
+          { label: 'CPL', value: formatOptionalCurrency(campaign.avgCpl || 0) },
+        ],
+  };
+
+  const scaleLayer: PyramidLayer = {
+    key: 'scale',
+    title: 'Topo — Eficiência & escala',
+    primary: budgetPercent,
+    metrics: [
+      { label: '% orçamento', value: budgetPercent },
+      { label: 'Frequência', value: `${(campaign.avgFrequency || 0).toFixed(1)}x` },
+      { label: 'CPM', value: formatOptionalCurrency(campaign.avgCpm || 0) },
+      { label: 'CPL', value: formatOptionalCurrency(campaign.avgCpl || 0) },
+    ],
+  };
+
+  return [baseLayer, interactionLayer, actionLayer, qualificationLayer, revenueLayer, scaleLayer];
+};
+
+const buildKpiCards = (campaign: PerformanceSummary, objectiveKey: string): KpiCard[] => {
+  const conversionRate =
+    campaign.totalClicks > 0 ? (campaign.totalConversions / campaign.totalClicks) * 100 : 0;
+  const messagesRate =
+    campaign.totalClicks > 0 ? (campaign.totalMessagingConversations / campaign.totalClicks) * 100 : 0;
+  const leadRate = campaign.totalClicks > 0 ? (campaign.totalLeads / campaign.totalClicks) * 100 : 0;
+  const lpRate =
+    campaign.totalClicks > 0 ? ((campaign.totalLandingPageViews || 0) / campaign.totalClicks) * 100 : 0;
+
+  if (objectiveKey === 'messages') {
+    return [
+      {
+        label: 'Investimento',
+        value: formatCurrency(campaign.totalSpend),
+        helper: `CPL ${formatOptionalCurrency(campaign.avgCpl || 0)}`,
+      },
+      {
+        label: 'Conversas',
+        value: formatOptionalNumber(campaign.totalMessagingConversations || 0),
+        helper: `Cliques→Conversas ${formatPercent(messagesRate)}`,
+      },
+      {
+        label: 'CTR / CPC',
+        value: formatPercent(campaign.avgCtr || 0),
+        helper: `CPC ${formatOptionalCurrency(campaign.avgCpc || 0)}`,
+      },
+      {
+        label: 'CPM / Freq',
+        value: formatOptionalCurrency(campaign.avgCpm || 0),
+        helper: `${(campaign.avgFrequency || 0).toFixed(1)}x`,
+      },
+    ];
+  }
+
+  if (objectiveKey === 'lead') {
+    return [
+      {
+        label: 'Investimento',
+        value: formatCurrency(campaign.totalSpend),
+        helper: `CPL ${formatOptionalCurrency(campaign.avgCpl || 0)}`,
+      },
+      {
+        label: 'Leads',
+        value: formatOptionalNumber(campaign.totalLeads || 0),
+        helper: `Cliques→Leads ${formatPercent(leadRate)}`,
+      },
+      {
+        label: 'CTR / CPC',
+        value: formatPercent(campaign.avgCtr || 0),
+        helper: `CPC ${formatOptionalCurrency(campaign.avgCpc || 0)}`,
+      },
+      {
+        label: 'CPM / Freq',
+        value: formatOptionalCurrency(campaign.avgCpm || 0),
+        helper: `${(campaign.avgFrequency || 0).toFixed(1)}x`,
+      },
+    ];
+  }
+
+  if (objectiveKey === 'traffic') {
+    return [
+      {
+        label: 'Investimento',
+        value: formatCurrency(campaign.totalSpend),
+        helper: `CPC ${formatOptionalCurrency(campaign.avgCpc || 0)}`,
+      },
+      {
+        label: 'LP Views',
+        value: formatOptionalNumber(campaign.totalLandingPageViews || 0),
+        helper: `Cliques→LP ${formatPercent(lpRate)}`,
+      },
+      {
+        label: 'CTR / Cliques',
+        value: formatPercent(campaign.avgCtr || 0),
+        helper: `${formatOptionalNumber(campaign.totalClicks)} cliques`,
+      },
+      {
+        label: 'CPM / Freq',
+        value: formatOptionalCurrency(campaign.avgCpm || 0),
+        helper: `${(campaign.avgFrequency || 0).toFixed(1)}x`,
+      },
+    ];
+  }
+
+  if (objectiveKey === 'awareness' || objectiveKey === 'engagement' || objectiveKey === 'video') {
+    return [
+      {
+        label: 'Investimento',
+        value: formatCurrency(campaign.totalSpend),
+        helper: `CPM ${formatOptionalCurrency(campaign.avgCpm || 0)}`,
+      },
+      {
+        label: 'Alcance',
+        value: formatOptionalNumber(campaign.totalReach || 0),
+        helper: `Frequência ${(campaign.avgFrequency || 0).toFixed(1)}x`,
+      },
+      {
+        label: 'Impressões',
+        value: formatOptionalNumber(campaign.totalImpressions || 0),
+        helper: `CTR ${formatPercent(campaign.avgCtr || 0)}`,
+      },
+      {
+        label: 'Cliques / CPC',
+        value: formatOptionalNumber(campaign.totalClicks || 0),
+        helper: `CPC ${formatOptionalCurrency(campaign.avgCpc || 0)}`,
+      },
+    ];
+  }
+
+  const hasRevenue = Number.isFinite(campaign.totalRevenue) && campaign.totalRevenue > 0;
+  return [
+    {
+      label: 'Investimento',
+      value: formatCurrency(campaign.totalSpend),
+      helper: `CPA ${formatOptionalCurrency(campaign.avgCpa || 0)}`,
+    },
+    {
+      label: 'Conversões',
+      value: formatOptionalNumber(campaign.totalConversions || 0),
+      helper: `Cliques→Conv ${formatPercent(conversionRate)}`,
+    },
+    {
+      label: 'CTR / CPC',
+      value: formatPercent(campaign.avgCtr || 0),
+      helper: `CPC ${formatOptionalCurrency(campaign.avgCpc || 0)}`,
+    },
+    {
+      label: hasRevenue ? 'ROAS / Receita' : 'CPA / CPL',
+      value: hasRevenue ? (Number.isFinite(campaign.roas) ? campaign.roas.toFixed(2) : '—') : formatOptionalCurrency(campaign.avgCpa || 0),
+      helper: hasRevenue ? formatOptionalCurrency(campaign.totalRevenue || 0) : `CPL ${formatOptionalCurrency(campaign.avgCpl || 0)}`,
+    },
+  ];
+};
+
+const buildAdvancedKpis = (campaign: PerformanceSummary, objectiveKey: string): KpiGroup | null => {
+  const clickToMessageRate =
+    campaign.totalClicks > 0 ? (campaign.totalMessagingConversations / campaign.totalClicks) * 100 : 0;
+  const responseRate =
+    campaign.totalMessagingConversations > 0
+      ? ((campaign.leadsResponded || 0) / campaign.totalMessagingConversations) * 100
+      : 0;
+  const lpToConvRate =
+    campaign.totalLandingPageViews > 0 ? (campaign.totalConversions / campaign.totalLandingPageViews) * 100 : 0;
+  const conversionRate =
+    campaign.totalClicks > 0 ? (campaign.totalConversions / campaign.totalClicks) * 100 : 0;
+  const leadRate =
+    campaign.totalClicks > 0 ? (campaign.totalLeads / campaign.totalClicks) * 100 : 0;
+  const hasRevenue = Number.isFinite(campaign.totalRevenue) && campaign.totalRevenue > 0;
+  const hasResponseTime = campaign.avgResponseTimeHours != null && Number.isFinite(campaign.avgResponseTimeHours);
+
+  if (objectiveKey === 'messages') {
+    return {
+      title: 'KPIs avançados — Mensagens',
+      items: [
+        {
+          label: 'Cliques → Conversas',
+          value: formatPercent(clickToMessageRate),
+          helper: `${formatOptionalNumber(campaign.totalMessagingConversations || 0)} conversas`,
+        },
+        {
+          label: 'Taxa de resposta',
+          value: formatPercent(responseRate),
+          helper: `${formatOptionalNumber(campaign.leadsResponded || 0)} respostas`,
+        },
+        {
+          label: 'Custo por conversa',
+          value: formatOptionalCurrency(campaign.avgCpl || 0),
+          helper: `CPA ${formatOptionalCurrency(campaign.avgCpa || 0)}`,
+        },
+        {
+          label: 'Tempo de resposta',
+          value: hasResponseTime ? `${campaign.avgResponseTimeHours!.toFixed(1)}h` : '—',
+          helper: hasResponseTime ? 'média de atendimento' : 'Sem SLA informado',
+        },
+      ],
+    };
+  }
+
+  if (objectiveKey === 'lead') {
+    return {
+      title: 'KPIs avançados — Leads',
+      items: [
+        {
+          label: 'Cliques → Leads',
+          value: formatPercent(leadRate),
+          helper: `${formatOptionalNumber(campaign.totalLeads || 0)} leads`,
+        },
+        {
+          label: 'CPA',
+          value: formatOptionalCurrency(campaign.avgCpa || 0),
+          helper: `CPL ${formatOptionalCurrency(campaign.avgCpl || 0)}`,
+        },
+        {
+          label: 'CPM',
+          value: formatOptionalCurrency(campaign.avgCpm || 0),
+          helper: `${(campaign.avgFrequency || 0).toFixed(1)}x`,
+        },
+        {
+          label: 'Alcance',
+          value: formatOptionalNumber(campaign.totalReach || 0),
+          helper: `${formatOptionalNumber(campaign.totalImpressions || 0)} impressões`,
+        },
+      ],
+    };
+  }
+
+  if (objectiveKey === 'traffic') {
+    return {
+      title: 'KPIs avançados — Tráfego',
+      items: [
+        {
+          label: 'Cliques → LP',
+          value: formatPercent(
+            campaign.totalClicks > 0 ? ((campaign.totalLandingPageViews || 0) / campaign.totalClicks) * 100 : 0
+          ),
+          helper: `${formatOptionalNumber(campaign.totalLandingPageViews || 0)} LP views`,
+        },
+        {
+          label: 'Cliques',
+          value: formatOptionalNumber(campaign.totalClicks || 0),
+          helper: `CTR ${formatPercent(campaign.avgCtr || 0)}`,
+        },
+        {
+          label: 'CPM',
+          value: formatOptionalCurrency(campaign.avgCpm || 0),
+          helper: `${(campaign.avgFrequency || 0).toFixed(1)}x`,
+        },
+        {
+          label: 'CPL',
+          value: formatOptionalCurrency(campaign.avgCpl || 0),
+          helper: `CPA ${formatOptionalCurrency(campaign.avgCpa || 0)}`,
+        },
+      ],
+    };
+  }
+
+  if (objectiveKey === 'awareness' || objectiveKey === 'engagement' || objectiveKey === 'video') {
+    return {
+      title: 'KPIs avançados — Awareness',
+      items: [
+        {
+          label: 'Frequência',
+          value: `${(campaign.avgFrequency || 0).toFixed(1)}x`,
+          helper: `CPM ${formatOptionalCurrency(campaign.avgCpm || 0)}`,
+        },
+        {
+          label: 'CTR',
+          value: formatPercent(campaign.avgCtr || 0),
+          helper: `CPC ${formatOptionalCurrency(campaign.avgCpc || 0)}`,
+        },
+        {
+          label: 'Cliques',
+          value: formatOptionalNumber(campaign.totalClicks || 0),
+          helper: `${formatOptionalNumber(campaign.totalImpressions || 0)} impressões`,
+        },
+        {
+          label: 'Alcance',
+          value: formatOptionalNumber(campaign.totalReach || 0),
+          helper: `${formatOptionalNumber(campaign.totalImpressions || 0)} impressões`,
+        },
+      ],
+    };
+  }
+
+  return {
+    title: 'KPIs avançados — Conversões',
+    items: [
+      {
+        label: 'Cliques → Conv',
+        value: formatPercent(conversionRate),
+        helper: `${formatOptionalNumber(campaign.totalConversions || 0)} conversões`,
+      },
+      {
+        label: 'LP → Conv',
+        value: formatPercent(lpToConvRate),
+        helper: `${formatOptionalNumber(campaign.totalLandingPageViews || 0)} LP views`,
+      },
+      {
+        label: hasRevenue ? 'Receita' : 'Receita',
+        value: hasRevenue ? formatOptionalCurrency(campaign.totalRevenue || 0) : '—',
+        helper: hasRevenue ? `ROAS ${Number.isFinite(campaign.roas) ? campaign.roas.toFixed(2) : '—'}` : 'Sem receita registrada',
+      },
+      {
+        label: 'CPA',
+        value: formatOptionalCurrency(campaign.avgCpa || 0),
+        helper: `CPL ${formatOptionalCurrency(campaign.avgCpl || 0)}`,
+      },
+    ],
+  };
+};
+
+const formatObjectiveLabel = (objective?: string | null, objectiveMeta?: PerformanceSummary['objectiveMeta'] | null) => {
+  if (!objective) return 'Objetivo não sincronizado';
+  const key = objective.toUpperCase();
+  const map: Record<string, string> = {
+    OUTCOME_LEADS: 'Leads',
+    OUTCOME_MESSAGES: 'Mensagens',
+    OUTCOME_TRAFFIC: 'Tráfego',
+    OUTCOME_ENGAGEMENT: 'Engajamento',
+    OUTCOME_SALES: 'Vendas',
+    BRAND_AWARENESS: 'Reconhecimento',
+    REACH: 'Alcance',
+    APP_INSTALLS: 'Instalações',
+    VIDEO_VIEWS: 'Vídeo',
+    LINK_CLICKS: 'Cliques',
+  };
+  const base = map[key] ?? objective;
+  const destination = objectiveMeta?.destinationType ? ` · ${objectiveMeta.destinationType}` : '';
+  const optimization = objectiveMeta?.optimizationGoal ? ` · ${objectiveMeta.optimizationGoal}` : '';
+  return `${base}${destination || optimization}`;
 };
 
 export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
@@ -237,7 +804,7 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
     subthemeOverrides[campaign.campaignId] ?? campaign.optimizationSubthemeKey ?? null;
 
   return (
-    <Card className="border-l-4 border-l-sky-500">
+    <Card className="edge-card border-l-2 border-l-primary">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base">
           Performance por Campanha
@@ -273,233 +840,362 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
         )}
       </CardHeader>
       <CardContent>
-        <div className="rounded-md border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Campanha</TableHead>
-                <TableHead>Plataforma</TableHead>
-                <TableHead>Tema</TableHead>
-                <TableHead className="text-right">Alcance</TableHead>
-                <TableHead className="text-right">Impressões</TableHead>
-                <TableHead className="text-right">Cliques</TableHead>
-                <TableHead className="text-right">Link clicks</TableHead>
-                <TableHead className="text-right">LP views</TableHead>
-                <TableHead className="text-right">Conversões</TableHead>
-                <TableHead className="text-right">Conv %</TableHead>
-                <TableHead className="text-right">CPC</TableHead>
-                <TableHead className="text-right">CTR</TableHead>
-                <TableHead className="text-right">CPA</TableHead>
-                <TableHead className="text-right">CPM</TableHead>
-                <TableHead className="text-right">Freq.</TableHead>
-                <TableHead className="text-right">ROAS</TableHead>
-                <TableHead className="text-right">Budget</TableHead>
-                <TableHead className="text-right">Usado</TableHead>
-                <TableHead className="text-right">Restante</TableHead>
-                <TableHead className="text-right">% uso</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {campaigns.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={21} className="text-center text-muted-foreground">
-                    Nenhuma campanha encontrada
-                  </TableCell>
-                </TableRow>
-              ) : (
-                campaigns.map((campaign) => {
-                  const themeKey = resolveThemeKey(campaign);
-                  const subthemeKey = resolveSubthemeKey(campaign);
-                  const draftSubtheme = subthemeDrafts[campaign.campaignId] ?? subthemeKey ?? '';
-                  const saveInfo = saveState[campaign.campaignId];
-                  const isSaving = saveInfo?.status === 'saving';
-                  const hasError = saveInfo?.status === 'error';
-                  const normalizedSavedSubtheme = (subthemeKey ?? '').trim();
-                  const normalizedDraftSubtheme = draftSubtheme.trim();
-                  const subthemeDirty = normalizedDraftSubtheme !== normalizedSavedSubtheme;
-                  const themeSelectValue = themeKey ?? AUTO_THEME_VALUE;
-                  const themeDisabled = themeLoading || themeOptions.length === 0 || isSaving;
-                  const conversionRate =
-                    campaign.totalClicks > 0 ? (campaign.totalConversions / campaign.totalClicks) * 100 : 0;
-                  const contacts =
-                    campaign.totalLeads > 0
-                      ? campaign.totalLeads
-                      : campaign.totalMessagingConversations > 0
-                        ? campaign.totalMessagingConversations
-                        : campaign.totalConversions;
-                  const showZeroConversations = (campaign.totalSpend ?? 0) > 0 && contacts === 0;
-                  const benchmark = benchmarkMap[campaign.campaignId];
-                  const benchmarkMessage = benchmark?.insights?.[0]?.message ?? null;
-                  const compliance = complianceMap[campaign.campaignId];
-                  const complianceBadge =
-                    compliance?.critical && compliance.critical > 0
-                      ? { label: 'Compliance crítico', className: 'bg-rose-500 text-white' }
-                      : compliance?.warning && compliance.warning > 0
-                        ? { label: 'Compliance alerta', className: 'bg-amber-400 text-amber-950' }
-                        : null;
+        <div className="space-y-4">
+          {campaigns.length === 0 ? (
+            <div className="rounded-md border p-8 text-center text-muted-foreground">
+              Nenhuma campanha encontrada
+            </div>
+          ) : (
+            campaigns.map((campaign) => {
+              const themeKey = resolveThemeKey(campaign);
+              const subthemeKey = resolveSubthemeKey(campaign);
+              const draftSubtheme = subthemeDrafts[campaign.campaignId] ?? subthemeKey ?? '';
+              const saveInfo = saveState[campaign.campaignId];
+              const isSaving = saveInfo?.status === 'saving';
+              const hasError = saveInfo?.status === 'error';
+              const normalizedSavedSubtheme = (subthemeKey ?? '').trim();
+              const normalizedDraftSubtheme = draftSubtheme.trim();
+              const subthemeDirty = normalizedDraftSubtheme !== normalizedSavedSubtheme;
+              const themeSelectValue = themeKey ?? AUTO_THEME_VALUE;
+              const themeDisabled = themeLoading || themeOptions.length === 0 || isSaving;
+              const conversionRate =
+                campaign.totalClicks > 0 ? (campaign.totalConversions / campaign.totalClicks) * 100 : 0;
+              const contacts =
+                campaign.totalLeads > 0
+                  ? campaign.totalLeads
+                  : campaign.totalMessagingConversations > 0
+                    ? campaign.totalMessagingConversations
+                    : campaign.totalConversions;
+              const showZeroConversations = (campaign.totalSpend ?? 0) > 0 && contacts === 0;
+              const benchmark = benchmarkMap[campaign.campaignId];
+              const benchmarkMessage = benchmark?.insights?.[0]?.message ?? null;
+              const compliance = complianceMap[campaign.campaignId];
+              const complianceBadge =
+                compliance?.critical && compliance.critical > 0
+                  ? { label: 'Compliance crítico', className: 'bg-rose-500 text-white' }
+                  : compliance?.warning && compliance.warning > 0
+                    ? { label: 'Compliance alerta', className: 'bg-amber-400 text-amber-950' }
+                    : null;
 
-                  return (
-                    <TableRow key={campaign.campaignId}>
-                      <TableCell className="font-medium max-w-[200px] truncate">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate">{campaign.campaignName}</span>
-                          {showZeroConversations && (
-                            <ZeroConversationsDialog
-                              clientId={clientId}
-                              campaignId={campaign.campaignId}
-                              campaignName={campaign.campaignName}
-                              period={campaign.period}
-                            >
-                              <Button
+              const pyramidLayers = buildPyramidLayers(campaign);
+              const objectiveKey = resolveObjectiveKey(campaign);
+              const kpiCards = buildKpiCards(campaign, objectiveKey);
+              const advancedKpis = buildAdvancedKpis(campaign, objectiveKey);
+              const lpRate = getStepRate(campaign.totalLandingPageViews || 0, campaign.totalClicks);
+              const lpToConvRate = getStepRate(campaign.totalConversions, campaign.totalLandingPageViews || 0);
+              const insightMessage = resolveInsight({
+                ctr: campaign.avgCtr,
+                cpl: campaign.avgCpl,
+                conversionRate,
+                clickToLpRate: lpRate,
+                lpToConvRate,
+                benchmark,
+              });
+              const budgetBase = campaign.budget || 0;
+              const budgetType = campaign.budgetType ?? 'unknown';
+              const isDailyBudget = budgetType === 'daily' || budgetType === 'adset_daily';
+              const budgetBaseLabel = budgetType === 'adset_daily' ? 'Diário (adset)' : 'Diário';
+              const budgetPeriod =
+                campaign.budgetPeriod && campaign.budgetPeriod > 0 ? campaign.budgetPeriod : budgetBase;
+              const budgetUsed = campaign.budgetUsed || 0;
+              const budgetRemaining = campaign.budgetRemaining || 0;
+              const hasBudgetInfo = budgetPeriod > 0 || budgetUsed > 0 || budgetRemaining > 0;
+              const computedBudgetUtil =
+                budgetPeriod > 0 && budgetUsed >= 0 ? (budgetUsed / budgetPeriod) * 100 : campaign.budgetUtilization || 0;
+              const budgetUtilization = Number.isFinite(computedBudgetUtil) ? computedBudgetUtil : 0;
+              const budgetStatus =
+                budgetPeriod <= 0 && budgetUsed > 0
+                  ? 'Budget não informado'
+                  : budgetUtilization > 110
+                    ? 'Estourado'
+                    : budgetUtilization > 90
+                      ? 'No limite'
+                      : budgetUtilization > 0
+                        ? 'Saudável'
+                        : 'Sem uso';
+              const qualityMeta = getRankingMeta(campaign.qualityRanking, 'quality');
+              const engagementMeta = getRankingMeta(campaign.engagementRateRanking, 'engagement');
+              const conversionMeta = getRankingMeta(campaign.conversionRateRanking, 'conversion');
+              const qualityReason =
+                contacts > 0
+                  ? `Baseado no CPL ${formatCurrency(campaign.avgCpl)} em ${formatOptionalNumber(contacts)} contato(s).`
+                  : 'Sem volume suficiente de contatos para leitura estável.';
+              const engagementReason =
+                campaign.totalImpressions > 0
+                  ? `Baseado no CTR ${formatPercent(campaign.avgCtr)} em ${formatOptionalNumber(campaign.totalImpressions)} impressão(ões).`
+                  : 'Sem volume suficiente de impressões para leitura estável.';
+              const conversionReason =
+                campaign.totalClicks > 0
+                  ? `Baseado na taxa ${formatPercent(conversionRate)} em ${formatOptionalNumber(campaign.totalClicks)} clique(s).`
+                  : 'Sem volume suficiente de cliques para leitura estável.';
+
+              return (
+                <div key={campaign.campaignId} className="rounded-[16px] border border-border/60 bg-card/70 p-5">
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)_minmax(0,0.9fr)]">
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <h4 className="text-base font-semibold">{campaign.campaignName}</h4>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span>{campaign.platform}</span>
+                            {campaign.platform === 'meta' && (
+                              <Badge
                                 variant="outline"
-                                size="xs"
-                                className="border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                                className={`text-[10px] px-1 py-0 h-5 ${
+                                  campaign.objective
+                                    ? 'border-primary/30 bg-primary/10 text-primary'
+                                    : 'border-amber-400/40 bg-amber-400/10 text-amber-200'
+                                }`}
                               >
-                                Sem conversas
-                              </Button>
-                            </ZeroConversationsDialog>
-                          )}
+                            {formatObjectiveLabel(campaign.objective, campaign.objectiveMeta)}
+                              </Badge>
+                            )}
+                            {campaign.budgetMode && campaign.budgetMode !== 'unknown' && (
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] px-1 py-0 h-5 ${campaign.budgetMode === 'abo'
+                                    ? 'border-primary/30 bg-primary/10 text-primary'
+                                    : campaign.budgetMode === 'cbo'
+                                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                                      : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                                  }`}
+                              >
+                                {campaign.budgetMode.toUpperCase()}
+                              </Badge>
+                            )}
+                            <Badge className={statusColors[campaign.status] ?? 'bg-slate-500'}>
+                              {campaign.status}
+                            </Badge>
+                            {complianceBadge && (
+                              <Badge className={`text-[10px] ${complianceBadge.className}`}>
+                                {complianceBadge.label}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                        {benchmarkMessage && (
-                          <p className="text-[11px] text-muted-foreground mt-1">{benchmarkMessage}</p>
+                        {showZeroConversations && (
+                          <ZeroConversationsDialog
+                            clientId={clientId}
+                            campaignId={campaign.campaignId}
+                            campaignName={campaign.campaignName}
+                            period={campaign.period}
+                          >
+                            <Button
+                              variant="outline"
+                              size="xs"
+                              className="border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                            >
+                              Sem conversas
+                            </Button>
+                          </ZeroConversationsDialog>
                         )}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {campaign.platform}
-                        {campaign.budgetMode && campaign.budgetMode !== 'unknown' && (
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="relative group">
+                          <Badge variant="outline" className={`text-[10px] ${qualityMeta.tone}`}>
+                            Qualidade: {qualityMeta.label}
+                          </Badge>
+                          <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-64 rounded-md border border-border/60 bg-background/95 p-2 text-[11px] text-muted-foreground opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Por que?</p>
+                            <p className="mt-1">{qualityReason}</p>
+                            <p className="mt-1 text-[10px] text-muted-foreground">Comparado com campanhas similares no período.</p>
+                          </div>
+                        </div>
+                        <div className="relative group">
+                          <Badge variant="outline" className={`text-[10px] ${engagementMeta.tone}`}>
+                            Engajamento: {engagementMeta.label}
+                          </Badge>
+                          <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-64 rounded-md border border-border/60 bg-background/95 p-2 text-[11px] text-muted-foreground opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Por que?</p>
+                            <p className="mt-1">{engagementReason}</p>
+                            <p className="mt-1 text-[10px] text-muted-foreground">Comparado com campanhas similares no período.</p>
+                          </div>
+                        </div>
+                        <div className="relative group">
+                          <Badge variant="outline" className={`text-[10px] ${conversionMeta.tone}`}>
+                            Conversão: {conversionMeta.label}
+                          </Badge>
+                          <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-64 rounded-md border border-border/60 bg-background/95 p-2 text-[11px] text-muted-foreground opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Por que?</p>
+                            <p className="mt-1">{conversionReason}</p>
+                            <p className="mt-1 text-[10px] text-muted-foreground">Comparado com campanhas similares no período.</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-md border border-border/60 bg-muted/10 p-3 text-[11px] text-muted-foreground">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ranking da Meta (comparativo)</p>
+                        <div className="mt-2 space-y-1">
+                          <p><span className="text-foreground/80">Qualidade:</span> {qualityMeta.hint}</p>
+                          <p><span className="text-foreground/80">Engajamento:</span> {engagementMeta.hint}</p>
+                          <p><span className="text-foreground/80">Conversão:</span> {conversionMeta.hint}</p>
+                        </div>
+                        {campaign.objectiveMeta && (
+                          <p className="mt-1">
+                            Config Meta:{' '}
+                            {campaign.objectiveMeta.destinationType ? `destino ${campaign.objectiveMeta.destinationType}` : 'destino —'}
+                            {campaign.objectiveMeta.optimizationGoal ? ` · otimização ${campaign.objectiveMeta.optimizationGoal}` : ' · otimização —'}
+                          </p>
+                        )}
+                        {benchmarkMessage && <p className="mt-1">{benchmarkMessage}</p>}
+                        <p className="mt-1 text-foreground/80">{insightMessage}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">PIRÂMIDE POR OBJETIVO</p>
+                      <div className="space-y-2">
+                        {pyramidLayers.map((layer, index) => {
+                          const width = 100 - index * 8;
+                          return (
+                            <div key={layer.key} className="rounded-md border border-border/60 bg-muted/10 p-2.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{layer.title}</span>
+                                <span className="text-[10px] text-muted-foreground">{layer.primary}</span>
+                              </div>
+                              <div className="mt-1.5 h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-primary/60"
+                                  style={{ width: `${width}%`, margin: '0 auto' }}
+                                />
+                              </div>
+                              <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+                                {layer.metrics.map((metric) => (
+                                  <div key={`${layer.key}-${metric.label}`} className="flex items-center justify-between gap-2">
+                                    <span>{metric.label}</span>
+                                    <span className="text-foreground/80">{metric.value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        {kpiCards.map((card) => (
+                          <div key={card.label} className="rounded-md border border-border/60 p-3 bg-muted/20">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{card.label}</p>
+                            <p className="text-sm font-semibold">{card.value}</p>
+                            <p className="text-[10px] text-muted-foreground mt-1">{card.helper}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {advancedKpis && (
+                        <div className="rounded-md border border-border/60 bg-muted/10 p-3 text-xs">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{advancedKpis.title}</p>
+                            <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
+                              Avançado
+                            </Badge>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-3">
+                            {advancedKpis.items.map((item) => (
+                              <div key={item.label} className="rounded-md border border-border/60 bg-background/40 p-2">
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{item.label}</p>
+                                <p className="text-sm font-semibold">{item.value}</p>
+                                <p className="text-[10px] text-muted-foreground mt-1">{item.helper}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                    <div className="grid gap-2">
+                      <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Tema & Subtema</p>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <Select
+                          value={themeSelectValue}
+                          onValueChange={(value) => handleThemeChange(campaign.campaignId, value)}
+                          disabled={themeDisabled}
+                        >
+                          <SelectTrigger className="h-8 min-w-[200px]">
+                            <SelectValue placeholder="Definir tema" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={AUTO_THEME_VALUE}>Automático</SelectItem>
+                            {themeOptions.map((theme) => (
+                              <SelectItem key={theme.key} value={theme.key}>
+                                {theme.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={draftSubtheme}
+                            onChange={(e) =>
+                              setSubthemeDrafts((prev) => ({
+                                ...prev,
+                                [campaign.campaignId]: e.target.value,
+                              }))
+                            }
+                            placeholder={themeKey ? 'Subtema (opcional)' : 'Selecione um tema'}
+                            disabled={!themeKey || isSaving}
+                            className="h-8"
+                          />
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            onClick={() => handleSubthemeSave(campaign.campaignId)}
+                            disabled={!themeKey || isSaving || !subthemeDirty}
+                          >
+                            Salvar
+                          </Button>
+                        </div>
+                      </div>
+                      {isSaving && (
+                        <span className="text-xs text-muted-foreground">Salvando...</span>
+                      )}
+                      {hasError && (
+                        <span className="text-xs text-rose-600">{saveInfo?.message ?? 'Falha ao salvar.'}</span>
+                      )}
+                    </div>
+
+                    {hasBudgetInfo ? (
+                      <div className="rounded-md border border-border/60 p-3 bg-muted/20 text-xs">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Budget</p>
                           <Badge
                             variant="outline"
-                            className={`ml-2 text-[10px] px-1 py-0 h-5 ${campaign.budgetMode === 'abo'
-                                ? 'border-purple-200 bg-purple-50 text-purple-700'
-                                : campaign.budgetMode === 'cbo'
-                                  ? 'border-sky-200 bg-sky-50 text-sky-700'
-                                  : 'border-amber-200 bg-amber-50 text-amber-700'
+                            className={`text-[10px] ${budgetStatus === 'Estourado'
+                                ? 'border-rose-500/40 text-rose-300'
+                                : budgetStatus === 'No limite'
+                                  ? 'border-amber-400/40 text-amber-200'
+                                  : 'border-emerald-500/30 text-emerald-300'
                               }`}
                           >
-                            {campaign.budgetMode.toUpperCase()}
+                            {budgetStatus}
                           </Badge>
+                        </div>
+                        {isDailyBudget ? (
+                          <>
+                            <p className="mt-1">{budgetBaseLabel} {formatOptionalCurrency(budgetBase)}</p>
+                            <p>Total período {formatOptionalCurrency(budgetPeriod)}</p>
+                          </>
+                        ) : (
+                          <p className="mt-1">Total {formatOptionalCurrency(budgetPeriod)}</p>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-2 min-w-[220px]">
-                          <Select
-                            value={themeSelectValue}
-                            onValueChange={(value) => handleThemeChange(campaign.campaignId, value)}
-                            disabled={themeDisabled}
-                          >
-                            <SelectTrigger className="h-8">
-                              <SelectValue placeholder="Definir tema" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={AUTO_THEME_VALUE}>Automático</SelectItem>
-                              {themeOptions.map((theme) => (
-                                <SelectItem key={theme.key} value={theme.key}>
-                                  {theme.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              value={draftSubtheme}
-                              onChange={(e) =>
-                                setSubthemeDrafts((prev) => ({
-                                  ...prev,
-                                  [campaign.campaignId]: e.target.value,
-                                }))
-                              }
-                              placeholder={themeKey ? 'Subtema (opcional)' : 'Selecione um tema'}
-                              disabled={!themeKey || isSaving}
-                              className="h-8"
-                            />
-                            <Button
-                              size="xs"
-                              variant="outline"
-                              onClick={() => handleSubthemeSave(campaign.campaignId)}
-                              disabled={!themeKey || isSaving || !subthemeDirty}
-                            >
-                              Salvar
-                            </Button>
-                          </div>
-                          {isSaving && (
-                            <span className="text-xs text-muted-foreground">Salvando...</span>
-                          )}
-                          {hasError && (
-                            <span className="text-xs text-rose-600">{saveInfo?.message ?? 'Falha ao salvar.'}</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatNumber(campaign.totalReach || 0)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatNumber(campaign.totalImpressions)}
-                      </TableCell>
-                      <TableCell className="text-right">{formatNumber(campaign.totalClicks)}</TableCell>
-                      <TableCell className="text-right">
-                        {formatOptionalNumber(campaign.totalLinkClicks)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatOptionalNumber(campaign.totalLandingPageViews)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatNumber(campaign.totalConversions)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatPercent(conversionRate)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatOptionalCurrency(campaign.avgCpc || 0)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatPercent(campaign.avgCtr || 0)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatOptionalCurrency(campaign.avgCpa || 0)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(campaign.avgCpm || 0)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className={
-                          (campaign.avgFrequency || 0) >= 5 ? 'text-rose-600 font-medium' :
-                            (campaign.avgFrequency || 0) >= 3 ? 'text-yellow-600' : ''
-                        }>
-                          {(campaign.avgFrequency || 0).toFixed(1)}x
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">{campaign.roas.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">
-                        {formatOptionalCurrency(campaign.budget || 0)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatOptionalCurrency(campaign.budgetUsed || 0)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatOptionalCurrency(campaign.budgetRemaining || 0)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatPercent(campaign.budgetUtilization || 0)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <Badge className={statusColors[campaign.status] ?? 'bg-slate-500'}>
-                            {campaign.status}
-                          </Badge>
-                          {complianceBadge && (
-                            <Badge className={`text-[10px] ${complianceBadge.className}`}>
-                              {complianceBadge.label}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                        <p>Usado {formatOptionalCurrency(budgetUsed)}</p>
+                        <p>Restante {formatOptionalCurrency(budgetRemaining)}</p>
+                        <p className="mt-1 text-muted-foreground">% uso {formatPercent(budgetUtilization || 0)}</p>
+                      </div>
+                    ) : (
+                      <div className="rounded-md border border-border/60 p-3 bg-muted/10 text-xs text-muted-foreground">
+                        Budget indisponível para este período.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </CardContent>
     </Card>

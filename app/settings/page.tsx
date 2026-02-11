@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { getApiErrorMessage } from '@/lib/api/client/error';
+import { PageShell } from '@/components/layout/page-shell';
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
@@ -83,10 +84,12 @@ export default function SettingsPage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold">Configurações</h1>
-
+    <PageShell
+      eyebrow="Conta"
+      title="Configurações"
+      description="Gerencie seu perfil, credenciais e preferências de acesso."
+    >
+      <div className="max-w-2xl space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Perfil</CardTitle>
@@ -167,6 +170,6 @@ export default function SettingsPage() {
           </form>
         </Card>
       </div>
-    </div>
+    </PageShell>
   );
 }

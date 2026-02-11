@@ -77,7 +77,7 @@ const statusBadgeClass: Record<ActionProposalStatus, string> = {
   pending: 'border-amber-200 bg-amber-50 text-amber-900',
   approved: 'border-emerald-200 bg-emerald-50 text-emerald-800',
   rejected: 'border-rose-200 bg-rose-50 text-rose-800',
-  executed: 'border-sky-200 bg-sky-50 text-sky-800',
+  executed: 'border-primary/30 bg-primary/10 text-primary',
   expired: 'border-slate-200 bg-slate-50 text-slate-700',
 };
 
@@ -218,7 +218,7 @@ export function ActionProposalsQueue({ clientId, metricsQuery, selectedCampaignI
   const rangeLabel = metricsQuery?.startDate && metricsQuery?.endDate ? `${metricsQuery.startDate} → ${metricsQuery.endDate}` : metricsQuery?.period ?? null;
 
   return (
-    <Card className="border-l-4 border-l-rose-500">
+    <Card className="edge-card border-l-2 border-l-primary">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base">
           Fila de Aprovação

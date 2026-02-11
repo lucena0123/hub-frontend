@@ -14,7 +14,7 @@ import { formatCreativeType, rateColor, toStringArray } from './formatters';
 type AnalysisReason = { code: string; message: string; severity: 'info' | 'warning' | 'critical' };
 
 const reasonBadgeClass: Record<AnalysisReason['severity'], string> = {
-  info: 'bg-blue-100 text-blue-800 border-blue-200',
+  info: 'bg-primary/10 text-primary border-primary/30',
   warning: 'bg-amber-100 text-amber-900 border-amber-200',
   critical: 'bg-rose-100 text-rose-800 border-rose-200',
 };
@@ -74,7 +74,7 @@ export const CreativePerformanceRow = (props: {
       >
         <TableCell className="max-w-[420px]">
           <div className="flex items-start gap-3">
-            <div className="h-10 w-10 flex-none overflow-hidden rounded-md border bg-muted">
+            <div className="h-10 w-10 flex-none overflow-hidden rounded-[2px] border bg-muted">
               {thumbnailUrl ? (
                 <Image
                   src={thumbnailUrl}

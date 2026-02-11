@@ -66,7 +66,7 @@ export function FacebookMarketplace({
 
                 {/* Footer Bar */}
                 <div className="p-3 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
-                    <span className="font-semibold text-blue-600 text-sm">
+                    <span className="font-semibold text-primary text-sm">
                         {displayCta}
                     </span>
                     <Button size="sm" variant="secondary" className="h-7 text-xs px-3 bg-gray-200 hover:bg-gray-300 text-gray-800">

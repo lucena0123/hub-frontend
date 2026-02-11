@@ -6,6 +6,7 @@ import { OptimizationTask } from "@/types/optimization";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, AlertTriangle, PlayCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface TaskCardProps {
     task: OptimizationTask;
@@ -51,17 +52,24 @@ export function TaskCard({ task }: TaskCardProps) {
 
     const getStatusIcon = (status: string) => {
         switch (status) {
-            case "completed": return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-            case "approved": return <PlayCircle className="w-4 h-4 text-blue-500" />;
-            case "failed": return <AlertTriangle className="w-4 h-4 text-red-500" />;
+            case "completed": return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+            case "approved": return <PlayCircle className="w-4 h-4 text-primary" />;
+            case "failed": return <AlertTriangle className="w-4 h-4 text-destructive" />;
             default: return null;
         }
     };
 
     return (
         <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-            <Card className="cursor-grab hover:shadow-md transition bg-background border-l-4"
-                style={{ borderLeftColor: severity === 'critical' ? 'red' : 'transparent' }}>
+            <Card
+                className={cn(
+                    "cursor-grab transition hover-lift edge-card border-l-2",
+                    severity === 'critical' && "border-l-destructive",
+                    severity === 'high' && "border-l-primary",
+                    severity === 'medium' && "border-l-amber-500",
+                    severity === 'low' && "border-l-border"
+                )}
+            >
                 <CardHeader className="p-3 pb-0 space-y-0">
                     <div className="flex justify-between items-start">
                         <Badge variant={getSeverityColor(severity)} className="text-[10px] px-1 h-5">
@@ -76,9 +84,9 @@ export function TaskCard({ task }: TaskCardProps) {
                 <CardContent className="p-3 text-xs text-muted-foreground">
                     <p className="line-clamp-2">{description}</p>
                     {autoAction && (
-                        <div className="mt-2 text-[10px] bg-secondary p-1 rounded-sm flex items-center gap-1">
-                            <span>🤖 Action:</span>
-                            <span className="font-mono">{autoAction.type}</span>
+                        <div className="mt-2 text-[10px] bg-secondary/60 p-1 rounded-[2px] flex items-center gap-1 uppercase tracking-[0.2em] text-muted-foreground">
+                            <span>Auto</span>
+                            <span className="text-foreground">{autoAction.type}</span>
                         </div>
                     )}
                     {task.status === 'completed' &&
@@ -86,8 +94,8 @@ export function TaskCard({ task }: TaskCardProps) {
                         task.output !== null &&
                         'success' in task.output &&
                         (task.output as { success?: unknown }).success === true && (
-                        <div className="mt-2 text-[10px] text-green-600 flex items-center gap-1">
-                            <span>✅ Executed</span>
+                        <div className="mt-2 text-[10px] text-emerald-400 flex items-center gap-1 uppercase tracking-[0.2em]">
+                            <span>Executed</span>
                         </div>
                     )}
                 </CardContent>

@@ -11,17 +11,17 @@ const typeConfig: Record<
 > = {
   critical: {
     label: 'Critical',
-    className: 'bg-rose-100 text-rose-700',
+    className: 'border border-destructive/50 bg-destructive/10 text-destructive',
     icon: AlertOctagon,
   },
   warning: {
     label: 'Warning',
-    className: 'bg-amber-100 text-amber-800',
+    className: 'border border-amber-400/50 bg-amber-400/10 text-amber-300',
     icon: AlertTriangle,
   },
   info: {
     label: 'Info',
-    className: 'bg-sky-100 text-sky-700',
+    className: 'border border-primary/50 bg-primary/10 text-primary',
     icon: Info,
   },
 };
@@ -69,7 +69,7 @@ export function AlertCard({ alert }: { alert: PerformanceAlert }) {
       : '-';
 
   return (
-    <Card>
+    <Card className="edge-card hover-lift">
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-muted-foreground" />

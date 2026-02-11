@@ -33,7 +33,7 @@ export const CreativeLibraryRow = (props: {
     creative.metrics.holdRateAvg != null;
 
   const reasonBadgeClass: Record<NonNullable<CreativeLibraryItem['analysis']>['reasons'][number]['severity'], string> = {
-    info: 'bg-blue-100 text-blue-800 border-blue-200',
+    info: 'bg-primary/10 text-primary border-primary/30',
     warning: 'bg-amber-100 text-amber-900 border-amber-200',
     critical: 'bg-rose-100 text-rose-800 border-rose-200',
   };
@@ -41,7 +41,7 @@ export const CreativeLibraryRow = (props: {
   const complianceIssueBadgeClass: Record<'error' | 'warning' | 'info', string> = {
     error: 'bg-rose-100 text-rose-800 border-rose-200',
     warning: 'bg-amber-100 text-amber-900 border-amber-200',
-    info: 'bg-blue-100 text-blue-800 border-blue-200',
+    info: 'bg-primary/10 text-primary border-primary/30',
   };
 
   const listHeadlines = Array.isArray(creative.headlines) ? creative.headlines : [];
@@ -73,7 +73,7 @@ export const CreativeLibraryRow = (props: {
         <TableCell className="max-w-[520px]">
           <div className="flex items-start gap-3">
             <AdPreviewDialog creative={creative}>
-              <div className="h-10 w-10 flex-none overflow-hidden rounded-md border bg-muted cursor-pointer hover:opacity-80 transition-opacity">
+              <div className="h-10 w-10 flex-none overflow-hidden rounded-[2px] border bg-muted cursor-pointer hover:opacity-80 transition-opacity">
                 {thumbnailUrl ? (
                   <Image
                     src={thumbnailUrl}

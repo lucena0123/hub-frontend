@@ -91,7 +91,7 @@ export function TaskActionCard({ task, onActionComplete }: TaskActionCardProps) 
         critical: 'bg-red-500',
         high: 'bg-orange-500',
         medium: 'bg-yellow-500',
-        low: 'bg-blue-500',
+        low: 'bg-primary',
     }[task.input?.severity || 'medium'] || 'bg-gray-500';
 
     return (

@@ -16,13 +16,13 @@ import { Settings } from "lucide-react";
 const getRuleIcon = (rule: OptimizationRule, enabled: boolean) => {
     const color = enabled ? "" : "text-muted-foreground";
     if (rule.category === 'campaign' || rule.id.includes('campaign') || rule.id.includes('cpl') || rule.id.includes('budget')) {
-        return <DollarSign className={cn("w-4 h-4", enabled ? "text-green-600" : color)} />;
+        return <DollarSign className={cn("w-4 h-4", enabled ? "text-emerald-400" : color)} />;
     }
     if (rule.category === 'adset' || rule.id.includes('adset') || rule.action === 'scale') {
-        return <TrendingUp className={cn("w-4 h-4", enabled ? "text-blue-500" : color)} />;
+        return <TrendingUp className={cn("w-4 h-4", enabled ? "text-primary" : color)} />;
     }
     if (rule.category === 'creative' || rule.id.includes('creative') || rule.id.includes('copy')) {
-        return <Zap className={cn("w-4 h-4", enabled ? "text-yellow-500" : color)} />;
+        return <Zap className={cn("w-4 h-4", enabled ? "text-amber-400" : color)} />;
     }
     return <BookOpen className="w-4 h-4" />;
 };
@@ -98,7 +98,7 @@ export function RuleLibrary() {
     };
 
     return (
-        <div className="w-[220px] border-r h-full flex flex-col bg-muted/20">
+        <div className="w-[220px] border-r border-border/60 h-full flex flex-col bg-card/40">
             <RuleConfigDialog
                 key={selectedRule?.id ?? 'rule-config'}
                 open={configOpen}
@@ -106,7 +106,7 @@ export function RuleLibrary() {
                 rule={selectedRule}
             />
 
-            <div className="p-4 border-b">
+            <div className="p-4 border-b border-border/60">
                 <h2 className="font-semibold text-sm flex items-center gap-2">
                     <BookOpen className="w-4 h-4" />
                     Playbook

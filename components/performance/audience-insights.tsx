@@ -12,8 +12,8 @@ function SegmentBar({ segments, totalSpend }: { segments: AudienceSegment[]; tot
 
   const top = segments.slice(0, 8);
   const colors = [
-    'bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500',
-    'bg-cyan-500', 'bg-rose-500', 'bg-indigo-500', 'bg-orange-500',
+    'bg-primary', 'bg-emerald-500', 'bg-amber-500', 'bg-orange-500',
+    'bg-rose-500', 'bg-red-500', 'bg-lime-500', 'bg-yellow-500',
   ];
 
   return (
@@ -199,9 +199,9 @@ export function AudienceInsights({ clientId, campaignId }: { clientId: string; c
 
         {/* Recommendation */}
         {data.recommendation && (
-          <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20 p-3">
-            <Lightbulb className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
-            <p className="text-sm text-blue-700 dark:text-blue-300">{data.recommendation}</p>
+          <div className="flex items-start gap-2 rounded-[2px] border border-primary/40 bg-primary/10 p-3">
+            <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <p className="text-sm text-foreground/80">{data.recommendation}</p>
           </div>
         )}
       </CardContent>

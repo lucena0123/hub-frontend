@@ -63,7 +63,7 @@ export function CampaignHealthCard({
   const hasRankings = qualityRanking || engagementRateRanking || conversionRateRanking;
 
   return (
-    <Card className="border-l-4 border-l-violet-500">
+    <Card className="edge-card border-l-2 border-l-primary">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base">
           Saúde da Campanha
@@ -75,13 +75,13 @@ export function CampaignHealthCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-lg bg-violet-500/5 border border-violet-500/10">
+          <div className="p-3 rounded-[2px] bg-primary/10 border border-primary/30">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Alcance</p>
             <p className="text-lg font-bold mt-0.5">{totalReach.toLocaleString('pt-BR')}</p>
             <p className="text-[10px] text-muted-foreground">pessoas únicas</p>
           </div>
 
-          <div className={`p-3 rounded-lg border ${frequencyBg(avgFrequency)}`}>
+          <div className={`p-3 rounded-[2px] border ${frequencyBg(avgFrequency)}`}>
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Frequência</p>
             <p className={`text-lg font-bold mt-0.5 ${frequencyColor(avgFrequency)}`}>
               {avgFrequency.toFixed(2)}x
@@ -89,14 +89,14 @@ export function CampaignHealthCard({
             <p className="text-[10px] text-muted-foreground">{frequencyStatus(avgFrequency)}</p>
           </div>
 
-          <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
+          <div className="p-3 rounded-[2px] bg-amber-500/10 border border-amber-500/30">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">CPM</p>
             <p className="text-lg font-bold mt-0.5">
               R$ {avgCpm.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
             </p>
           </div>
 
-          <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+          <div className="p-3 rounded-[2px] bg-secondary/60 border border-border/60">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Impressões</p>
             <p className="text-lg font-bold mt-0.5">{totalImpressions.toLocaleString('pt-BR')}</p>
             <p className="text-[10px] text-muted-foreground">

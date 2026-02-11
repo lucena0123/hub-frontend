@@ -7,6 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Activity, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PageShell } from '@/components/layout/page-shell';
+import { Reveal } from '@/components/layout/reveal';
+import { SectionHeader } from '@/components/performance/section-header';
 
 export default function ProcessesPage() {
   const [processes, setProcesses] = useState<ProcessInstance[]>([]);
@@ -39,7 +42,7 @@ export default function ProcessesPage() {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
           <Activity className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground font-mono text-sm tracking-widest">LOADING_PROCESS_ENGINE...</p>
+          <p className="text-muted-foreground text-sm tracking-[0.3em] uppercase">Carregando processos...</p>
         </div>
       </div>
     );
@@ -48,14 +51,11 @@ export default function ProcessesPage() {
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <Card className="w-full max-w-md border-destructive/50 bg-destructive/5">
-          <CardHeader>
-            <CardTitle className="text-destructive font-mono">SYSTEM_ERROR</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground font-mono">{error}</p>
-          </CardContent>
-        </Card>
+        <div className="edge-card w-full max-w-md p-6 text-center space-y-3">
+          <PlayCircle className="h-8 w-8 text-destructive mx-auto" />
+          <p className="text-sm uppercase tracking-[0.2em] text-destructive">Falha no sistema</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
       </div>
     );
   }
@@ -64,82 +64,100 @@ export default function ProcessesPage() {
   const completedCount = processes.filter(p => p.status === 'completed').length;
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8 font-mono text-foreground">
-      <div className="max-w-[1600px] mx-auto space-y-8">
-        {/* Header HUD */}
-        <div className="flex flex-col md:flex-row items-end justify-between gap-4 border-b border-primary/20 pb-6">
-          <div>
-            <div className="flex items-center gap-2 text-primary/50 text-xs tracking-[0.3em] mb-1">
-              <PlayCircle className="h-3 w-3" />
-              <span>TERMINAL_ID: PROCESS_OPS</span>
-            </div>
-            <h1 className="text-3xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50">
-              ACTIVE_PROCESSES
-            </h1>
-          </div>
-          <div className="flex gap-8">
-            <div className="flex flex-col items-end border-r border-border/50 pr-8 last:border-0 last:pr-0">
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">RUNNING</span>
-              <span className="text-2xl font-bold text-blue-500 shadow-[0_0_10px_var(--color-blue-500)]">{runningCount}</span>
-            </div>
-            <div className="flex flex-col items-end">
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">COMPLETED</span>
-              <span className="text-2xl font-bold text-emerald-500 shadow-[0_0_10px_var(--color-emerald-500)]">{completedCount}</span>
-            </div>
-          </div>
+    <PageShell
+      eyebrow="Operações / Processos"
+      title="Linha de Execução"
+      description="Acompanhe instâncias críticas e progresso das automações em tempo real."
+      meta={
+        <div className="space-y-2 text-xs text-muted-foreground">
+          <div className="signal-chip">Rodando {runningCount}</div>
+          <div className="signal-chip">Concluídos {completedCount}</div>
         </div>
+      }
+    >
+      <div className="space-y-8">
+        <SectionHeader
+          title="Resumo de Execução"
+          subtitle="Indicadores rápidos do pipeline."
+          icon={PlayCircle}
+        />
 
-        {/* Processes List (Replaces Table) */}
-        <div className="space-y-4">
+        <Reveal>
+          <div className="flex flex-wrap gap-4">
+            <div className="edge-card hover-lift p-4 flex items-center justify-between flex-[1_1_220px]">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Rodando</p>
+                <p className="text-3xl font-semibold text-primary">{runningCount}</p>
+              </div>
+              <PlayCircle className="h-6 w-6 text-primary" />
+            </div>
+            <div className="edge-card hover-lift p-4 flex items-center justify-between flex-[1_1_220px]">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Concluídos</p>
+                <p className="text-3xl font-semibold text-emerald-400">{completedCount}</p>
+              </div>
+              <Activity className="h-6 w-6 text-emerald-400" />
+            </div>
+          </div>
+        </Reveal>
+
+        <SectionHeader
+          title="Instâncias em Andamento"
+          subtitle="Status detalhado por cliente e processo."
+          icon={Activity}
+        />
+
+        <Reveal delayMs={120}>
           {processes.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-border/50 rounded-lg">
-              <p className="text-muted-foreground text-sm tracking-widest">NO_ACTIVE_INSTANCES</p>
+            <div className="edge-card p-8 text-center">
+              <p className="text-muted-foreground text-sm tracking-[0.3em] uppercase">Nenhuma instância ativa</p>
             </div>
           ) : (
-            processes.map((process) => (
-              <div key={process.id} className="relative group border border-border/50 bg-card/30 hover:bg-card/50 transition-all p-4 rounded-sm hover:border-primary/50 overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary/20 group-hover:bg-primary transition-colors" />
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-
-                  <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                    <div>
-                      <p className="text-[10px] text-muted-foreground uppercase opacity-50">PROCESS_ID</p>
-                      <p className="font-mono text-xs">{process.processId}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground uppercase opacity-50">CLIENT_TARGET</p>
-                      <p className="font-bold text-sm truncate">{process.clientName || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground uppercase opacity-50">STATUS_Core</p>
-                      <Badge variant="outline" className={cn(
-                        "border-0 bg-transparent px-0 rounded-none",
-                        process.status === 'running' ? 'text-blue-500' :
-                          process.status === 'completed' ? 'text-emerald-500' :
-                            process.status === 'failed' ? 'text-destructive' : 'text-muted-foreground'
-                      )}>
-                        [{process.status.toUpperCase()}]
-                      </Badge>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground uppercase opacity-50">EXEC_PROGRESS</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono">{process.progress}%</span>
-                        <div className="h-1 flex-1 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className={cn("h-full", process.status === 'completed' ? 'bg-emerald-500' : 'bg-primary')}
-                            style={{ width: `${process.progress}%` }}
-                          />
+            <div className="space-y-4">
+              {processes.map((process) => (
+                <div key={process.id} className="relative group edge-card hover-lift p-4 overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary/40 group-hover:bg-primary transition-colors" />
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 w-full">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">Processo</p>
+                        <p className="text-xs">{process.processId}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">Cliente</p>
+                        <p className="font-semibold text-sm truncate">{process.clientName || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">Status</p>
+                        <Badge variant="outline" className={cn(
+                          "border-0 bg-transparent px-0",
+                          process.status === 'running' ? 'text-primary' :
+                            process.status === 'completed' ? 'text-emerald-500' :
+                              process.status === 'failed' ? 'text-destructive' : 'text-muted-foreground'
+                        )}>
+                          [{process.status.toUpperCase()}]
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">Progresso</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">{process.progress}%</span>
+                          <div className="h-1 flex-1 bg-secondary overflow-hidden">
+                            <div
+                              className={cn("h-full", process.status === 'completed' ? 'bg-emerald-500' : 'bg-primary')}
+                              style={{ width: `${process.progress}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
-        </div>
+        </Reveal>
       </div>
-    </div>
+    </PageShell>
   );
 }

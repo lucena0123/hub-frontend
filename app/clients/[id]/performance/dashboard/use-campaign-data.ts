@@ -123,8 +123,12 @@ export const useCampaignData = (params: {
         setError(getApiErrorMessage(metrics.reason, 'Failed to load campaign metrics'));
       }
 
-      if (adsets.status === 'fulfilled') setAdsetData(adsets.value.adsets ?? []);
-      else setAdsetData([]);
+      if (adsets.status === 'fulfilled') {
+        setAdsetData(adsets.value.adsets ?? []);
+      } else {
+        setAdsetData([]);
+        setError(getApiErrorMessage(adsets.reason, 'Failed to load ad set metrics'));
+      }
 
       if (ads.status === 'fulfilled') setAdCreativeData(ads.value.ads ?? []);
       else setAdCreativeData([]);

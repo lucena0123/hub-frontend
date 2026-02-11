@@ -99,12 +99,12 @@ export const PerformanceDashboardHeader = (props: {
               value={props.selectedCampaignId ?? undefined}
               onValueChange={(value) => props.setSelectedCampaignId(value)}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="flex-1 min-w-[240px] max-w-[480px] lg:min-w-[280px] xl:min-w-[360px]">
                 <SelectValue placeholder="Campanha" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="min-w-[260px] max-w-[520px]">
                 {props.campaigns.map((c) => (
-                  <SelectItem key={c.campaignId} value={c.campaignId}>
+                  <SelectItem key={c.campaignId} value={c.campaignId} className="whitespace-normal">
                     {c.campaignName}
                   </SelectItem>
                 ))}
@@ -201,7 +201,7 @@ export const PerformanceDashboardHeader = (props: {
         <Button
           variant="default"
           size="sm"
-          className="gap-2 bg-blue-600 hover:bg-blue-700"
+          className="gap-2"
           onClick={props.onMetaSync}
           disabled={props.syncing || !props.metaAdAccountId.trim()}
         >
@@ -305,17 +305,17 @@ export const PerformanceDashboardHeader = (props: {
       ) : null}
 
       {props.syncing && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div className="rounded-[2px] border border-primary/30 bg-primary/10 p-4">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-blue-700">Meta Ads</p>
-              <p className="text-sm text-blue-700/80">
+              <p className="text-sm font-medium text-primary">Meta Ads</p>
+              <p className="text-sm text-foreground/80">
                 {props.metaSyncMessage} {props.metaSyncPercent !== null ? `(${props.metaSyncPercent}%)` : ''}
               </p>
-              {props.metaSyncRange && <p className="text-xs text-blue-700/70">{props.metaSyncRange}</p>}
+              {props.metaSyncRange && <p className="text-xs text-primary/70">{props.metaSyncRange}</p>}
             </div>
             {metaSyncProgress?.stage && (
-              <p className="text-xs text-blue-700/70">
+              <p className="text-xs text-primary/70">
                 {metaSyncProgress.stage} {(metaSyncProgress.stageCompleted ?? 0)}/{(metaSyncProgress.stageTotal ?? 0)}
               </p>
             )}

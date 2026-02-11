@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { validateCreativeCopy, type CopyValidationResult } from '@/lib/api/client';
+import { PageShell } from '@/components/layout/page-shell';
 
 const CTA_OPTIONS = [
   { value: '', label: 'Nenhum (não especificado)' },
@@ -86,14 +87,18 @@ export default function CreativeLinterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6 md:p-8">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <PageShell
+      eyebrow="Ferramentas"
+      title="Creative Linter"
+      description="Valide o copy antes de publicar no Meta Ads."
+    >
+      <div className="max-w-3xl space-y-6">
         <div className="flex items-center gap-3">
           <Sparkles className="h-6 w-6 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold">Creative Linter</h1>
+            <h2 className="text-xl font-semibold">Checklist do Criativo</h2>
             <p className="text-sm text-muted-foreground">
-              Valide seu copy antes de publicar no Meta Ads
+              Padronize headlines, CTA e coerência do texto.
             </p>
           </div>
         </div>
@@ -234,6 +239,6 @@ export default function CreativeLinterPage() {
           </Card>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

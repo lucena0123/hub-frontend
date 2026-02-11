@@ -115,7 +115,7 @@ const statusBadgeClass: Record<ActionProposalStatus, string> = {
   pending: 'border-amber-200 bg-amber-50 text-amber-900',
   approved: 'border-emerald-200 bg-emerald-50 text-emerald-800',
   rejected: 'border-rose-200 bg-rose-50 text-rose-800',
-  executed: 'border-sky-200 bg-sky-50 text-sky-800',
+  executed: 'border-primary/30 bg-primary/10 text-primary',
   expired: 'border-slate-200 bg-slate-50 text-slate-700',
 };
 
@@ -137,7 +137,7 @@ const executionStatusLabel: Record<string, string> = {
 const executionStatusClass: Record<string, string> = {
   success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
   failed: 'border-rose-200 bg-rose-50 text-rose-800',
-  running: 'border-blue-200 bg-blue-50 text-blue-800',
+  running: 'border-primary/30 bg-primary/10 text-primary',
   queued: 'border-slate-200 bg-slate-50 text-slate-700',
 };
 
@@ -366,7 +366,7 @@ export function DiagnosticsPanel({
   };
 
   return (
-    <Card>
+    <Card className="edge-card">
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -584,7 +584,7 @@ export function DiagnosticsPanel({
                   const entityLabel = item.entity?.name ?? item.entity?.id ?? null;
 
                   return (
-                    <div key={item.executionId} className="rounded-lg border p-3 space-y-1">
+                    <div key={item.executionId} className="rounded-[2px] border p-3 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="outline" className={`text-[10px] ${statusClass}`}>
                           {statusText}
@@ -640,7 +640,7 @@ function RecommendationItem({ item }: { item: OptimizationCenterItem }) {
   const actionLabel = actionLabelMap[item.action] ?? item.action;
 
   return (
-    <div className={`rounded-lg border border-l-4 ${severityBorder[item.severity]} p-3`}>
+    <div className={`rounded-[2px] border border-l-2 ${severityBorder[item.severity]} p-3`}>
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className={`text-[10px] ${severityColor[item.severity]}`}>
@@ -685,7 +685,7 @@ function ProposalItem({
   const actionLabel = actionLabelMap[proposal.action ?? ''] ?? proposal.action ?? '';
 
   return (
-    <div className="rounded-lg border p-3 space-y-2">
+    <div className="rounded-[2px] border p-3 space-y-2">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -707,7 +707,7 @@ function ProposalItem({
               </Badge>
             )}
             {proposal.status === 'approved' && proposal.lastDecision?.decidedByUserId == null && (
-              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400">
+              <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary">
                 Auto-executado
               </Badge>
             )}

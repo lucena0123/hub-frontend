@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/auth-context";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { AuthenticatedLayout } from "@/components/auth/authenticated-layout";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const signalSans = Space_Grotesk({
+  variable: "--font-signal-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const signalMono = IBM_Plex_Mono({
+  variable: "--font-signal-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -28,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${signalSans.variable} ${signalMono.variable} antialiased premium-shell`}
       >
         <AuthProvider>
           <AuthGuard>

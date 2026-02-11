@@ -2,23 +2,18 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { LucideIcon } from 'lucide-react';
 
-type AccentColor = 'blue' | 'emerald' | 'violet' | 'amber' | 'red' | 'slate';
+type AccentColor = 'signal' | 'emerald' | 'amber' | 'red' | 'slate';
 
 const colorMap: Record<AccentColor, { icon: string; bg: string; border: string }> = {
-  blue: {
-    icon: 'text-blue-600 dark:text-blue-400',
-    bg: 'bg-blue-500/10',
-    border: 'border-l-blue-500',
+  signal: {
+    icon: 'text-primary',
+    bg: 'bg-primary/10',
+    border: 'border-l-primary',
   },
   emerald: {
     icon: 'text-emerald-600 dark:text-emerald-400',
     bg: 'bg-emerald-500/10',
     border: 'border-l-emerald-500',
-  },
-  violet: {
-    icon: 'text-violet-600 dark:text-violet-400',
-    bg: 'bg-violet-500/10',
-    border: 'border-l-violet-500',
   },
   amber: {
     icon: 'text-amber-600 dark:text-amber-400',

@@ -29,7 +29,7 @@ export const CopyLab = (props: {
   if (copyCandidates.length === 0) return null;
 
   return (
-    <Card className="border-dashed border-l-4 border-l-purple-500">
+    <Card className="edge-card border-l-2 border-l-primary">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center justify-between">
           Sugestões de Copy (IA)
@@ -70,7 +70,7 @@ export const CopyLab = (props: {
         ) : copyError ? (
           <p className="text-sm text-muted-foreground">{copyError}</p>
         ) : copyInsights?.analysis ? (
-          <div className="space-y-3 rounded-lg border bg-background p-3">
+          <div className="space-y-3 rounded-[2px] border bg-background p-3">
             {copyInsights.analysis?.aiUsed === false ? (
               <div className="space-y-1">
                 <p className="text-sm text-amber-700">
