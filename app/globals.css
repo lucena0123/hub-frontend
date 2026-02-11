@@ -237,6 +237,28 @@
     border-left: 1px solid oklch(0.3 0.02 60 / 0.6);
   }
 
+  .compact-shell.page-shell {
+    padding: clamp(1.25rem, 2.5vw, 2.25rem) clamp(1.5rem, 4vw, 3.25rem) 3rem;
+  }
+
+  .compact-shell .page-header {
+    margin-bottom: 1.75rem;
+    padding: 1rem;
+  }
+
+  .compact-shell .page-title {
+    font-size: clamp(1.8rem, 3vw, 2.8rem);
+  }
+
+  .compact-shell .page-description {
+    font-size: 0.85rem;
+    max-width: 34rem;
+  }
+
+  .compact-shell .page-meta {
+    gap: 0.5rem;
+  }
+
   .section-title {
     font-size: 0.9rem;
     text-transform: uppercase;
@@ -691,6 +713,7 @@
   }
 
   .premium-sidebar-tabs {
+    display: flex;
     width: 100%;
     flex-direction: column;
     align-items: stretch;
@@ -719,6 +742,21 @@
     background: linear-gradient(120deg, rgba(234, 88, 12, 0.2), rgba(255, 255, 255, 0.04));
     color: #f9fafb;
     box-shadow: 0 0 18px rgba(234, 88, 12, 0.25);
+  }
+
+  .premium-sidebar-subtabs {
+    gap: 0.25rem;
+  }
+
+  .premium-sidebar-subtabs [data-slot="tabs-trigger"] {
+    padding: 0.6rem 0.85rem;
+    letter-spacing: 0.16em;
+  }
+
+  .premium-sidebar-divider {
+    height: 1px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.08);
   }
 
   .reveal {

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { BarChart3, Gauge, Layers, Loader2, Sparkles, Target, TrendingUp } from 'lucide-react';
+import { BarChart3, Gauge, Layers, Loader2, Sparkles, TrendingUp } from 'lucide-react';
 
 import { AdSetTable } from '@/components/performance/adset-table';
 import { BudgetPacingCard } from '@/components/performance/budget-pacing-card';
@@ -29,7 +29,7 @@ import { SectionHeader } from '@/components/performance/section-header';
 import { ReportGenerator } from '@/components/reports/report-generator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { PageShell } from '@/components/layout/page-shell';
 import { Reveal } from '@/components/layout/reveal';
 
@@ -39,7 +39,7 @@ import { LeadTrackingHistory } from './components/lead-tracking-history';
 import { PerformanceSidebar } from './components/performance-sidebar';
 
 type DashboardTab = 'executive' | 'operation' | 'analysis';
-type AnalysisTab = 'campaigns' | 'adsets' | 'creatives' | 'breakdowns' | 'funnel' | 'progress';
+type AnalysisTab = 'campaigns' | 'adsets' | 'creatives' | 'breakdowns' | 'business' | 'funnel' | 'progress';
 
 export default function ClientPerformancePage() {
   const params = useParams();
@@ -182,6 +182,7 @@ export default function ClientPerformancePage() {
 
   return (
     <PageShell
+      className="compact-shell"
       eyebrow={`Clientes / ${summary.clientId}`}
       title="Performance"
       description={`Visão tática de mídia, funil e receita para ${summary.clientName}.`}
@@ -242,7 +243,11 @@ export default function ClientPerformancePage() {
         className="w-full"
       >
         <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <PerformanceSidebar />
+          <PerformanceSidebar
+            activeTab={activeTab}
+            analysisTab={analysisTab}
+            onAnalysisTabChange={setAnalysisTab}
+          />
 
           <div className="space-y-8">
             <TabsContent value="executive">
@@ -351,54 +356,14 @@ export default function ClientPerformancePage() {
 
             <TabsContent value="analysis">
               <div className="premium-canvas space-y-8">
-                <div className="space-y-4">
-                  <SectionHeader
-                    title="Funil & Negócio"
-                    subtitle="Impacto real no resultado e métricas de LTV."
-                    icon={Target}
-                  />
-                  <Reveal delayMs={80}>
-                    {selectedCampaignId ? (
-                      <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,1.2fr)]">
-                        <LeadGenMetricsCard
-                          totalMessagingConversations={messagingMetrics.totalMessagingConversations}
-                          totalMessagingFirstReply={messagingMetrics.totalMessagingFirstReply}
-                          totalLinkClicks={messagingMetrics.totalLinkClicks}
-                          totalSpend={messagingMetrics.totalSpend}
-                          hasManualTracking={leadTrackingData.length > 0}
-                          qualifiedLeads={aggregatedLeadData.qualifiedLeads}
-                          disqualificationReasons={aggregatedLeadData.disqualificationReasons}
-                          contractsClosed={aggregatedLeadData.contractsClosed}
-                          totalRevenue={aggregatedLeadData.totalRevenue}
-                        />
-                        <BusinessMetricsCard data={businessData} loading={businessLoading} />
-                      </div>
-                    ) : (
-                      <Card>
-                        <CardContent className="flex items-center justify-center p-8 text-muted-foreground">
-                          Selecione uma campanha para visualizar métricas de funil e negócio.
-                        </CardContent>
-                      </Card>
-                    )}
-                  </Reveal>
-                </div>
+                <Reveal delayMs={120}>
+                  <Tabs value={analysisTab} onValueChange={(value) => setAnalysisTab(value as AnalysisTab)} className="space-y-6">
 
-                <div className="space-y-4">
-                  <SectionHeader
-                    title="Detalhamento"
-                    subtitle="Camadas de campanhas, conjuntos, criativos e público."
-                    icon={BarChart3}
-                  />
-                  <Reveal delayMs={120}>
-                    <Tabs value={analysisTab} onValueChange={(value) => setAnalysisTab(value as AnalysisTab)} className="space-y-4">
-                      <TabsList className="premium-subtabs flex-wrap h-auto w-full justify-start">
-                        <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
-                        <TabsTrigger value="adsets">Conjuntos</TabsTrigger>
-                        <TabsTrigger value="creatives">Criativos</TabsTrigger>
-                        <TabsTrigger value="breakdowns">Público & Tempo</TabsTrigger>
-                        <TabsTrigger value="funnel">Funil</TabsTrigger>
-                        <TabsTrigger value="progress">Progresso</TabsTrigger>
-                      </TabsList>
+                    <SectionHeader
+                      title="Detalhamento"
+                      subtitle="Camadas de campanhas, conjuntos, criativos e público."
+                      icon={BarChart3}
+                    />
 
                     <TabsContent value="campaigns" className="space-y-4">
                       {metricsLoading ? (
@@ -523,6 +488,31 @@ export default function ClientPerformancePage() {
                         )}
                       </TabsContent>
 
+                      <TabsContent value="business" className="space-y-4">
+                        {selectedCampaignId ? (
+                          <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,1.2fr)]">
+                            <LeadGenMetricsCard
+                              totalMessagingConversations={messagingMetrics.totalMessagingConversations}
+                              totalMessagingFirstReply={messagingMetrics.totalMessagingFirstReply}
+                              totalLinkClicks={messagingMetrics.totalLinkClicks}
+                              totalSpend={messagingMetrics.totalSpend}
+                              hasManualTracking={leadTrackingData.length > 0}
+                              qualifiedLeads={aggregatedLeadData.qualifiedLeads}
+                              disqualificationReasons={aggregatedLeadData.disqualificationReasons}
+                              contractsClosed={aggregatedLeadData.contractsClosed}
+                              totalRevenue={aggregatedLeadData.totalRevenue}
+                            />
+                            <BusinessMetricsCard data={businessData} loading={businessLoading} />
+                          </div>
+                        ) : (
+                          <Card>
+                            <CardContent className="flex items-center justify-center p-8 text-muted-foreground">
+                              Selecione uma campanha para visualizar métricas de funil e negócio.
+                            </CardContent>
+                          </Card>
+                        )}
+                      </TabsContent>
+
                       <TabsContent value="funnel" className="space-y-4">
                         {selectedCampaignId && selectedCampaign ? (
                           <>
@@ -555,8 +545,7 @@ export default function ClientPerformancePage() {
                         <BpmnProgressTracker progress={bpmnProgress} />
                       </TabsContent>
                     </Tabs>
-                  </Reveal>
-                </div>
+                </Reveal>
               </div>
             </TabsContent>
           </div>
