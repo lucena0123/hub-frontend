@@ -16,6 +16,10 @@ export interface AdCreativeSnapshot {
   primaryTexts: unknown;
   ctaTypes: unknown;
   destinationUrls: unknown;
+  descriptions?: unknown;
+  objectStorySpec?: unknown;
+  assetFeedSpec?: unknown;
+  raw?: unknown;
   visualAttributes?: {
     dominantColor?: string | null;
     textDetected?: boolean | null;
@@ -47,6 +51,8 @@ export interface AdCreativeMetric {
   totalLandingPageViews: number;
   totalSpend: number;
   totalConversions: number;
+  totalLeads?: number;
+  totalPurchases?: number;
   totalMessagingConversations: number;
   avgCtr: number;
   avgCpm: number;

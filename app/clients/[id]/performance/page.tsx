@@ -422,7 +422,13 @@ export default function ClientPerformancePage() {
                               Selecione uma campanha no topo para visualizar anúncios.
                             </div>
                           ) : selectedCampaignHasDelivery ? (
-                            <CreativePerformanceTable ads={adCreativeData} loading={adCreativeLoading} creativeLibraryData={creativeLibraryData} />
+                            <CreativePerformanceTable
+                              ads={adCreativeData}
+                              loading={adCreativeLoading}
+                              creativeLibraryData={creativeLibraryData}
+                              objective={selectedCampaign?.objective ?? null}
+                              objectiveMeta={selectedCampaign?.objectiveMeta ?? null}
+                            />
                           ) : (
                             <div className="flex items-center justify-center p-8 border rounded-[2px] border-dashed text-sm text-muted-foreground bg-muted/20">
                               Sem dados de anúncios para esta campanha no período.

@@ -34,12 +34,36 @@ export const CreativePerformanceRow = (props: {
   rowKey: string;
   snapshotId: string | null;
   expanded: boolean;
-  hasVideoData: boolean;
+  columns: Array<{
+    key:
+      | 'conversations'
+      | 'leads'
+      | 'cpl'
+      | 'clicks'
+      | 'linkClicks'
+      | 'lpViews'
+      | 'lpRate'
+      | 'ctr'
+      | 'cpc'
+      | 'cpa'
+      | 'convRate'
+      | 'messageRate'
+      | 'cpm'
+      | 'impressions'
+      | 'reach'
+      | 'frequency'
+      | 'video3s'
+      | 'thruplay'
+      | 'hookRate'
+      | 'holdRate'
+      | 'invest';
+    label: string;
+  }>;
   onToggle: () => void;
   status?: CreativeLibraryStatus;
   reasons?: AnalysisReason[];
 }) => {
-  const { ad, rowKey, snapshotId, expanded, hasVideoData, onToggle, status, reasons } = props;
+  const { ad, rowKey, snapshotId, expanded, columns, onToggle, status, reasons } = props;
 
   const creative = ad.creative || null;
   const primaryText = creative?.primaryText || null;
@@ -58,9 +82,37 @@ export const CreativePerformanceRow = (props: {
   const cpc = clicks > 0 ? ad.totalSpend / clicks : 0;
   const cpa = conversions > 0 ? ad.totalSpend / conversions : 0;
   const conversionRate = clicks > 0 ? (conversions / clicks) * 100 : 0;
+  const conversationRate = clicks > 0 ? (ad.totalMessagingConversations / clicks) * 100 : 0;
+  const lpBaseClicks = ad.totalLinkClicks > 0 ? ad.totalLinkClicks : clicks;
+  const lpRate = lpBaseClicks > 0 ? (ad.totalLandingPageViews / lpBaseClicks) * 100 : 0;
+  const frequency = ad.totalReach > 0 ? ad.totalImpressions / ad.totalReach : 0;
 
-  const colSpan = hasVideoData ? 14 : 12;
+  const colSpan = columns.length + 1;
   const canExpand = Boolean(snapshotId);
+
+  const metricValues: Record<string, string> = {
+    conversations: formatNumber(ad.totalMessagingConversations),
+    leads: formatNumber(ad.totalConversions),
+    cpl: formatCurrency(ad.cpl),
+    clicks: formatNumber(ad.totalClicks),
+    linkClicks: formatOptionalNumber(ad.totalLinkClicks),
+    lpViews: formatOptionalNumber(ad.totalLandingPageViews),
+    lpRate: formatPercent(lpRate),
+    ctr: formatPercent(ad.avgCtr, 2),
+    cpc: formatCurrency(cpc),
+    cpa: formatCurrency(cpa),
+    convRate: formatPercent(conversionRate),
+    messageRate: formatPercent(conversationRate),
+    cpm: formatCurrency(ad.avgCpm),
+    impressions: formatOptionalNumber(ad.totalImpressions),
+    reach: formatOptionalNumber(ad.totalReach),
+    frequency: frequency > 0 ? `${frequency.toFixed(1)}x` : '—',
+    video3s: formatOptionalNumber(ad.video3secViews),
+    thruplay: formatOptionalNumber(ad.videoThruplay),
+    hookRate: ad.hookRate > 0 ? `${ad.hookRate.toFixed(1)}%` : '—',
+    holdRate: ad.holdRate > 0 ? `${ad.holdRate.toFixed(1)}%` : '—',
+    invest: formatCurrency(ad.totalSpend),
+  };
 
   return (
     <>
@@ -107,27 +159,28 @@ export const CreativePerformanceRow = (props: {
             </div>
           </div>
         </TableCell>
-        <TableCell className="text-right">{formatNumber(ad.totalMessagingConversations)}</TableCell>
-        <TableCell className="text-right">{formatCurrency(ad.cpl)}</TableCell>
-        <TableCell className="text-right">{formatNumber(ad.totalClicks)}</TableCell>
-        <TableCell className="text-right">{formatOptionalNumber(ad.totalLinkClicks)}</TableCell>
-        <TableCell className="text-right">{formatOptionalNumber(ad.totalLandingPageViews)}</TableCell>
-        <TableCell className="text-right">{formatPercent(ad.avgCtr, 2)}</TableCell>
-        <TableCell className="text-right">{formatCurrency(cpc)}</TableCell>
-        <TableCell className="text-right">{formatCurrency(cpa)}</TableCell>
-        <TableCell className="text-right">{formatPercent(conversionRate)}</TableCell>
-        <TableCell className="text-right">{formatCurrency(ad.avgCpm)}</TableCell>
-        {hasVideoData && (
-          <>
-            <TableCell className="text-right">
-              <span className={rateColor(ad.hookRate, 'hook')}>{ad.hookRate > 0 ? `${ad.hookRate.toFixed(1)}%` : '-'}</span>
+        {columns.map((column) => {
+          const value = metricValues[column.key] ?? '—';
+          if (column.key === 'hookRate') {
+            return (
+              <TableCell key={column.key} className="text-right">
+                <span className={rateColor(ad.hookRate, 'hook')}>{value}</span>
+              </TableCell>
+            );
+          }
+          if (column.key === 'holdRate') {
+            return (
+              <TableCell key={column.key} className="text-right">
+                <span className={rateColor(ad.holdRate, 'hold')}>{value}</span>
+              </TableCell>
+            );
+          }
+          return (
+            <TableCell key={column.key} className="text-right">
+              {value}
             </TableCell>
-            <TableCell className="text-right">
-              <span className={rateColor(ad.holdRate, 'hold')}>{ad.holdRate > 0 ? `${ad.holdRate.toFixed(1)}%` : '-'}</span>
-            </TableCell>
-          </>
-        )}
-        <TableCell className="text-right">{formatCurrency(ad.totalSpend)}</TableCell>
+          );
+        })}
       </TableRow>
 
       {canExpand && expanded ? (
