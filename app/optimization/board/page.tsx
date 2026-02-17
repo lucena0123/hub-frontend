@@ -18,7 +18,8 @@ import { BoardColumn } from "@/components/optimization/board-column";
 import { TaskCard } from "@/components/optimization/task-card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LayoutDashboard, Users, Loader2, ShieldAlert, History, Crosshair } from "lucide-react";
+import { LayoutDashboard, Users, Loader2, ShieldAlert, History, Crosshair, SlidersHorizontal } from "lucide-react";
+import Link from "next/link";
 import { RuleLibrary } from "@/components/optimization/rule-library";
 
 import { ClientSelect } from "@/components/optimization/client-select";
@@ -383,6 +384,12 @@ export default function OptimizationBoardPage() {
                                 >
                                     <Crosshair className="w-4 h-4 mr-1" />
                                     Somente agir agora
+                                </Button>
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href="/optimization/settings">
+                                        <SlidersHorizontal className="w-4 h-4 mr-1" />
+                                        Configurar regras
+                                    </Link>
                                 </Button>
                                 <Button onClick={() => fetchTasks(selectedClientId)} variant="outline" size="sm">
                                     Refresh
