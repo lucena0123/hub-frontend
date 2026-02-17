@@ -18,7 +18,7 @@ import { BoardColumn } from "@/components/optimization/board-column";
 import { TaskCard } from "@/components/optimization/task-card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LayoutDashboard, Users, Loader2, ShieldAlert, History } from "lucide-react";
+import { LayoutDashboard, Users, Loader2, ShieldAlert, History, Crosshair } from "lucide-react";
 import { RuleLibrary } from "@/components/optimization/rule-library";
 
 import { ClientSelect } from "@/components/optimization/client-select";
@@ -92,11 +92,79 @@ export default function OptimizationBoardPage() {
     const [auditActionFilter, setAuditActionFilter] = useState<'all' | 'create' | 'update' | 'delete' | 'read'>('all');
     const [auditEventTypeFilter, setAuditEventTypeFilter] = useState<string>('all');
     const [auditWindowHours, setAuditWindowHours] = useState<6 | 24 | 72>(24);
+    const [showActionableOnly, setShowActionableOnly] = useState(false);
 
     const canOperate = useMemo(() => {
         const role = user?.role?.toLowerCase();
         return role === 'admin' || role === 'manager' || role === 'analyst';
     }, [user?.role]);
+
+    const getTaskAgeHours = useCallback((task: OptimizationTask) => {
+        const base = task.createdAt ?? task.updatedAt;
+        if (!base) return 0;
+        const date = new Date(base);
+        if (Number.isNaN(date.getTime())) return 0;
+        return Math.max(0, (Date.now() - date.getTime()) / (1000 * 60 * 60));
+    }, []);
+
+    const actionableTaskItems = useMemo(() => {
+        const candidateStatuses: OptimizationTaskStatus[] = ['pending', 'in_progress', 'failed'];
+        const candidates = tasks.filter((task) => candidateStatuses.includes(task.status));
+
+        const severityWeight: Record<string, number> = {
+            critical: 4,
+            high: 3,
+            medium: 2,
+            low: 1,
+        };
+
+        const toReason = (task: OptimizationTask, ageHours: number) => {
+            if (task.status === 'failed') return 'Atrasada';
+            if (task.status === 'in_progress') return 'Em andamento';
+            if ((task.input?.severity ?? 'low') === 'critical') return 'Urgente';
+            if (ageHours >= 24) return 'Pendente antiga';
+            if ((task.priority ?? 0) >= 8) return 'Alta prioridade';
+            return 'Agir agora';
+        };
+
+        return candidates
+            .map((task) => {
+                const ageHours = getTaskAgeHours(task);
+                const priority = Number.isFinite(task.priority) ? task.priority : 0;
+                const sev = severityWeight[task.input?.severity ?? 'low'] ?? 1;
+                const statusBoost = task.status === 'failed' ? 20 : task.status === 'in_progress' ? 10 : 0;
+                const ageBoost = Math.min(12, Math.floor(ageHours / 2));
+                const score = priority * 3 + sev * 4 + statusBoost + ageBoost;
+
+                return {
+                    task,
+                    score,
+                    reason: toReason(task, ageHours),
+                };
+            })
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 5);
+    }, [tasks, getTaskAgeHours]);
+
+    const actionableIds = useMemo(() => new Set(actionableTaskItems.map((item) => item.task.id)), [actionableTaskItems]);
+
+    const visibleColumns = useMemo(() => {
+        if (!showActionableOnly) return columns;
+
+        return columns.map((column) => ({
+            ...column,
+            tasks: column.tasks.filter((task) => actionableIds.has(task.id)),
+        }));
+    }, [columns, showActionableOnly, actionableIds]);
+
+    const handleFocusTask = useCallback((taskId: string) => {
+        const element = document.querySelector(`[data-task-id="${taskId}"]`);
+        if (element instanceof HTMLElement) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+            element.classList.add('ring-2', 'ring-primary');
+            window.setTimeout(() => element.classList.remove('ring-2', 'ring-primary'), 1400);
+        }
+    }, []);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -308,12 +376,52 @@ export default function OptimizationBoardPage() {
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
+                                <Button
+                                    variant={showActionableOnly ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setShowActionableOnly((prev) => !prev)}
+                                >
+                                    <Crosshair className="w-4 h-4 mr-1" />
+                                    Somente agir agora
+                                </Button>
                                 <Button onClick={() => fetchTasks(selectedClientId)} variant="outline" size="sm">
                                     Refresh
                                 </Button>
                             </div>
                         )}
                     />
+
+                    <div className="rounded-[12px] border border-border/60 bg-card/40 p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                            <div>
+                                <div className="text-sm font-medium">Prioridade do Dia</div>
+                                <div className="text-xs text-muted-foreground">Top 5 tarefas acionáveis para reduzir tempo de detecção → ação.</div>
+                            </div>
+                            <div className="text-[11px] text-muted-foreground">{actionableTaskItems.length} item(ns)</div>
+                        </div>
+                        {actionableTaskItems.length === 0 ? (
+                            <div className="text-xs text-muted-foreground">Sem tarefas acionáveis no momento.</div>
+                        ) : (
+                            <div className="space-y-2">
+                                {actionableTaskItems.map(({ task, reason }) => (
+                                    <div key={task.id} className="flex items-center justify-between gap-3 border border-border/50 rounded-md px-3 py-2 bg-background/60">
+                                        <div className="min-w-0">
+                                            <div className="text-xs font-medium truncate">{task.name}</div>
+                                            <div className="text-[11px] text-muted-foreground truncate">
+                                                client: {task.processInstance?.clientId ?? selectedClientId ?? 'n/d'} · status: {task.status}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span className="text-[10px] px-2 py-1 rounded bg-primary/15 text-primary uppercase tracking-wide">{reason}</span>
+                                            <Button size="sm" variant="outline" onClick={() => handleFocusTask(task.id)}>
+                                                Ir para card
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
                     <DndContext
                         sensors={sensors}
@@ -322,7 +430,7 @@ export default function OptimizationBoardPage() {
                     >
                         <div className="min-h-[520px] overflow-x-auto overflow-y-hidden p-4 bg-muted/10 rounded-[16px] border border-border/60">
                             <div className="flex h-full gap-4 min-w-max">
-                                {columns.map(col => (
+                                {visibleColumns.map(col => (
                                     <BoardColumn key={col.id} column={col} tasks={col.tasks} readOnly={!canOperate} />
                                 ))}
                             </div>

@@ -62,7 +62,7 @@ export function TaskCard({ task, disabled = false }: TaskCardProps) {
     };
 
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners} data-task-id={task.id} id={`task-${task.id}`}>
             <Card
                 className={cn(
                     disabled ? "cursor-not-allowed opacity-80 transition edge-card border-l-2" : "cursor-grab transition hover-lift edge-card border-l-2",
