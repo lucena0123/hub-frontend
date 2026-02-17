@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { getDashboardOverview } from '@/lib/api/client';
 import type { DashboardOverview } from '@/types';
 import { Activity, Cpu, Wifi, Zap, AlertTriangle, Server } from 'lucide-react';
@@ -160,6 +161,18 @@ export default function DashboardPage() {
     ? Math.min(100, Math.round((overview.bpmn.clientsInMonitoring / overview.clients.total) * 100))
     : 0;
 
+  const recommendedActions: Array<{ label: string; href: string; tone: 'default' | 'warning' }> = [];
+
+  if (overview.performance.avgRoas < 2) {
+    recommendedActions.push({ label: 'ROAS abaixo do alvo: revisar prioridades no board', href: '/optimization/board', tone: 'warning' });
+  }
+  if (overview.performance.avgCpl > 20) {
+    recommendedActions.push({ label: 'CPL elevado: ajustar thresholds de regras', href: '/optimization/settings', tone: 'warning' });
+  }
+  if (recommendedActions.length === 0) {
+    recommendedActions.push({ label: 'Operação estável: validar efetividade e manter baseline', href: '/optimization/effectiveness', tone: 'default' });
+  }
+
   return (
     <PageShell
       eyebrow="Agência / Visão geral"
@@ -202,6 +215,26 @@ export default function DashboardPage() {
               value={formatCurrency(overview.performance.totalSpend)}
             />
           </div>
+        </Reveal>
+
+        <Reveal delayMs={80}>
+          <Card className="border border-border/60 bg-card/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm uppercase tracking-[0.2em]">Ações recomendadas (alinhadas)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {recommendedActions.map((item, idx) => (
+                <div key={`${item.href}-${idx}`} className="flex items-center justify-between gap-3 text-sm">
+                  <span className={cn(item.tone === 'warning' ? 'text-amber-300' : 'text-muted-foreground')}>
+                    {item.label}
+                  </span>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={item.href}>Abrir</Link>
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </Reveal>
 
         <SectionHeader
