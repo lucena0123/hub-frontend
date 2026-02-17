@@ -88,8 +88,9 @@ export default function OptimizationBoardPage() {
     const [auditEvents, setAuditEvents] = useState<OptimizationAuditEvent[]>([]);
     const [auditLoading, setAuditLoading] = useState(false);
     const [auditSummary, setAuditSummary] = useState<Array<{ action: string; total: number }>>([]);
+    const [auditEventTypes, setAuditEventTypes] = useState<Array<{ eventType: string; total: number }>>([]);
     const [auditActionFilter, setAuditActionFilter] = useState<'all' | 'create' | 'update' | 'delete' | 'read'>('all');
-    const [auditEventTypeFilter, setAuditEventTypeFilter] = useState<'all' | 'client.update' | 'task.update'>('all');
+    const [auditEventTypeFilter, setAuditEventTypeFilter] = useState<string>('all');
 
     const canOperate = useMemo(() => {
         const role = user?.role?.toLowerCase();
@@ -133,9 +134,11 @@ export default function OptimizationBoardPage() {
             ]);
             setAuditEvents(events);
             setAuditSummary(summary.actions ?? []);
+            setAuditEventTypes(summary.eventTypes ?? []);
         } catch {
             setAuditEvents([]);
             setAuditSummary([]);
+            setAuditEventTypes([]);
         } finally {
             setAuditLoading(false);
         }
@@ -351,14 +354,15 @@ export default function OptimizationBoardPage() {
                                         <SelectItem value="read">Read</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Select value={auditEventTypeFilter} onValueChange={(value) => setAuditEventTypeFilter(value as 'all' | 'client.update' | 'task.update')}>
-                                    <SelectTrigger className="h-8 w-[170px]">
+                                <Select value={auditEventTypeFilter} onValueChange={setAuditEventTypeFilter}>
+                                    <SelectTrigger className="h-8 w-[190px]">
                                         <SelectValue placeholder="Tipo" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">Todos tipos</SelectItem>
-                                        <SelectItem value="client.update">client.update</SelectItem>
-                                        <SelectItem value="task.update">task.update</SelectItem>
+                                        {auditEventTypes.map((item) => (
+                                            <SelectItem key={item.eventType} value={item.eventType}>{item.eventType}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                                 <Button variant="outline" size="sm" onClick={loadAudit} disabled={auditLoading}>
