@@ -27,6 +27,43 @@ import { SectionHeader } from "@/components/performance/section-header";
 import { useAuth } from "@/contexts/auth-context";
 import { getOptimizationAudit, type OptimizationAuditEvent } from "@/lib/api/client/optimization";
 
+const actionLabel: Record<string, string> = {
+    create: 'Criação',
+    update: 'Atualização',
+    delete: 'Remoção',
+    read: 'Leitura',
+};
+
+const eventTypeLabel = (eventType: string) => {
+    if (eventType === 'client.update') return 'Configuração de cliente atualizada';
+    if (eventType === 'task.update') return 'Tarefa de otimização atualizada';
+    if (eventType.startsWith('task.')) return 'Evento de tarefa';
+    if (eventType.startsWith('client.')) return 'Evento de cliente';
+    return eventType;
+};
+
+const asRecord = (value: unknown): Record<string, unknown> | null => {
+    if (typeof value === 'object' && value !== null) return value as Record<string, unknown>;
+    return null;
+};
+
+const extractRoute = (metadata: unknown): string | null => {
+    const rec = asRecord(metadata);
+    const route = rec?.route;
+    return typeof route === 'string' && route.length > 0 ? route : null;
+};
+
+const extractEntitySummary = (resource: unknown): string | null => {
+    const rec = asRecord(resource);
+    const entityType = rec?.entityType;
+    const entityId = rec?.entityId;
+
+    if (typeof entityType === 'string' && typeof entityId === 'string') {
+        return `${entityType} · ${entityId}`;
+    }
+    return null;
+};
+
 export default function OptimizationBoardPage() {
     const { tasks, columns, mode, fetchTasks, moveTask, setMode, isLoading, error } = useOptimizationStore();
     const { user } = useAuth();
@@ -301,17 +338,30 @@ export default function OptimizationBoardPage() {
                             <div className="text-xs text-muted-foreground">Sem eventos recentes para este filtro.</div>
                         ) : (
                             <div className="space-y-2">
-                                {auditEvents.map((event) => (
-                                    <div key={event.id} className="text-xs border border-border/50 rounded-md px-3 py-2 bg-background/60">
-                                        <div className="font-medium">{event.eventType} · {event.action}</div>
-                                        <div className="text-muted-foreground">
-                                            clientId: {event.clientId} · {new Date(event.timestamp).toLocaleString('pt-BR')}
+                                {auditEvents.map((event) => {
+                                    const route = extractRoute(event.metadata);
+                                    const entitySummary = extractEntitySummary(event.resource);
+
+                                    return (
+                                        <div key={event.id} className="text-xs border border-border/50 rounded-md px-3 py-2 bg-background/60 space-y-1">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="font-medium">{eventTypeLabel(event.eventType)}</div>
+                                                <span className="px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[10px] uppercase tracking-wide">
+                                                    {actionLabel[event.action] ?? event.action}
+                                                </span>
+                                            </div>
+                                            <div className="text-muted-foreground">
+                                                clientId: {event.clientId} · {new Date(event.timestamp).toLocaleString('pt-BR')}
+                                            </div>
+                                            {entitySummary && (
+                                                <div className="text-[11px] text-muted-foreground/90">entidade: {entitySummary}</div>
+                                            )}
+                                            {route && (
+                                                <div className="text-[11px] text-muted-foreground/80">rota: {route}</div>
+                                            )}
                                         </div>
-                                        {typeof event.metadata?.route === 'string' && (
-                                            <div className="text-[11px] text-muted-foreground/80">rota: {event.metadata.route}</div>
-                                        )}
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
