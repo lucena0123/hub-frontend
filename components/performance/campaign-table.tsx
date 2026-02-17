@@ -9,8 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ZeroConversationsDialog } from '@/components/performance/zero-conversations-dialog';
-import { getCampaignBenchmarks, getComplianceRisk, getOptimizationCenterPlaybook, updateCampaign } from '@/lib/api/client';
-import type { CampaignBenchmark, ComplianceRiskCampaign, ComplianceRiskResponse, LearningSummary, PerformanceSummary } from '@/types';
+import { getAlerts, getCampaignBenchmarks, getComplianceRisk, getOptimizationCenterPlaybook, updateCampaign } from '@/lib/api/client';
+import type { CampaignBenchmark, ComplianceRiskCampaign, ComplianceRiskResponse, LearningSummary, PerformanceAlert, PerformanceSummary } from '@/types';
 
 interface CampaignTableProps {
   clientId: string;
@@ -711,6 +711,37 @@ const formatObjectiveLabel = (objective?: string | null, objectiveMeta?: Perform
   return `${base}${destination ? ` · ${destination}` : ''}${optimization ? ` · ${optimization}` : ''}`;
 };
 
+const getAlertPriorityScore = (alert: PerformanceAlert) => {
+  const severityWeight: Record<PerformanceAlert['type'], number> = {
+    critical: 10_000,
+    warning: 5_000,
+    info: 1_000,
+  };
+
+  const categoryBoost: Record<string, number> = {
+    bpmn: 900,
+    sync: 700,
+    contacts: 600,
+    qualification: 500,
+    roas: 450,
+    budget: 350,
+    trend: 300,
+    'creative-fatigue': 250,
+    creative: 200,
+    ctr: 180,
+    'creative-video': 120,
+    'creative-winner': 10,
+  };
+
+  const threshold = Number.isFinite(alert.threshold) ? alert.threshold : 0;
+  const current = Number.isFinite(alert.currentValue) ? alert.currentValue : 0;
+  const relativeGap =
+    threshold !== 0 ? Math.abs((current - threshold) / Math.abs(threshold)) : Math.abs(current - threshold);
+  const boundedImpact = Math.min(1_500, Math.round(relativeGap * 1_000));
+
+  return severityWeight[alert.type] + (categoryBoost[alert.category] ?? 100) + boundedImpact;
+};
+
 export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
   const [themeOptions, setThemeOptions] = useState<ThemeOption[]>([]);
   const [themeLoading, setThemeLoading] = useState(true);
@@ -725,6 +756,7 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
   const [complianceMap, setComplianceMap] = useState<Record<string, ComplianceRiskCampaign>>({});
   const [complianceSummary, setComplianceSummary] = useState<ComplianceRiskResponse['summary'] | null>(null);
   const [complianceError, setComplianceError] = useState<string | null>(null);
+  const [alertScoreByCampaign, setAlertScoreByCampaign] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let active = true;
@@ -831,6 +863,42 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
     };
   }, [campaigns, clientId]);
 
+  useEffect(() => {
+    if (!clientId || campaigns.length === 0) {
+      setAlertScoreByCampaign({});
+      return;
+    }
+
+    let active = true;
+
+    const loadAlertScores = async () => {
+      try {
+        const response = await getAlerts();
+        if (!active) return;
+
+        const nextScores: Record<string, number> = {};
+        response.alerts.forEach((alert) => {
+          if (alert.clientId !== clientId || !alert.campaignId) return;
+          const score = getAlertPriorityScore(alert);
+          const current = nextScores[alert.campaignId] ?? 0;
+          if (score > current) {
+            nextScores[alert.campaignId] = score;
+          }
+        });
+
+        setAlertScoreByCampaign(nextScores);
+      } catch {
+        if (!active) return;
+        setAlertScoreByCampaign({});
+      }
+    };
+
+    void loadAlertScores();
+    return () => {
+      active = false;
+    };
+  }, [campaigns, clientId]);
+
   const setCampaignSaveState = (campaignId: string, next: SaveState) => {
     setSaveState((prev) => ({ ...prev, [campaignId]: next }));
   };
@@ -879,6 +947,18 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
   const resolveSubthemeKey = (campaign: PerformanceSummary) =>
     subthemeOverrides[campaign.campaignId] ?? campaign.optimizationSubthemeKey ?? null;
 
+  const sortedCampaigns = [...campaigns].sort((a, b) => {
+    const scoreA = alertScoreByCampaign[a.campaignId] ?? 0;
+    const scoreB = alertScoreByCampaign[b.campaignId] ?? 0;
+    if (scoreA !== scoreB) return scoreB - scoreA;
+
+    const spendA = Number.isFinite(a.totalSpend) ? a.totalSpend : 0;
+    const spendB = Number.isFinite(b.totalSpend) ? b.totalSpend : 0;
+    if (spendA !== spendB) return spendB - spendA;
+
+    return a.campaignName.localeCompare(b.campaignName, 'pt-BR');
+  });
+
   return (
     <Card className="edge-card border-l-2 border-l-primary">
       <CardHeader className="pb-3">
@@ -922,7 +1002,7 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
               Nenhuma campanha encontrada
             </div>
           ) : (
-            campaigns.map((campaign) => {
+            sortedCampaigns.map((campaign) => {
               const themeKey = resolveThemeKey(campaign);
               const subthemeKey = resolveSubthemeKey(campaign);
               const draftSubtheme = subthemeDrafts[campaign.campaignId] ?? subthemeKey ?? '';
