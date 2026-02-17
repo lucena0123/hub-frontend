@@ -123,11 +123,14 @@ export {
   getCampaignHealth,
   getAutoApprovalConfig,
   updateAutoApprovalConfig,
+  getOptimizationAudit,
   type AnomalyDetection,
   type AnomalyType,
   type CampaignHealthResult,
   type HealthFactor,
   type AutoApprovalConfig,
   type AutoApprovalRuleConfig,
+  type OptimizationAuditEvent,
+  type OptimizationAuditResponse,
 } from './client/optimization';
 

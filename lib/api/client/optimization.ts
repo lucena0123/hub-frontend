@@ -91,6 +91,26 @@ export const getCampaignHealth = async (clientId: string): Promise<CampaignHealt
     return data.campaigns ?? [];
 };
 
+export type OptimizationAuditEvent = {
+    id: string;
+    action: string;
+    eventType: string;
+    clientId: string;
+    processId?: string | null;
+    userId: string;
+    userRole: string;
+    resource: Record<string, unknown>;
+    changes?: Record<string, unknown> | null;
+    metadata: Record<string, unknown>;
+    timestamp: string;
+};
+
+export type OptimizationAuditResponse = {
+    success: boolean;
+    total: number;
+    events: OptimizationAuditEvent[];
+};
+
 type AutoApprovalConfigResponse = AutoApprovalConfig & { clientId: string };
 
 export const getAutoApprovalConfig = async (clientId: string): Promise<AutoApprovalConfig> => {
@@ -108,4 +128,9 @@ export const updateAutoApprovalConfig = async (
     const { clientId: responseClientId, ...updated } = data;
     void responseClientId;
     return updated;
+};
+
+export const getOptimizationAudit = async (params?: { clientId?: string; limit?: number }): Promise<OptimizationAuditEvent[]> => {
+    const { data } = await apiClient.get<OptimizationAuditResponse>('/api/optimization/audit', { params });
+    return data.events ?? [];
 };
