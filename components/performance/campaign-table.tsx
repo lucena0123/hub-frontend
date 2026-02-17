@@ -742,6 +742,16 @@ const getAlertPriorityScore = (alert: PerformanceAlert) => {
   return severityWeight[alert.type] + (categoryBoost[alert.category] ?? 100) + boundedImpact;
 };
 
+const getPriorityMeta = (score: number) => {
+  if (score >= 10_500) {
+    return { label: 'Prioridade alta', className: 'bg-rose-500 text-white' };
+  }
+  if (score >= 5_300) {
+    return { label: 'Prioridade média', className: 'bg-amber-400 text-amber-950' };
+  }
+  return { label: 'Prioridade baixa', className: 'bg-muted text-muted-foreground' };
+};
+
 export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
   const [themeOptions, setThemeOptions] = useState<ThemeOption[]>([]);
   const [themeLoading, setThemeLoading] = useState(true);
@@ -1035,6 +1045,8 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
               const complianceTooltip = compliance
                 ? `Criticos: ${compliance.critical} · Alertas: ${compliance.warning} · Baixos: ${compliance.low}`
                 : null;
+              const priorityScore = alertScoreByCampaign[campaign.campaignId] ?? 0;
+              const priorityMeta = getPriorityMeta(priorityScore);
 
               const pyramidLayers = buildPyramidLayers(campaign);
               const objectiveKey = resolveObjectiveKey(campaign);
@@ -1131,6 +1143,12 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
                               title="Status de performance calculado por CTR, CPL e ROAS."
                             >
                               {campaign.status}
+                            </Badge>
+                            <Badge
+                              className={`text-[10px] ${priorityMeta.className}`}
+                              title={`Score de prioridade: ${priorityScore}`}
+                            >
+                              {priorityMeta.label}
                             </Badge>
                             {complianceBadge && (
                               <Badge
