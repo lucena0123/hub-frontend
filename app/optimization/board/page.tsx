@@ -54,6 +54,12 @@ export default function OptimizationBoardPage() {
         fetchTasks();
     }, [fetchTasks]);
 
+    useEffect(() => {
+        if (!actionFeedback) return;
+        const timer = window.setTimeout(() => setActionFeedback(null), 3500);
+        return () => window.clearTimeout(timer);
+    }, [actionFeedback]);
+
     const handleDragStart = (event: DragStartEvent) => {
         if (!canOperate) return;
 
