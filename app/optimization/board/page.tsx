@@ -391,6 +391,11 @@ export default function OptimizationBoardPage() {
                                         Configurar regras
                                     </Link>
                                 </Button>
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href="/optimization/effectiveness">
+                                        Efetividade
+                                    </Link>
+                                </Button>
                                 <Button onClick={() => fetchTasks(selectedClientId)} variant="outline" size="sm">
                                     Refresh
                                 </Button>
