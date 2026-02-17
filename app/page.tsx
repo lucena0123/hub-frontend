@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getDashboardOverview } from '@/lib/api/client';
-import type { DashboardOverview } from '@/types';
+import { getDashboardOverview, getAlerts } from '@/lib/api/client';
+import type { AlertsResponse, DashboardOverview } from '@/types';
 import { Activity, Cpu, Wifi, Zap, AlertTriangle, Server } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -94,6 +94,7 @@ const PlatformBar = ({ name, value, total, color }: { name: string; value: numbe
 
 export default function DashboardPage() {
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
+  const [alerts, setAlerts] = useState<AlertsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,9 +102,15 @@ export default function DashboardPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const data: unknown = await getDashboardOverview();
+        const [overviewData, alertsData] = await Promise.all([
+          getDashboardOverview(),
+          getAlerts().catch(() => null),
+        ]);
+
+        const data: unknown = overviewData;
         if (isDashboardOverview(data)) {
           setOverview(data);
+          setAlerts(alertsData);
         } else {
           setError('Falha ao validar dados do painel.');
         }
@@ -161,16 +168,47 @@ export default function DashboardPage() {
     ? Math.min(100, Math.round((overview.bpmn.clientsInMonitoring / overview.clients.total) * 100))
     : 0;
 
+  const topAlert = alerts?.alerts?.[0];
+
   const recommendedActions: Array<{ label: string; href: string; tone: 'default' | 'warning' }> = [];
 
   if (overview.performance.avgRoas < 2) {
-    recommendedActions.push({ label: 'ROAS abaixo do alvo: revisar prioridades no board', href: '/optimization/board', tone: 'warning' });
+    const href = topAlert?.clientId
+      ? `/optimization/board?clientId=${topAlert.clientId}`
+      : '/optimization/board';
+    recommendedActions.push({
+      label: topAlert?.clientName
+        ? `ROAS abaixo do alvo: revisar prioridades (${topAlert.clientName})`
+        : 'ROAS abaixo do alvo: revisar prioridades no board',
+      href,
+      tone: 'warning',
+    });
   }
+
   if (overview.performance.avgCpl > 20) {
-    recommendedActions.push({ label: 'CPL elevado: ajustar thresholds de regras', href: '/optimization/settings', tone: 'warning' });
+    const href = topAlert?.clientId
+      ? `/optimization/settings?clientId=${topAlert.clientId}`
+      : '/optimization/settings';
+    recommendedActions.push({
+      label: topAlert?.clientName
+        ? `CPL elevado: ajustar thresholds (${topAlert.clientName})`
+        : 'CPL elevado: ajustar thresholds de regras',
+      href,
+      tone: 'warning',
+    });
   }
+
   if (recommendedActions.length === 0) {
-    recommendedActions.push({ label: 'Operação estável: validar efetividade e manter baseline', href: '/optimization/effectiveness', tone: 'default' });
+    const href = topAlert?.clientId
+      ? `/optimization/effectiveness?clientId=${topAlert.clientId}`
+      : '/optimization/effectiveness';
+    recommendedActions.push({
+      label: topAlert?.clientName
+        ? `Operação estável: validar efetividade (${topAlert.clientName})`
+        : 'Operação estável: validar efetividade e manter baseline',
+      href,
+      tone: 'default',
+    });
   }
 
   return (
