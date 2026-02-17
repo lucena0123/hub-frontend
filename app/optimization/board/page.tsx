@@ -18,13 +18,14 @@ import { BoardColumn } from "@/components/optimization/board-column";
 import { TaskCard } from "@/components/optimization/task-card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LayoutDashboard, Users, Loader2, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, Users, Loader2, ShieldAlert, History } from "lucide-react";
 import { RuleLibrary } from "@/components/optimization/rule-library";
 
 import { ClientSelect } from "@/components/optimization/client-select";
 import { PageShell } from "@/components/layout/page-shell";
 import { SectionHeader } from "@/components/performance/section-header";
 import { useAuth } from "@/contexts/auth-context";
+import { getOptimizationAudit, type OptimizationAuditEvent } from "@/lib/api/client/optimization";
 
 export default function OptimizationBoardPage() {
     const { tasks, columns, mode, fetchTasks, moveTask, setMode, isLoading, error } = useOptimizationStore();
@@ -33,6 +34,8 @@ export default function OptimizationBoardPage() {
     const [activeRule, setActiveRule] = useState<OptimizationRule | null>(null);
     const [selectedClientId, setSelectedClientId] = useState<string | undefined>(undefined);
     const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [auditEvents, setAuditEvents] = useState<OptimizationAuditEvent[]>([]);
+    const [auditLoading, setAuditLoading] = useState(false);
 
     const canOperate = useMemo(() => {
         const role = user?.role?.toLowerCase();
@@ -59,6 +62,25 @@ export default function OptimizationBoardPage() {
         const timer = window.setTimeout(() => setActionFeedback(null), 3500);
         return () => window.clearTimeout(timer);
     }, [actionFeedback]);
+
+    useEffect(() => {
+        const loadAudit = async () => {
+            try {
+                setAuditLoading(true);
+                const events = await getOptimizationAudit({
+                    limit: 8,
+                    clientId: selectedClientId,
+                });
+                setAuditEvents(events);
+            } catch {
+                setAuditEvents([]);
+            } finally {
+                setAuditLoading(false);
+            }
+        };
+
+        loadAudit();
+    }, [selectedClientId, tasks.length]);
 
     const handleDragStart = (event: DragStartEvent) => {
         if (!canOperate) return;
@@ -246,6 +268,29 @@ export default function OptimizationBoardPage() {
                             ) : null}
                         </DragOverlay>
                     </DndContext>
+
+                    <div className="rounded-[12px] border border-border/60 bg-card/40 p-4 space-y-3">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                            <History className="w-4 h-4" />
+                            Últimos eventos de otimização
+                        </div>
+                        {auditLoading ? (
+                            <div className="text-xs text-muted-foreground">Carregando auditoria...</div>
+                        ) : auditEvents.length === 0 ? (
+                            <div className="text-xs text-muted-foreground">Sem eventos recentes para este filtro.</div>
+                        ) : (
+                            <div className="space-y-2">
+                                {auditEvents.map((event) => (
+                                    <div key={event.id} className="text-xs border border-border/50 rounded-md px-3 py-2 bg-background/60">
+                                        <div className="font-medium">{event.eventType} · {event.action}</div>
+                                        <div className="text-muted-foreground">
+                                            clientId: {event.clientId} · {new Date(event.timestamp).toLocaleString('pt-BR')}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </PageShell>
