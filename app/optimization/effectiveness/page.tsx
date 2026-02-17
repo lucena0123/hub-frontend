@@ -95,6 +95,34 @@ export default function OptimizationEffectivenessPage() {
         return Array.from(map.values()).sort((a, b) => b.total - a.total);
     }, [events]);
 
+    const usefulTop = useMemo(() => metrics.filter((m) => statusFromMetric(m) === "útil").slice(0, 3), [metrics]);
+    const noisyTop = useMemo(() => metrics.filter((m) => statusFromMetric(m) === "ruidosa").slice(0, 3), [metrics]);
+
+    const dailyChecklist = useMemo(() => {
+        const items: Array<{ key: string; action: "manter" | "ajustar" | "desligar"; reason: string }> = [];
+
+        usefulTop.forEach((m) => {
+            items.push({
+                key: m.key,
+                action: "manter",
+                reason: `sinal útil com ${m.updates} atualização(ões) na janela.`,
+            });
+        });
+
+        noisyTop.forEach((m) => {
+            const shouldDisable = m.updates === 0 && m.reads >= 3;
+            items.push({
+                key: m.key,
+                action: shouldDisable ? "desligar" : "ajustar",
+                reason: shouldDisable
+                    ? "ruído sem atualização útil (somente leitura)."
+                    : "ruído acima do ideal; revisar threshold.",
+            });
+        });
+
+        return items.slice(0, 8);
+    }, [usefulTop, noisyTop]);
+
     return (
         <PageShell
             eyebrow="Intervention"
@@ -132,6 +160,63 @@ export default function OptimizationEffectivenessPage() {
                     <div className="rounded-[12px] border border-border/60 bg-card/40 p-4">
                         <div className="text-xs text-muted-foreground">Sinais únicos</div>
                         <div className="text-2xl font-semibold mt-1">{metrics.length}</div>
+                    </div>
+                </div>
+
+                <div className="rounded-[12px] border border-border/60 bg-card/40 p-4 space-y-3">
+                    <div className="text-sm font-medium">Resumo diário</div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
+                            <div className="text-xs font-medium text-emerald-300">Top 3 úteis</div>
+                            {usefulTop.length === 0 ? (
+                                <div className="text-[11px] text-muted-foreground mt-2">Sem sinais úteis nesta janela.</div>
+                            ) : (
+                                <div className="mt-2 space-y-1">
+                                    {usefulTop.map((m) => (
+                                        <div key={`useful-${m.key}`} className="text-[11px] text-muted-foreground">
+                                            {m.key} · {m.updates} updates
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+                            <div className="text-xs font-medium text-amber-300">Top 3 ruidosas</div>
+                            {noisyTop.length === 0 ? (
+                                <div className="text-[11px] text-muted-foreground mt-2">Sem sinais ruidosos nesta janela.</div>
+                            ) : (
+                                <div className="mt-2 space-y-1">
+                                    {noisyTop.map((m) => (
+                                        <div key={`noisy-${m.key}`} className="text-[11px] text-muted-foreground">
+                                            {m.key} · reads {m.reads} / updates {m.updates}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="rounded-md border border-border/50 bg-background/50 p-3">
+                        <div className="text-xs font-medium">Checklist de ações do dia</div>
+                        {dailyChecklist.length === 0 ? (
+                            <div className="text-[11px] text-muted-foreground mt-2">Sem ações recomendadas no momento.</div>
+                        ) : (
+                            <div className="mt-2 space-y-2">
+                                {dailyChecklist.map((item) => (
+                                    <div key={`${item.action}-${item.key}`} className="flex items-start justify-between gap-2 text-[11px]">
+                                        <div className="text-muted-foreground">{item.key} — {item.reason}</div>
+                                        <span className={`uppercase tracking-wide px-2 py-0.5 rounded ${
+                                            item.action === "manter"
+                                                ? "bg-emerald-500/15 text-emerald-300"
+                                                : item.action === "ajustar"
+                                                    ? "bg-amber-500/15 text-amber-300"
+                                                    : "bg-destructive/15 text-destructive"
+                                        }`}>{item.action}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
 
