@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useOptimizationStore } from "@/lib/stores/optimization-store";
 import { PageShell } from "@/components/layout/page-shell";
 import { ClientSelect } from "@/components/optimization/client-select";
@@ -48,6 +49,7 @@ const PRESETS: Record<ThemePresetKey, Record<string, Record<string, unknown>>> =
 
 export default function OptimizationSettingsPage() {
     const { rules, fetchRules, toggleRule, updateRuleConfig } = useOptimizationStore();
+    const searchParams = useSearchParams();
     const [clientId, setClientId] = useState<string>("all");
     const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
     const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
@@ -57,6 +59,11 @@ export default function OptimizationSettingsPage() {
     const [applyingPreset, setApplyingPreset] = useState(false);
 
     const canEdit = clientId !== "all";
+
+    useEffect(() => {
+        const queryClientId = searchParams.get("clientId");
+        if (queryClientId) setClientId(queryClientId);
+    }, [searchParams]);
 
     useEffect(() => {
         fetchRules(canEdit ? clientId : undefined);

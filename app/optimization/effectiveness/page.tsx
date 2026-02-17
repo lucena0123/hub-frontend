@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageShell } from "@/components/layout/page-shell";
 import { ClientSelect } from "@/components/optimization/client-select";
@@ -38,6 +39,7 @@ const statusFromMetric = (metric: RuleMetric): "útil" | "ruidosa" | "inativa" =
 };
 
 export default function OptimizationEffectivenessPage() {
+    const searchParams = useSearchParams();
     const [clientId, setClientId] = useState<string>("all");
     const [windowHours, setWindowHours] = useState<WindowHours>(24);
     const [loading, setLoading] = useState(false);
@@ -62,6 +64,11 @@ export default function OptimizationEffectivenessPage() {
             setLoading(false);
         }
     }, [clientId, windowHours]);
+
+    useEffect(() => {
+        const queryClientId = searchParams.get("clientId");
+        if (queryClientId) setClientId(queryClientId);
+    }, [searchParams]);
 
     useEffect(() => {
         loadData();

@@ -175,12 +175,24 @@ export default function ClientsPage() {
                       </div>
                     </div>
 
-                    <div className="flex gap-2 mt-auto pt-2">
-                      <Button asChild variant="outline" size="sm" className="flex-1 h-7 text-[10px] border-border/30 hover:bg-primary/10 hover:text-primary">
+                    <div className="grid grid-cols-2 gap-2 mt-auto pt-2">
+                      <Button asChild variant="outline" size="sm" className="h-7 text-[10px] border-border/30 hover:bg-primary/10 hover:text-primary">
                         <Link href={`/clients/${client.id}/performance`}>
                           <BarChart3 className="h-3 w-3 mr-1 opacity-60" /> Perf
                         </Link>
                       </Button>
+                      <Button asChild variant="outline" size="sm" className="h-7 text-[10px] border-border/30">
+                        <Link href={`/optimization/board?clientId=${client.id}`}>Board</Link>
+                      </Button>
+                      <Button asChild variant="outline" size="sm" className="h-7 text-[10px] border-border/30">
+                        <Link href={`/optimization/settings?clientId=${client.id}`}>Regras</Link>
+                      </Button>
+                      <Button asChild variant="outline" size="sm" className="h-7 text-[10px] border-border/30">
+                        <Link href={`/optimization/effectiveness?clientId=${client.id}`}>Efetividade</Link>
+                      </Button>
+                    </div>
+
+                    <div className="flex justify-end">
                       <Button
                         variant="ghost"
                         size="sm"

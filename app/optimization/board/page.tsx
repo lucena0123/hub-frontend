@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LayoutDashboard, Users, Loader2, ShieldAlert, History, Crosshair, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { RuleLibrary } from "@/components/optimization/rule-library";
 
 import { ClientSelect } from "@/components/optimization/client-select";
@@ -82,6 +83,7 @@ const extractChangeSummary = (changes: unknown): string | null => {
 export default function OptimizationBoardPage() {
     const { tasks, columns, mode, fetchTasks, moveTask, setMode, isLoading, error } = useOptimizationStore();
     const { user } = useAuth();
+    const searchParams = useSearchParams();
     const [activeTask, setActiveTask] = useState<OptimizationTask | null>(null);
     const [activeRule, setActiveRule] = useState<OptimizationRule | null>(null);
     const [selectedClientId, setSelectedClientId] = useState<string | undefined>(undefined);
@@ -179,8 +181,10 @@ export default function OptimizationBoardPage() {
     );
 
     useEffect(() => {
-        fetchTasks();
-    }, [fetchTasks]);
+        const queryClientId = searchParams.get('clientId') ?? undefined;
+        setSelectedClientId(queryClientId);
+        fetchTasks(queryClientId);
+    }, [fetchTasks, searchParams]);
 
     useEffect(() => {
         if (!actionFeedback) return;
