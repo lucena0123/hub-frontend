@@ -232,12 +232,13 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
         try {
             await apiClient.patch(`/api/optimization/tasks/${taskId}`, { status: newStatus });
             // In real world, we might reload tasks to get the 'output' or confirmed status
-            await get().fetchTasks();
+            await get().fetchTasks(get().selectedClientId ?? undefined);
         } catch (error) {
             // Revert on failure
             const msg = error instanceof Error ? error.message : 'Failed to update task status';
             set({ error: msg });
-            get().fetchTasks();
+            await get().fetchTasks(get().selectedClientId ?? undefined);
+            throw error;
         }
     },
 
@@ -250,10 +251,11 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
                 dryRun: false
             });
             // Refresh tasks to see if new one was created
-            get().fetchTasks(clientId);
+            await get().fetchTasks(clientId);
         } catch (error) {
             const msg = error instanceof Error ? error.message : 'Failed to run rule';
             set({ error: msg });
+            throw error;
         }
     }
 }));

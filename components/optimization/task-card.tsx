@@ -10,9 +10,10 @@ import { cn } from "@/lib/utils";
 
 interface TaskCardProps {
     task: OptimizationTask;
+    disabled?: boolean;
 }
 
-export function TaskCard({ task }: TaskCardProps) {
+export function TaskCard({ task, disabled = false }: TaskCardProps) {
     const input = task.input ?? {
         severity: 'low',
         description: 'Sem detalhes',
@@ -33,6 +34,7 @@ export function TaskCard({ task }: TaskCardProps) {
             type: "task",
             task,
         },
+        disabled,
     });
 
     const style = {
@@ -63,7 +65,7 @@ export function TaskCard({ task }: TaskCardProps) {
         <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
             <Card
                 className={cn(
-                    "cursor-grab transition hover-lift edge-card border-l-2",
+                    disabled ? "cursor-not-allowed opacity-80 transition edge-card border-l-2" : "cursor-grab transition hover-lift edge-card border-l-2",
                     severity === 'critical' && "border-l-destructive",
                     severity === 'high' && "border-l-primary",
                     severity === 'medium' && "border-l-amber-500",

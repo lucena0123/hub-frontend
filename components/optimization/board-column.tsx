@@ -10,9 +10,10 @@ import { Badge } from "@/components/ui/badge";
 interface BoardColumnProps {
     column: ColumnType;
     tasks: OptimizationTask[];
+    readOnly?: boolean;
 }
 
-export function BoardColumn({ column, tasks }: BoardColumnProps) {
+export function BoardColumn({ column, tasks, readOnly = false }: BoardColumnProps) {
     const { setNodeRef } = useDroppable({
         id: column.id,
         data: {
@@ -34,7 +35,7 @@ export function BoardColumn({ column, tasks }: BoardColumnProps) {
                 <div ref={setNodeRef} className="flex flex-col gap-2 min-h-[150px]">
                     <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
                         {tasks.map((task) => (
-                            <TaskCard key={task.id} task={task} />
+                            <TaskCard key={task.id} task={task} disabled={readOnly} />
                         ))}
                     </SortableContext>
                     {tasks.length === 0 && (

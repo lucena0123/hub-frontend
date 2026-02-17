@@ -27,7 +27,14 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const isDashboardOverview = (value: unknown): value is DashboardOverview => {
   if (!isRecord(value)) return false;
-  return 'clients' in value && 'campaigns' in value;
+
+  return (
+    'clients' in value &&
+    'campaigns' in value &&
+    'performance' in value &&
+    'bpmn' in value &&
+    'recentActivity' in value
+  );
 };
 
 function formatCurrency(value: number): string {
@@ -63,22 +70,26 @@ const HudMetric = ({
   </div>
 );
 
-const PlatformBar = ({ name, value, total, color }: { name: string; value: number; total: number; color: string }) => (
-  <div className="group space-y-1">
-    <div className="flex justify-between text-xs uppercase tracking-wider">
-      <span className="text-muted-foreground group-hover:text-primary transition-colors">{name}</span>
-      <span className="text-xs">{value}</span>
-    </div>
-    <div className="h-1.5 w-full bg-secondary/60 overflow-hidden">
-      <div
-        className="h-full transition-all duration-500 relative"
-        style={{ width: `${(value / total) * 100}%`, backgroundColor: color }}
-      >
-        <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-foreground/60" />
+const PlatformBar = ({ name, value, total, color }: { name: string; value: number; total: number; color: string }) => {
+  const width = total > 0 ? (value / total) * 100 : 0;
+
+  return (
+    <div className="group space-y-1">
+      <div className="flex justify-between text-xs uppercase tracking-wider">
+        <span className="text-muted-foreground group-hover:text-primary transition-colors">{name}</span>
+        <span className="text-xs">{value}</span>
+      </div>
+      <div className="h-1.5 w-full bg-secondary/60 overflow-hidden">
+        <div
+          className="h-full transition-all duration-500 relative"
+          style={{ width: `${width}%`, backgroundColor: color }}
+        >
+          <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-foreground/60" />
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default function DashboardPage() {
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
@@ -133,6 +144,21 @@ export default function DashboardPage() {
   const platformData = Object.entries(overview.campaigns.byPlatform || {}).map(([k, v]) => ({ name: k, value: v as number }));
   const totalCampaigns = overview.campaigns.active;
   const recentLogs = overview.recentActivity || [];
+
+  const performanceVector = [
+    { name: 'Investimento', val: overview.performance.totalSpend },
+    { name: 'Receita', val: overview.performance.totalRevenue },
+    { name: 'Leads', val: overview.performance.totalLeads * 100 },
+    { name: 'Conversões', val: overview.performance.totalConversions * 100 },
+  ];
+
+  const executionRatio = overview.clients.total > 0
+    ? Math.min(100, Math.round((overview.bpmn.clientsInExecution / overview.clients.total) * 100))
+    : 0;
+
+  const monitoringRatio = overview.clients.total > 0
+    ? Math.min(100, Math.round((overview.bpmn.clientsInMonitoring / overview.clients.total) * 100))
+    : 0;
 
   return (
     <PageShell
@@ -199,12 +225,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={[
-                      { name: '00:00', val: 4000 }, { name: '04:00', val: 3000 },
-                      { name: '08:00', val: 2000 }, { name: '12:00', val: 2780 },
-                      { name: '16:00', val: 1890 }, { name: '20:00', val: 2390 },
-                      { name: '23:59', val: 3490 },
-                    ]}>
+                    <AreaChart data={performanceVector}>
                       <defs>
                         <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="var(--signal)" stopOpacity={0.25} />
@@ -249,7 +270,7 @@ export default function DashboardPage() {
                         <span className="text-primary">{overview.bpmn.clientsInExecution}</span>
                       </div>
                       <div className="h-1 bg-secondary w-full">
-                        <div className="h-full bg-primary w-[65%]" />
+                        <div className="h-full bg-primary" style={{ width: `${executionRatio}%` }} />
                       </div>
 
                       <div className="flex justify-between">
@@ -257,7 +278,7 @@ export default function DashboardPage() {
                         <span className="text-emerald-500">{overview.bpmn.clientsInMonitoring}</span>
                       </div>
                       <div className="h-1 bg-secondary w-full">
-                        <div className="h-full bg-emerald-500 w-[40%]" />
+                        <div className="h-full bg-emerald-500" style={{ width: `${monitoringRatio}%` }} />
                       </div>
                     </div>
                   </CardContent>

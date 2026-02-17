@@ -27,14 +27,26 @@ const getRuleIcon = (rule: OptimizationRule, enabled: boolean) => {
     return <BookOpen className="w-4 h-4" />;
 };
 
-function DraggableRule({ rule, enabled, onToggle, onConfig }: { rule: OptimizationRule, enabled: boolean, onToggle: (val: boolean) => void, onConfig: () => void }) {
+function DraggableRule({
+    rule,
+    enabled,
+    onToggle,
+    onConfig,
+    readOnly,
+}: {
+    rule: OptimizationRule,
+    enabled: boolean,
+    onToggle: (val: boolean) => void,
+    onConfig: () => void,
+    readOnly: boolean,
+}) {
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: `rule-${rule.id}`,
         data: {
             type: 'rule',
             rule
         },
-        disabled: !enabled
+        disabled: !enabled || readOnly
     });
 
     const style = transform ? {
@@ -53,12 +65,17 @@ function DraggableRule({ rule, enabled, onToggle, onConfig }: { rule: Optimizati
                         <CardTitle className="text-xs font-medium">{rule.title ?? rule.name ?? rule.id}</CardTitle>
                     </div>
                     <div className="flex items-center gap-1">
-                        <button onClick={onConfig} className="p-1 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                            onClick={onConfig}
+                            disabled={readOnly}
+                            className="p-1 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
                             <Settings className="w-3 h-3 text-muted-foreground" />
                         </button>
                         <Switch
                             checked={enabled}
                             onCheckedChange={onToggle}
+                            disabled={readOnly}
                             className="scale-75"
                         />
                     </div>
@@ -71,7 +88,7 @@ function DraggableRule({ rule, enabled, onToggle, onConfig }: { rule: Optimizati
     );
 }
 
-export function RuleLibrary() {
+export function RuleLibrary({ readOnly = false }: { readOnly?: boolean }) {
     const { rules, fetchRules, toggleRule, selectedClientId } = useOptimizationStore();
 
     const [configOpen, setConfigOpen] = useState(false);
@@ -131,6 +148,7 @@ export function RuleLibrary() {
                             enabled={rule.enabled ?? true}
                             onToggle={(val) => handleToggle(rule.id, val)}
                             onConfig={() => handleConfig(rule)}
+                            readOnly={readOnly}
                         />
                     ))}
                 </div>
