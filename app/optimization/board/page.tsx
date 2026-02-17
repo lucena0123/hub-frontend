@@ -25,7 +25,7 @@ import { ClientSelect } from "@/components/optimization/client-select";
 import { PageShell } from "@/components/layout/page-shell";
 import { SectionHeader } from "@/components/performance/section-header";
 import { useAuth } from "@/contexts/auth-context";
-import { getOptimizationAudit, type OptimizationAuditEvent } from "@/lib/api/client/optimization";
+import { getOptimizationAudit, getOptimizationAuditSummary, type OptimizationAuditEvent } from "@/lib/api/client/optimization";
 
 const actionLabel: Record<string, string> = {
     create: 'Criação',
@@ -87,6 +87,7 @@ export default function OptimizationBoardPage() {
     const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [auditEvents, setAuditEvents] = useState<OptimizationAuditEvent[]>([]);
     const [auditLoading, setAuditLoading] = useState(false);
+    const [auditSummary, setAuditSummary] = useState<Array<{ action: string; total: number }>>([]);
     const [auditActionFilter, setAuditActionFilter] = useState<'all' | 'create' | 'update' | 'delete' | 'read'>('all');
     const [auditEventTypeFilter, setAuditEventTypeFilter] = useState<'all' | 'client.update' | 'task.update'>('all');
 
@@ -119,15 +120,22 @@ export default function OptimizationBoardPage() {
     const loadAudit = useCallback(async () => {
         try {
             setAuditLoading(true);
-            const events = await getOptimizationAudit({
-                limit: 8,
-                clientId: selectedClientId,
-                action: auditActionFilter === 'all' ? undefined : auditActionFilter,
-                eventType: auditEventTypeFilter === 'all' ? undefined : auditEventTypeFilter,
-            });
+            const [events, summary] = await Promise.all([
+                getOptimizationAudit({
+                    limit: 8,
+                    clientId: selectedClientId,
+                    action: auditActionFilter === 'all' ? undefined : auditActionFilter,
+                    eventType: auditEventTypeFilter === 'all' ? undefined : auditEventTypeFilter,
+                }),
+                getOptimizationAuditSummary({
+                    clientId: selectedClientId,
+                })
+            ]);
             setAuditEvents(events);
+            setAuditSummary(summary.actions ?? []);
         } catch {
             setAuditEvents([]);
+            setAuditSummary([]);
         } finally {
             setAuditLoading(false);
         }
@@ -358,6 +366,15 @@ export default function OptimizationBoardPage() {
                                 </Button>
                             </div>
                         </div>
+                        {auditSummary.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                {auditSummary.map((item) => (
+                                    <div key={item.action} className="text-[11px] px-2 py-1 rounded bg-secondary/60 text-muted-foreground">
+                                        {actionLabel[item.action] ?? item.action}: <span className="text-foreground">{item.total}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         {auditLoading ? (
                             <div className="text-xs text-muted-foreground">Carregando auditoria...</div>
                         ) : auditEvents.length === 0 ? (

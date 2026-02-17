@@ -124,6 +124,7 @@ export {
   getAutoApprovalConfig,
   updateAutoApprovalConfig,
   getOptimizationAudit,
+  getOptimizationAuditSummary,
   type AnomalyDetection,
   type AnomalyType,
   type CampaignHealthResult,
@@ -132,5 +133,6 @@ export {
   type AutoApprovalRuleConfig,
   type OptimizationAuditEvent,
   type OptimizationAuditResponse,
+  type OptimizationAuditSummary,
 } from './client/optimization';
 

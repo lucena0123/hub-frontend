@@ -111,6 +111,12 @@ export type OptimizationAuditResponse = {
     events: OptimizationAuditEvent[];
 };
 
+export type OptimizationAuditSummary = {
+    success: boolean;
+    actions: Array<{ action: string; total: number }>;
+    eventTypes: Array<{ eventType: string; total: number }>;
+};
+
 type AutoApprovalConfigResponse = AutoApprovalConfig & { clientId: string };
 
 export const getAutoApprovalConfig = async (clientId: string): Promise<AutoApprovalConfig> => {
@@ -138,4 +144,9 @@ export const getOptimizationAudit = async (params?: {
 }): Promise<OptimizationAuditEvent[]> => {
     const { data } = await apiClient.get<OptimizationAuditResponse>('/api/optimization/audit', { params });
     return data.events ?? [];
+};
+
+export const getOptimizationAuditSummary = async (params?: { clientId?: string }): Promise<OptimizationAuditSummary> => {
+    const { data } = await apiClient.get<OptimizationAuditSummary>('/api/optimization/audit/summary', { params });
+    return data;
 };
