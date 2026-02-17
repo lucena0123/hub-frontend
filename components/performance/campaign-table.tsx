@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ZeroConversationsDialog } from '@/components/performance/zero-conversations-dialog';
 import { getCampaignBenchmarks, getComplianceRisk, getOptimizationCenterPlaybook, updateCampaign } from '@/lib/api/client';
-import type { CampaignBenchmark, ComplianceRiskCampaign, ComplianceRiskResponse, PerformanceSummary } from '@/types';
+import type { CampaignBenchmark, ComplianceRiskCampaign, ComplianceRiskResponse, LearningSummary, PerformanceSummary } from '@/types';
 
 interface CampaignTableProps {
   clientId: string;
@@ -161,6 +161,52 @@ type KpiGroup = {
 const formatOptionalNumber = (value: number) => {
   if (!Number.isFinite(value) || value <= 0) return '—';
   return value.toLocaleString('pt-BR');
+};
+
+const resolveLearningBadge = (summary?: LearningSummary | null) => {
+  if (!summary) {
+    return { label: 'Sem dados', tone: 'border-muted text-muted-foreground' };
+  }
+
+  switch (summary.conclusion) {
+    case 'passed':
+      return { label: 'Aprendizado OK', tone: 'border-emerald-500/30 text-emerald-300' };
+    case 'learning_limited':
+      return { label: 'Aprendizado limitado', tone: 'border-rose-500/40 text-rose-300' };
+    case 'learning':
+      return { label: 'Em aprendizado', tone: 'border-amber-400/40 text-amber-200' };
+    case 'events_low':
+      return { label: 'Eventos insuficientes', tone: 'border-amber-400/40 text-amber-200' };
+    case 'budget_low':
+      return { label: 'Orçamento baixo', tone: 'border-amber-400/40 text-amber-200' };
+    case 'insufficient_data':
+    default:
+      return { label: 'Dados incompletos', tone: 'border-muted text-muted-foreground' };
+  }
+};
+
+const formatLearningValue = (value: number | null) => {
+  if (!Number.isFinite(value ?? NaN) || (value ?? 0) <= 0) return '—';
+  return formatOptionalCurrency(value ?? 0);
+};
+
+const buildLearningRows = (summary?: LearningSummary | null) => {
+  if (!summary) return [];
+
+  const statusLine = `${summary.statusCounts.learning} learning · ${summary.statusCounts.limited} limitado`;
+  const eventsLine = `${summary.totalEventsInWindow.toLocaleString('pt-BR')} ${summary.eventLabel}`;
+  const targetLine = `${summary.adsetsMeetingTarget}/${summary.adsetCount} ≥ ${summary.eventTarget}`;
+  const budgetLine = `${formatLearningValue(summary.budgetDailyAverage)} · necessário ${formatLearningValue(summary.budgetDailyRequired)}`;
+
+  return [
+    { label: 'Ad sets', value: `${summary.adsetCount} (${statusLine})` },
+    { label: 'Eventos (7d)', value: `${eventsLine} | ${targetLine}` },
+    { label: 'Budget diário', value: budgetLine },
+    {
+      label: 'Cobertura',
+      value: `${summary.dataCoverage.withLastEdit}/${summary.adsetCount} com edição · ${summary.dataCoverage.withBudgetData}/${summary.adsetCount} com budget`,
+    },
+  ];
 };
 
 const resolveObjectiveKey = (campaign: PerformanceSummary) => {
@@ -614,6 +660,33 @@ const buildAdvancedKpis = (campaign: PerformanceSummary, objectiveKey: string): 
   };
 };
 
+const formatDestinationLabel = (value?: string | null) => {
+  if (!value) return null;
+  const normalized = value.toUpperCase();
+  if (normalized.includes('WHATSAPP')) return 'WhatsApp';
+  if (normalized.includes('MESSENGER')) return 'Messenger';
+  if (normalized.includes('INSTAGRAM')) return 'Instagram';
+  if (normalized.includes('FACEBOOK')) return 'Facebook';
+  if (normalized.includes('APP')) return 'App';
+  if (normalized.includes('SITE')) return 'Site';
+  if (normalized.includes('DIRECT') || normalized.includes('MESSAGING')) return 'Mensagens';
+  return value.replace(/_/g, ' ');
+};
+
+const formatOptimizationLabel = (value?: string | null) => {
+  if (!value) return null;
+  const normalized = value.toUpperCase();
+  if (normalized.includes('CONVERSATION')) return 'Conversas';
+  if (normalized.includes('MESSAGE') || normalized.includes('MESSAGING')) return 'Mensagens';
+  if (normalized.includes('LEAD')) return 'Leads';
+  if (normalized.includes('LANDING_PAGE')) return 'LP Views';
+  if (normalized.includes('LINK_CLICK')) return 'Cliques no link';
+  if (normalized.includes('PURCHASE') || normalized.includes('OFFSITE_CONVERSIONS')) return 'Compras';
+  if (normalized.includes('REACH')) return 'Alcance';
+  if (normalized.includes('IMPRESSIONS')) return 'Impressões';
+  return value.replace(/_/g, ' ');
+};
+
 const formatObjectiveLabel = (objective?: string | null, objectiveMeta?: PerformanceSummary['objectiveMeta'] | null) => {
   if (!objective) return 'Objetivo não sincronizado';
   const key = objective.toUpperCase();
@@ -630,9 +703,11 @@ const formatObjectiveLabel = (objective?: string | null, objectiveMeta?: Perform
     LINK_CLICKS: 'Cliques',
   };
   const base = map[key] ?? objective;
-  const destination = objectiveMeta?.destinationType ? ` · ${objectiveMeta.destinationType}` : '';
-  const optimization = objectiveMeta?.optimizationGoal ? ` · ${objectiveMeta.optimizationGoal}` : '';
-  return `${base}${destination || optimization}`;
+
+  const destination = formatDestinationLabel(objectiveMeta?.destinationType);
+  const optimization = formatOptimizationLabel(objectiveMeta?.optimizationGoal);
+
+  return `${base}${destination ? ` · ${destination}` : ''}${optimization ? ` · ${optimization}` : ''}`;
 };
 
 export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
@@ -876,6 +951,9 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
                   : compliance?.warning && compliance.warning > 0
                     ? { label: 'Compliance alerta', className: 'bg-amber-400 text-amber-950' }
                     : null;
+              const complianceTooltip = compliance
+                ? `Criticos: ${compliance.critical} · Alertas: ${compliance.warning} · Baixos: ${compliance.low}`
+                : null;
 
               const pyramidLayers = buildPyramidLayers(campaign);
               const objectiveKey = resolveObjectiveKey(campaign);
@@ -935,7 +1013,9 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
                     <div className="space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1">
-                          <h4 className="text-base font-semibold">{campaign.campaignName}</h4>
+                          <h4 className="text-base font-semibold leading-snug">
+                            {campaign.campaignName}
+                          </h4>
                           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             <span>{campaign.platform}</span>
                             {campaign.platform === 'meta' && (
@@ -946,6 +1026,7 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
                                     ? 'border-primary/30 bg-primary/10 text-primary'
                                     : 'border-amber-400/40 bg-amber-400/10 text-amber-200'
                                 }`}
+                                title="Objetivo, destino e otimização sincronizados do Meta Ads."
                               >
                             {formatObjectiveLabel(campaign.objective, campaign.objectiveMeta)}
                               </Badge>
@@ -959,15 +1040,22 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
                                       ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
                                       : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
                                   }`}
+                                title="Origem do orçamento: ABO = por conjunto, CBO = por campanha."
                               >
                                 {campaign.budgetMode.toUpperCase()}
                               </Badge>
                             )}
-                            <Badge className={statusColors[campaign.status] ?? 'bg-slate-500'}>
+                            <Badge
+                              className={statusColors[campaign.status] ?? 'bg-slate-500'}
+                              title="Status de performance calculado por CTR, CPL e ROAS."
+                            >
                               {campaign.status}
                             </Badge>
                             {complianceBadge && (
-                              <Badge className={`text-[10px] ${complianceBadge.className}`}>
+                              <Badge
+                                className={`text-[10px] ${complianceBadge.className}`}
+                                title={complianceTooltip ?? 'Sinalização de risco de compliance no período.'}
+                              >
                                 {complianceBadge.label}
                               </Badge>
                             )}
@@ -1034,12 +1122,53 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
                         {campaign.objectiveMeta && (
                           <p className="mt-1">
                             Config Meta:{' '}
-                            {campaign.objectiveMeta.destinationType ? `destino ${campaign.objectiveMeta.destinationType}` : 'destino —'}
-                            {campaign.objectiveMeta.optimizationGoal ? ` · otimização ${campaign.objectiveMeta.optimizationGoal}` : ' · otimização —'}
+                            {campaign.objectiveMeta.destinationType
+                              ? `destino ${formatDestinationLabel(campaign.objectiveMeta.destinationType)}`
+                              : 'destino —'}
+                            {campaign.objectiveMeta.optimizationGoal
+                              ? ` · otimização ${formatOptimizationLabel(campaign.objectiveMeta.optimizationGoal)}`
+                              : ' · otimização —'}
                           </p>
                         )}
                         {benchmarkMessage && <p className="mt-1">{benchmarkMessage}</p>}
                         <p className="mt-1 text-foreground/80">{insightMessage}</p>
+                      </div>
+
+                      <div className="rounded-md border border-border/60 bg-muted/10 p-3 text-[11px] text-muted-foreground">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Aprendizado (Meta)</p>
+                          {(() => {
+                            const badge = resolveLearningBadge(campaign.learningSummary);
+                            return (
+                              <Badge variant="outline" className={`text-[10px] ${badge.tone}`}>
+                                {badge.label}
+                              </Badge>
+                            );
+                          })()}
+                        </div>
+                        {(() => {
+                          const rows = buildLearningRows(campaign.learningSummary);
+                          if (rows.length === 0) {
+                            return (
+                              <p className="mt-2 text-[10px] text-muted-foreground">
+                                Sem dados suficientes de aprendizado para este período.
+                              </p>
+                            );
+                          }
+                          return (
+                            <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+                              {rows.map((row) => (
+                                <div key={row.label} className="flex items-center justify-between gap-2">
+                                  <span>{row.label}</span>
+                                  <span className="text-foreground/80">{row.value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                        {campaign.learningSummary?.notes && (
+                          <p className="mt-2 text-[10px] text-muted-foreground">{campaign.learningSummary.notes}</p>
+                        )}
                       </div>
                     </div>
 

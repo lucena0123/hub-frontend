@@ -80,6 +80,16 @@ const formatPercent = (value: number, decimals = 1) => {
   return `${value.toFixed(decimals)}%`;
 };
 
+const formatDestinationDomain = (domain?: string | null) => {
+  if (!domain) return null;
+  const normalized = domain.toLowerCase();
+  if (normalized.includes('whatsapp')) return 'WhatsApp';
+  if (normalized.includes('messenger')) return 'Messenger';
+  if (normalized.includes('instagram')) return 'Instagram';
+  if (normalized.includes('facebook')) return 'Facebook';
+  return domain;
+};
+
 const parseWhatsAppInfo = (url?: string | null) => {
   if (!url) return { number: null, message: null };
   try {
@@ -626,6 +636,7 @@ export function CreativePerformanceTable({
                 const mainImage = imageUrlsForDisplay[0] ?? null;
                 const isThumbnailOnly = Boolean(mainImageRaw && mainImageRaw === creative?.thumbnailUrl && !creative?.imageUrl);
                 const domain = getDomainFromUrl(creative?.destinationUrl);
+                const destinationLabel = formatDestinationDomain(domain);
                 const ctaLabel = formatCta(creative?.ctaType);
                 const typeLabel = formatCreativeType(creative?.format, Boolean(creative?.isDynamic));
                 const thumbnailUrl = mainImage ?? withCacheBust(creative?.imageUrl, snapshotId) ?? withCacheBust(creative?.thumbnailUrl, snapshotId) ?? null;
@@ -732,16 +743,32 @@ export function CreativePerformanceTable({
                           ) : null}
                         </div>
                         <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-medium truncate max-w-[340px]">{ad.adName || creative?.headline || ad.adId}</p>
+                          <p className="font-medium leading-snug">{ad.adName || creative?.headline || ad.adId}</p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
                             {libraryEntry?.status && (
-                              <Badge variant="outline" className={statusBadgeClass[libraryEntry.status]}>
+                              <Badge
+                                variant="outline"
+                                className={statusBadgeClass[libraryEntry.status]}
+                                title="Status do criativo baseado em performance recente."
+                              >
                                 {statusLabel[libraryEntry.status]}
                               </Badge>
                             )}
-                            {ctaLabel && <Badge variant="outline">{ctaLabel}</Badge>}
-                            {typeLabel && <Badge variant="secondary">{typeLabel}</Badge>}
-                            {domain && <Badge variant="outline">{domain}</Badge>}
+                            {ctaLabel && (
+                              <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary" title="CTA configurado no anúncio.">
+                                {ctaLabel}
+                              </Badge>
+                            )}
+                            {typeLabel && (
+                              <Badge variant="secondary" title="Formato do criativo.">
+                                {typeLabel}
+                              </Badge>
+                            )}
+                            {destinationLabel && (
+                              <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300" title="Destino do anúncio.">
+                                {destinationLabel}
+                              </Badge>
+                            )}
                             {!creative && <Badge variant="outline">sem snapshot</Badge>}
                           </div>
                           <p className="text-xs text-muted-foreground truncate max-w-[420px]">

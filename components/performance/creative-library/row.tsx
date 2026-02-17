@@ -8,6 +8,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import type { ComplianceRiskCreative, CreativeLibraryItem } from '@/types';
 
 import { formatCta, formatCurrency, formatNumber, getDomainFromUrl, pctClass, statusBadgeClass, statusLabel } from './formatters';
+import { formatCreativeType } from '../creative-performance-table/formatters';
 import { AdPreviewDialog } from './previews/ad-preview-dialog';
 import { CreativeAbTestSuggestions } from './ab-test-suggestions';
 import { CreativeBenchmarkInsight } from './benchmark-insight';
@@ -23,7 +24,17 @@ export const CreativeLibraryRow = (props: {
 
   const thumbnailUrl = creative.thumbnailUrl || creative.imageUrl || null;
   const domain = getDomainFromUrl(creative.destinationUrl);
+  const destinationLabel = (() => {
+    if (!domain) return null;
+    const normalized = domain.toLowerCase();
+    if (normalized.includes('whatsapp')) return 'WhatsApp';
+    if (normalized.includes('messenger')) return 'Messenger';
+    if (normalized.includes('instagram')) return 'Instagram';
+    if (normalized.includes('facebook')) return 'Facebook';
+    return domain;
+  })();
   const ctaLabel = formatCta(creative.ctaType);
+  const typeLabel = formatCreativeType(creative.format, Boolean(creative.isDynamic));
   const reasons = creative.analysis?.reasons ?? [];
 
   const showVideoMetrics =
@@ -66,6 +77,12 @@ export const CreativeLibraryRow = (props: {
     warning: 'Risco alerta',
     low: 'Compliance ok',
   };
+  const complianceSummary = complianceRisk?.issues?.length
+    ? complianceRisk.issues
+        .slice(0, 2)
+        .map((issue) => `${issue.title}: ${issue.message}`)
+        .join(' · ')
+    : null;
 
   return (
     <>
@@ -90,17 +107,36 @@ export const CreativeLibraryRow = (props: {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-medium truncate max-w-[360px]">{creative.adNames?.[0] || creative.headline || 'Criativo'}</p>
-                <Badge variant="outline" className={statusBadgeClass[creative.status]}>
+                <Badge
+                  variant="outline"
+                  className={statusBadgeClass[creative.status]}
+                  title="Status do criativo baseado em performance recente."
+                >
                   {statusLabel[creative.status]}
                 </Badge>
                 {complianceSeverity && (
-                  <Badge className={complianceBadgeClass[complianceSeverity]}>
+                  <Badge
+                    className={complianceBadgeClass[complianceSeverity]}
+                    title={complianceSummary ?? 'Sinalização de risco de compliance.'}
+                  >
                     {complianceLabel[complianceSeverity]}
                   </Badge>
                 )}
-                {ctaLabel && <Badge variant="outline">{ctaLabel}</Badge>}
-                {domain && <Badge variant="outline">{domain}</Badge>}
-                {creative.isDynamic && <Badge variant="secondary">dynamic</Badge>}
+                {ctaLabel && (
+                  <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary" title="CTA configurado no anúncio.">
+                    {ctaLabel}
+                  </Badge>
+                )}
+                {typeLabel && (
+                  <Badge variant="secondary" title="Formato do criativo.">
+                    {typeLabel}
+                  </Badge>
+                )}
+                {destinationLabel && (
+                  <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300" title="Destino do anúncio.">
+                    {destinationLabel}
+                  </Badge>
+                )}
               </div>
               <p className="text-xs text-muted-foreground truncate max-w-[520px]">
                 snapshot {creative.snapshotId.slice(0, 8)} · {creative.adsCount} ads · {creative.campaigns.length} campanhas · {creative.adsets.length}{' '}

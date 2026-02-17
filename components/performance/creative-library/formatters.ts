@@ -38,10 +38,10 @@ export const formatCta = (value: string | null | undefined) => {
 };
 
 export const statusLabel: Record<CreativeLibraryStatus, string> = {
-  winner: 'winner',
-  loser: 'loser',
-  fatigued: 'fadiga',
-  neutral: 'neutro',
+  winner: 'Vencedor',
+  loser: 'Abaixo',
+  fatigued: 'Fadiga',
+  neutral: 'Neutro',
 };
 
 export const statusBadgeClass: Record<CreativeLibraryStatus, string> = {
@@ -58,4 +58,3 @@ export const pctClass = (value: number | null | undefined, invert?: boolean) => 
   if (normalized <= -20) return 'text-rose-600 font-medium';
   return 'text-muted-foreground';
 };
-

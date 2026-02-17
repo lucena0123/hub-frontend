@@ -99,12 +99,16 @@ export const PerformanceDashboardHeader = (props: {
               value={props.selectedCampaignId ?? undefined}
               onValueChange={(value) => props.setSelectedCampaignId(value)}
             >
-              <SelectTrigger className="flex-1 min-w-[240px] max-w-[480px] lg:min-w-[280px] xl:min-w-[360px]">
+              <SelectTrigger className="flex-1 min-w-[240px] max-w-[520px] lg:min-w-[280px] xl:min-w-[420px]">
                 <SelectValue placeholder="Campanha" />
               </SelectTrigger>
-              <SelectContent className="min-w-[260px] max-w-[520px]">
+              <SelectContent className="w-[min(92vw,680px)] min-w-[260px] max-w-[680px]">
                 {props.campaigns.map((c) => (
-                  <SelectItem key={c.campaignId} value={c.campaignId} className="whitespace-normal">
+                  <SelectItem
+                    key={c.campaignId}
+                    value={c.campaignId}
+                    className="whitespace-normal break-words leading-snug items-start py-2"
+                  >
                     {c.campaignName}
                   </SelectItem>
                 ))}

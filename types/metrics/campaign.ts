@@ -137,7 +137,47 @@ export interface PerformanceSummary {
     targetRoas?: number;
     targetConversions?: number;
   };
+  learningSummary?: LearningSummary | null;
   status: 'excellent' | 'good' | 'fair' | 'poor';
+}
+
+export interface LearningSummary {
+  adsetCount: number;
+  statusCounts: {
+    learning: number;
+    limited: number;
+    active: number;
+    unknown: number;
+  };
+  eventTarget: number;
+  eventLabel: string;
+  adsetsMeetingTarget: number;
+  adsetsBelowTarget: number;
+  totalEventsInWindow: number;
+  avgEventsPerAdset: number;
+  avgCostPerEvent: number | null;
+  budgetDailyAverage: number | null;
+  budgetDailyRequired: number | null;
+  budgetAdequateCount: number;
+  budgetUnknownCount: number;
+  dataCoverage: {
+    withLastEdit: number;
+    withLearningStatus: number;
+    withEventData: number;
+    withBudgetData: number;
+  };
+  lastEditRange: {
+    min?: string | null;
+    max?: string | null;
+  };
+  conclusion:
+    | 'passed'
+    | 'learning'
+    | 'learning_limited'
+    | 'events_low'
+    | 'budget_low'
+    | 'insufficient_data';
+  notes?: string;
 }
 
 export interface ClientPerformanceSummary {
@@ -165,6 +205,7 @@ export interface ClientPerformanceSummary {
   avgCtr: number;
   avgCpl: number;
   avgRoas: number;
+  dailyMetrics?: DailyMetric[];
   campaigns: PerformanceSummary[];
   bpmnProgress?: BPMNProgress;
 }

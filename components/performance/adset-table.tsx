@@ -5,25 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
-interface AdSetMetric {
-  adsetId: string;
-  adsetName: string;
-  totalImpressions: number;
-  totalReach: number;
-  totalClicks: number;
-  totalLinkClicks: number;
-  totalLandingPageViews: number;
-  totalSpend: number;
-  totalConversions: number;
-  totalMessagingConversations: number;
-  totalMessagingFirstReply: number;
-  avgCtr: number;
-  avgCpc: number;
-  avgCpm: number;
-  avgFrequency: number;
-  cpl: number;
-}
+import type { AdSetMetric } from '@/types';
 
 interface AdSetTableProps {
   adsets: AdSetMetric[];
@@ -57,6 +39,33 @@ const formatDateLabel = (value: string | null | undefined) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString('pt-BR');
+};
+
+const formatDestinationLabel = (value?: string | null) => {
+  if (!value) return null;
+  const normalized = value.toUpperCase();
+  if (normalized.includes('WHATSAPP')) return 'WhatsApp';
+  if (normalized.includes('MESSENGER')) return 'Messenger';
+  if (normalized.includes('INSTAGRAM')) return 'Instagram';
+  if (normalized.includes('FACEBOOK')) return 'Facebook';
+  if (normalized.includes('APP')) return 'App';
+  if (normalized.includes('SITE')) return 'Site';
+  if (normalized.includes('DIRECT') || normalized.includes('MESSAGING')) return 'Mensagens';
+  return value.replace(/_/g, ' ');
+};
+
+const formatOptimizationLabel = (value?: string | null) => {
+  if (!value) return null;
+  const normalized = value.toUpperCase();
+  if (normalized.includes('CONVERSATION')) return 'Conversas';
+  if (normalized.includes('MESSAGE') || normalized.includes('MESSAGING')) return 'Mensagens';
+  if (normalized.includes('LEAD')) return 'Leads';
+  if (normalized.includes('LANDING_PAGE')) return 'LP Views';
+  if (normalized.includes('LINK_CLICK')) return 'Cliques no link';
+  if (normalized.includes('PURCHASE') || normalized.includes('OFFSITE_CONVERSIONS')) return 'Compras';
+  if (normalized.includes('REACH')) return 'Alcance';
+  if (normalized.includes('IMPRESSIONS')) return 'Impressões';
+  return value.replace(/_/g, ' ');
 };
 
 const resolveObjectiveKey = (
@@ -200,19 +209,33 @@ export function AdSetTable({ adsets, loading, objective, objectiveMeta }: AdSetT
                   <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)_minmax(0,0.9fr)]">
                     <div className="space-y-3">
                       <div className="space-y-1">
-                        <h4 className="text-base font-semibold">{adset.adsetName || adset.adsetId}</h4>
+                        <h4 className="text-base font-semibold leading-snug">
+                          {adset.adsetName || adset.adsetId}
+                        </h4>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                          <Badge variant="outline" className="text-[10px]">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] border-primary/30 bg-primary/10 text-primary"
+                            title="Objetivo inferido a partir do objetivo da campanha e da configuração do conjunto."
+                          >
                             {objectiveKey === 'messages' ? 'Mensagens' : objectiveKey === 'traffic' ? 'Tráfego' : 'Conversões'}
                           </Badge>
                           {configDestination && (
-                            <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
-                              {String(configDestination).replace(/_/g, ' ')}
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                              title="Destino configurado no conjunto (ex.: WhatsApp, Site)."
+                            >
+                              {formatDestinationLabel(String(configDestination))}
                             </Badge>
                           )}
                           {configOptimization && (
-                            <Badge variant="outline" className="text-[10px] border-amber-400/40 text-amber-200">
-                              {String(configOptimization).replace(/_/g, ' ')}
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] border-amber-400/40 bg-amber-400/10 text-amber-200"
+                              title="Meta de otimização definida no conjunto."
+                            >
+                              {formatOptimizationLabel(String(configOptimization))}
                             </Badge>
                           )}
                         </div>

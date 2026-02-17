@@ -5,9 +5,15 @@ export const toStringArray = (value: unknown): string[] => {
 };
 
 export const formatCreativeType = (value: string | null | undefined, isDynamic: boolean) => {
-  if (isDynamic) return 'dynamic';
+  if (isDynamic) return 'Dinâmico';
   if (!value) return null;
-  return value.replace(/_/g, ' ').toLowerCase();
+  const normalized = value.toUpperCase();
+  if (normalized.includes('IMAGE')) return 'Imagem';
+  if (normalized.includes('VIDEO')) return 'Vídeo';
+  if (normalized.includes('CAROUSEL')) return 'Carrossel';
+  if (normalized.includes('COLLECTION')) return 'Coleção';
+  if (normalized.includes('SLIDESHOW')) return 'Slideshow';
+  return value.replace(/_/g, ' ');
 };
 
 export function rateColor(rate: number, type: 'hook' | 'hold'): string {
@@ -21,4 +27,3 @@ export function rateColor(rate: number, type: 'hook' | 'hold'): string {
   if (rate >= 25) return 'text-yellow-600';
   return 'text-rose-600';
 }
-
