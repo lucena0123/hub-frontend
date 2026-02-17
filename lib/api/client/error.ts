@@ -9,6 +9,7 @@ const codeMessageMap: Record<string, string> = {
   INVALID_PARAMETERS_SCHEMA: 'Schema de parâmetros inválido.',
   INVALID_PARAMETERS_TEMPLATE: 'Template de parâmetros inválido.',
   CLIENT_ID_REQUIRED: 'Selecione um cliente antes de continuar.',
+  CLIENT_NOT_FOUND: 'Cliente não encontrado para esta operação.',
 };
 
 export const getApiErrorMessage = (error: unknown, fallback: string): string => {
