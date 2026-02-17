@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     DndContext,
     DragOverlay,
@@ -63,24 +63,24 @@ export default function OptimizationBoardPage() {
         return () => window.clearTimeout(timer);
     }, [actionFeedback]);
 
-    useEffect(() => {
-        const loadAudit = async () => {
-            try {
-                setAuditLoading(true);
-                const events = await getOptimizationAudit({
-                    limit: 8,
-                    clientId: selectedClientId,
-                });
-                setAuditEvents(events);
-            } catch {
-                setAuditEvents([]);
-            } finally {
-                setAuditLoading(false);
-            }
-        };
+    const loadAudit = useCallback(async () => {
+        try {
+            setAuditLoading(true);
+            const events = await getOptimizationAudit({
+                limit: 8,
+                clientId: selectedClientId,
+            });
+            setAuditEvents(events);
+        } catch {
+            setAuditEvents([]);
+        } finally {
+            setAuditLoading(false);
+        }
+    }, [selectedClientId]);
 
+    useEffect(() => {
         loadAudit();
-    }, [selectedClientId, tasks.length]);
+    }, [loadAudit, tasks.length]);
 
     const handleDragStart = (event: DragStartEvent) => {
         if (!canOperate) return;
@@ -270,9 +270,14 @@ export default function OptimizationBoardPage() {
                     </DndContext>
 
                     <div className="rounded-[12px] border border-border/60 bg-card/40 p-4 space-y-3">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                            <History className="w-4 h-4" />
-                            Últimos eventos de otimização
+                        <div className="flex items-center justify-between gap-2 text-sm font-medium">
+                            <div className="flex items-center gap-2">
+                                <History className="w-4 h-4" />
+                                Últimos eventos de otimização
+                            </div>
+                            <Button variant="outline" size="sm" onClick={loadAudit} disabled={auditLoading}>
+                                Atualizar log
+                            </Button>
                         </div>
                         {auditLoading ? (
                             <div className="text-xs text-muted-foreground">Carregando auditoria...</div>
@@ -286,6 +291,9 @@ export default function OptimizationBoardPage() {
                                         <div className="text-muted-foreground">
                                             clientId: {event.clientId} · {new Date(event.timestamp).toLocaleString('pt-BR')}
                                         </div>
+                                        {typeof event.metadata?.route === 'string' && (
+                                            <div className="text-[11px] text-muted-foreground/80">rota: {event.metadata.route}</div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
