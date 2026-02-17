@@ -130,7 +130,12 @@ export const updateAutoApprovalConfig = async (
     return updated;
 };
 
-export const getOptimizationAudit = async (params?: { clientId?: string; limit?: number }): Promise<OptimizationAuditEvent[]> => {
+export const getOptimizationAudit = async (params?: {
+    clientId?: string;
+    action?: 'create' | 'update' | 'delete' | 'read';
+    eventType?: string;
+    limit?: number;
+}): Promise<OptimizationAuditEvent[]> => {
     const { data } = await apiClient.get<OptimizationAuditResponse>('/api/optimization/audit', { params });
     return data.events ?? [];
 };

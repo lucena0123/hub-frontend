@@ -36,6 +36,7 @@ export default function OptimizationBoardPage() {
     const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [auditEvents, setAuditEvents] = useState<OptimizationAuditEvent[]>([]);
     const [auditLoading, setAuditLoading] = useState(false);
+    const [auditActionFilter, setAuditActionFilter] = useState<'all' | 'create' | 'update' | 'delete' | 'read'>('all');
 
     const canOperate = useMemo(() => {
         const role = user?.role?.toLowerCase();
@@ -69,6 +70,7 @@ export default function OptimizationBoardPage() {
             const events = await getOptimizationAudit({
                 limit: 8,
                 clientId: selectedClientId,
+                action: auditActionFilter === 'all' ? undefined : auditActionFilter,
             });
             setAuditEvents(events);
         } catch {
@@ -76,7 +78,7 @@ export default function OptimizationBoardPage() {
         } finally {
             setAuditLoading(false);
         }
-    }, [selectedClientId]);
+    }, [selectedClientId, auditActionFilter]);
 
     useEffect(() => {
         loadAudit();
@@ -275,9 +277,23 @@ export default function OptimizationBoardPage() {
                                 <History className="w-4 h-4" />
                                 Últimos eventos de otimização
                             </div>
-                            <Button variant="outline" size="sm" onClick={loadAudit} disabled={auditLoading}>
-                                Atualizar log
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Select value={auditActionFilter} onValueChange={(value) => setAuditActionFilter(value as 'all' | 'create' | 'update' | 'delete' | 'read')}>
+                                    <SelectTrigger className="h-8 w-[140px]">
+                                        <SelectValue placeholder="Ação" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas ações</SelectItem>
+                                        <SelectItem value="create">Create</SelectItem>
+                                        <SelectItem value="update">Update</SelectItem>
+                                        <SelectItem value="delete">Delete</SelectItem>
+                                        <SelectItem value="read">Read</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Button variant="outline" size="sm" onClick={loadAudit} disabled={auditLoading}>
+                                    Atualizar log
+                                </Button>
+                            </div>
                         </div>
                         {auditLoading ? (
                             <div className="text-xs text-muted-foreground">Carregando auditoria...</div>
