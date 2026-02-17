@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -1285,6 +1286,21 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
                       {hasError && (
                         <span className="text-xs text-rose-600">{saveInfo?.message ?? 'Falha ao salvar.'}</span>
                       )}
+
+                      <div className="pt-1">
+                        <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Ações rápidas</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Button size="xs" variant="outline" asChild>
+                            <Link href={`/optimization/board?clientId=${clientId}`}>Ir para board</Link>
+                          </Button>
+                          <Button size="xs" variant="outline" asChild>
+                            <Link href={`/optimization/settings?clientId=${clientId}`}>Ajustar regras</Link>
+                          </Button>
+                          <Button size="xs" variant="outline" asChild>
+                            <Link href={`/optimization/effectiveness?clientId=${clientId}`}>Ver efetividade</Link>
+                          </Button>
+                        </div>
+                      </div>
                     </div>
 
                     {hasBudgetInfo ? (
