@@ -64,6 +64,20 @@ const extractEntitySummary = (resource: unknown): string | null => {
     return null;
 };
 
+const extractChangeSummary = (changes: unknown): string | null => {
+    const rec = asRecord(changes);
+    const after = asRecord(rec?.after);
+    if (!after) return null;
+
+    const status = after.status;
+    const enabled = after.enabled;
+
+    if (typeof status === 'string') return `status: ${status}`;
+    if (typeof enabled === 'boolean') return `enabled: ${enabled ? 'true' : 'false'}`;
+
+    return null;
+};
+
 export default function OptimizationBoardPage() {
     const { tasks, columns, mode, fetchTasks, moveTask, setMode, isLoading, error } = useOptimizationStore();
     const { user } = useAuth();
@@ -74,6 +88,7 @@ export default function OptimizationBoardPage() {
     const [auditEvents, setAuditEvents] = useState<OptimizationAuditEvent[]>([]);
     const [auditLoading, setAuditLoading] = useState(false);
     const [auditActionFilter, setAuditActionFilter] = useState<'all' | 'create' | 'update' | 'delete' | 'read'>('all');
+    const [auditEventTypeFilter, setAuditEventTypeFilter] = useState<'all' | 'client.update' | 'task.update'>('all');
 
     const canOperate = useMemo(() => {
         const role = user?.role?.toLowerCase();
@@ -108,6 +123,7 @@ export default function OptimizationBoardPage() {
                 limit: 8,
                 clientId: selectedClientId,
                 action: auditActionFilter === 'all' ? undefined : auditActionFilter,
+                eventType: auditEventTypeFilter === 'all' ? undefined : auditEventTypeFilter,
             });
             setAuditEvents(events);
         } catch {
@@ -115,7 +131,7 @@ export default function OptimizationBoardPage() {
         } finally {
             setAuditLoading(false);
         }
-    }, [selectedClientId, auditActionFilter]);
+    }, [selectedClientId, auditActionFilter, auditEventTypeFilter]);
 
     useEffect(() => {
         loadAudit();
@@ -327,6 +343,16 @@ export default function OptimizationBoardPage() {
                                         <SelectItem value="read">Read</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                <Select value={auditEventTypeFilter} onValueChange={(value) => setAuditEventTypeFilter(value as 'all' | 'client.update' | 'task.update')}>
+                                    <SelectTrigger className="h-8 w-[170px]">
+                                        <SelectValue placeholder="Tipo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos tipos</SelectItem>
+                                        <SelectItem value="client.update">client.update</SelectItem>
+                                        <SelectItem value="task.update">task.update</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <Button variant="outline" size="sm" onClick={loadAudit} disabled={auditLoading}>
                                     Atualizar log
                                 </Button>
@@ -341,6 +367,7 @@ export default function OptimizationBoardPage() {
                                 {auditEvents.map((event) => {
                                     const route = extractRoute(event.metadata);
                                     const entitySummary = extractEntitySummary(event.resource);
+                                    const changeSummary = extractChangeSummary(event.changes);
 
                                     return (
                                         <div key={event.id} className="text-xs border border-border/50 rounded-md px-3 py-2 bg-background/60 space-y-1">
@@ -355,6 +382,9 @@ export default function OptimizationBoardPage() {
                                             </div>
                                             {entitySummary && (
                                                 <div className="text-[11px] text-muted-foreground/90">entidade: {entitySummary}</div>
+                                            )}
+                                            {changeSummary && (
+                                                <div className="text-[11px] text-muted-foreground/90">mudança: {changeSummary}</div>
                                             )}
                                             {route && (
                                                 <div className="text-[11px] text-muted-foreground/80">rota: {route}</div>
