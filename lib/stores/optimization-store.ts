@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { OptimizationTask, BoardMode, BoardColumn, OptimizationRule, OptimizationTaskStatus } from '@/types/optimization';
 import { Campaign } from '@/types';
 import { apiClient } from '@/lib/api/client/http';
+import { getApiErrorMessage } from '@/lib/api/client/error';
 import { getCampaigns } from '@/lib/api/client/campaigns';
 
 interface OptimizationState {
@@ -76,7 +77,7 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
             await apiClient.post('/api/optimization/rules', payload);
             await get().fetchRules(clientId ?? get().selectedClientId ?? undefined);
         } catch (error) {
-            const msg = error instanceof Error ? error.message : 'Failed to create rule';
+            const msg = getApiErrorMessage(error, 'Failed to create rule');
             set({ error: msg });
             throw error;
         }
@@ -87,7 +88,7 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
             await apiClient.patch(`/api/optimization/rules/${ruleId}`, payload);
             await get().fetchRules(clientId ?? get().selectedClientId ?? undefined);
         } catch (error) {
-            const msg = error instanceof Error ? error.message : 'Failed to update rule';
+            const msg = getApiErrorMessage(error, 'Failed to update rule');
             set({ error: msg });
             throw error;
         }
@@ -98,7 +99,7 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
             await apiClient.delete(`/api/optimization/rules/${ruleId}`);
             await get().fetchRules(clientId ?? get().selectedClientId ?? undefined);
         } catch (error) {
-            const msg = error instanceof Error ? error.message : 'Failed to delete rule';
+            const msg = getApiErrorMessage(error, 'Failed to delete rule');
             set({ error: msg });
             throw error;
         }
@@ -152,7 +153,7 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
             set({ tasks, campaigns });
             get().setMode(get().mode); // Re-organize columns with new data
         } catch (error) {
-            const msg = error instanceof Error ? error.message : 'Failed to fetch data';
+            const msg = getApiErrorMessage(error, 'Failed to fetch data');
             set({ error: msg });
         } finally {
             set({ isLoading: false });
@@ -167,8 +168,10 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
             // Workflow Mode
             columns = [
                 { id: 'pending', title: '🔍 Diagnósticos', type: 'status', tasks: tasks.filter(t => t.status === 'pending') },
+                { id: 'in_progress', title: '⏳ Em execução', type: 'status', tasks: tasks.filter(t => t.status === 'in_progress') },
                 { id: 'approved', title: '🚀 Aprovados', type: 'status', tasks: tasks.filter(t => t.status === 'approved') },
                 { id: 'completed', title: '✅ Concluídos', type: 'status', tasks: tasks.filter(t => t.status === 'completed') },
+                { id: 'failed', title: '⚠️ Falharam', type: 'status', tasks: tasks.filter(t => t.status === 'failed') },
                 { id: 'rejected', title: '🗑️ Ignorados', type: 'status', tasks: tasks.filter(t => t.status === 'rejected') },
             ];
         } else {
@@ -235,7 +238,7 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
             await get().fetchTasks(get().selectedClientId ?? undefined);
         } catch (error) {
             // Revert on failure
-            const msg = error instanceof Error ? error.message : 'Failed to update task status';
+            const msg = getApiErrorMessage(error, 'Failed to update task status');
             set({ error: msg });
             await get().fetchTasks(get().selectedClientId ?? undefined);
             throw error;
@@ -253,7 +256,7 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
             // Refresh tasks to see if new one was created
             await get().fetchTasks(clientId);
         } catch (error) {
-            const msg = error instanceof Error ? error.message : 'Failed to run rule';
+            const msg = getApiErrorMessage(error, 'Failed to run rule');
             set({ error: msg });
             throw error;
         }

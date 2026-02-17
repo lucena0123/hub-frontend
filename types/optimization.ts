@@ -1,4 +1,4 @@
-export type OptimizationTaskStatus = 'pending' | 'approved' | 'rejected' | 'completed' | 'failed';
+export type OptimizationTaskStatus = 'pending' | 'in_progress' | 'approved' | 'rejected' | 'completed' | 'failed';
 
 export interface OptimizationTaskInput {
     insightId: string;
