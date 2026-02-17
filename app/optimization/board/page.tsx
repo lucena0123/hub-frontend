@@ -91,6 +91,7 @@ export default function OptimizationBoardPage() {
     const [auditEventTypes, setAuditEventTypes] = useState<Array<{ eventType: string; total: number }>>([]);
     const [auditActionFilter, setAuditActionFilter] = useState<'all' | 'create' | 'update' | 'delete' | 'read'>('all');
     const [auditEventTypeFilter, setAuditEventTypeFilter] = useState<string>('all');
+    const [auditWindowHours, setAuditWindowHours] = useState<6 | 24 | 72>(24);
 
     const canOperate = useMemo(() => {
         const role = user?.role?.toLowerCase();
@@ -127,9 +128,11 @@ export default function OptimizationBoardPage() {
                     clientId: selectedClientId,
                     action: auditActionFilter === 'all' ? undefined : auditActionFilter,
                     eventType: auditEventTypeFilter === 'all' ? undefined : auditEventTypeFilter,
+                    sinceHours: auditWindowHours,
                 }),
                 getOptimizationAuditSummary({
                     clientId: selectedClientId,
+                    sinceHours: auditWindowHours,
                 })
             ]);
             setAuditEvents(events);
@@ -142,7 +145,7 @@ export default function OptimizationBoardPage() {
         } finally {
             setAuditLoading(false);
         }
-    }, [selectedClientId, auditActionFilter, auditEventTypeFilter]);
+    }, [selectedClientId, auditActionFilter, auditEventTypeFilter, auditWindowHours]);
 
     useEffect(() => {
         loadAudit();
@@ -363,6 +366,16 @@ export default function OptimizationBoardPage() {
                                         {auditEventTypes.map((item) => (
                                             <SelectItem key={item.eventType} value={item.eventType}>{item.eventType}</SelectItem>
                                         ))}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={String(auditWindowHours)} onValueChange={(value) => setAuditWindowHours(Number(value) as 6 | 24 | 72)}>
+                                    <SelectTrigger className="h-8 w-[120px]">
+                                        <SelectValue placeholder="Janela" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="6">Últimas 6h</SelectItem>
+                                        <SelectItem value="24">Últimas 24h</SelectItem>
+                                        <SelectItem value="72">Últimas 72h</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <Button variant="outline" size="sm" onClick={loadAudit} disabled={auditLoading}>

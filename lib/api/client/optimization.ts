@@ -140,13 +140,14 @@ export const getOptimizationAudit = async (params?: {
     clientId?: string;
     action?: 'create' | 'update' | 'delete' | 'read';
     eventType?: string;
+    sinceHours?: number;
     limit?: number;
 }): Promise<OptimizationAuditEvent[]> => {
     const { data } = await apiClient.get<OptimizationAuditResponse>('/api/optimization/audit', { params });
     return data.events ?? [];
 };
 
-export const getOptimizationAuditSummary = async (params?: { clientId?: string }): Promise<OptimizationAuditSummary> => {
+export const getOptimizationAuditSummary = async (params?: { clientId?: string; sinceHours?: number }): Promise<OptimizationAuditSummary> => {
     const { data } = await apiClient.get<OptimizationAuditSummary>('/api/optimization/audit/summary', { params });
     return data;
 };
