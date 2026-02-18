@@ -185,6 +185,19 @@ export default function ExecutiveDashboardPage() {
               className="flex-[0.9_1_180px]"
             />
           </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Badge variant="outline" className="text-xs">Atalhos executivos</Badge>
+            <Link href="/alerts" className="inline-flex items-center rounded-[2px] border border-border/50 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground">
+              Ver alertas
+            </Link>
+            <Link href="/tasks" className="inline-flex items-center rounded-[2px] border border-border/50 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground">
+              Ver tarefas
+            </Link>
+            <Link href="/optimization/effectiveness" className="inline-flex items-center rounded-[2px] border border-border/50 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground">
+              Efetividade
+            </Link>
+          </div>
         </Reveal>
 
         <SectionHeader
