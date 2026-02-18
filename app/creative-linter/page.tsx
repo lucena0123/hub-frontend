@@ -66,10 +66,12 @@ export default function CreativeLinterPage() {
   const [themeKey, setThemeKey] = useState('');
   const [validating, setValidating] = useState(false);
   const [result, setResult] = useState<CopyValidationResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleValidate = async () => {
     setValidating(true);
     setResult(null);
+    setError(null);
     try {
       const res = await validateCreativeCopy({
         headline: headline || undefined,
@@ -79,8 +81,9 @@ export default function CreativeLinterPage() {
         themeKey: themeKey || undefined,
       });
       setResult(res);
-    } catch {
+    } catch (err: unknown) {
       setResult(null);
+      setError(err instanceof Error ? err.message : 'Falha ao validar copy.');
     } finally {
       setValidating(false);
     }
@@ -188,6 +191,11 @@ export default function CreativeLinterPage() {
               {validating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Validar Copy
             </Button>
+            {error && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
           </CardContent>
         </Card>
 

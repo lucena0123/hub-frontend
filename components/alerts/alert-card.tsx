@@ -1,7 +1,9 @@
 import type { LucideIcon } from 'lucide-react';
 import { AlertOctagon, AlertTriangle, Info } from 'lucide-react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import type { PerformanceAlert } from '@/types';
 import { format } from 'date-fns';
 
@@ -98,6 +100,18 @@ export function AlertCard({ alert }: { alert: PerformanceAlert }) {
             {currentValue} vs {thresholdValue}
           </span>
           <span>{timestamp}</span>
+        </div>
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button size="sm" variant="outline" asChild className="h-7 text-[10px]">
+            <Link href={`/clients/${alert.clientId}/performance`}>Performance</Link>
+          </Button>
+          <Button size="sm" variant="outline" asChild className="h-7 text-[10px]">
+            <Link href={`/optimization/board?clientId=${alert.clientId}`}>Board</Link>
+          </Button>
+          <Button size="sm" variant="outline" asChild className="h-7 text-[10px]">
+            <Link href={`/optimization/settings?clientId=${alert.clientId}`}>Regras</Link>
+          </Button>
         </div>
       </CardContent>
     </Card>

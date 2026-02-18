@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { getProcesses } from '@/lib/api/client';
 import type { ProcessInstance } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Activity, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageShell } from '@/components/layout/page-shell';
@@ -150,6 +151,14 @@ export default function ProcessesPage() {
                           </div>
                         </div>
                       </div>
+                    </div>
+                    <div className="flex gap-2 w-full md:w-auto">
+                      <Button size="sm" variant="outline" asChild className="h-7 text-[10px]">
+                        <Link href={`/clients/${process.clientId}`}>Cliente</Link>
+                      </Button>
+                      <Button size="sm" variant="outline" asChild className="h-7 text-[10px]">
+                        <Link href={`/clients/${process.clientId}/performance`}>Performance</Link>
+                      </Button>
                     </div>
                   </div>
                 </div>
