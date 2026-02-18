@@ -155,6 +155,7 @@ export default function MetaOpsPage() {
   const [confidenceFilter, setConfidenceFilter] = useState<'all' | OpsItem['confidence']>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | OpsStatus>('all');
   const [statusMap, setStatusMap] = useState<Record<string, OpsStatus>>({});
+  const [collapsedClientGroup, setCollapsedClientGroup] = useState<Record<string, boolean>>({});
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -336,6 +337,10 @@ export default function MetaOpsPage() {
     setStatusMap((prev) => ({ ...prev, [id]: status }));
   };
 
+  const toggleClientGroup = (key: string) => {
+    setCollapsedClientGroup((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   const copyField = async (key: string, text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -460,13 +465,27 @@ export default function MetaOpsPage() {
                 </Card>
               ) : (
                 <div className="space-y-3">
-                  {groups.map((group) => (
-                    <Card key={`${bucket}:${group.clientId}`} className="border-primary/20">
+                  {groups.map((group) => {
+                    const groupKey = `${bucket}:${group.clientId}`;
+                    const isCollapsed = collapsedClientGroup[groupKey] ?? false;
+
+                    return (
+                    <Card key={groupKey} className="border-primary/20">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Cliente: {group.clientName}</CardTitle>
+                        <div className="flex items-center justify-between gap-2">
+                          <CardTitle className="text-sm">Cliente: {group.clientName}</CardTitle>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">Itens {group.items.length}</Badge>
+                            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => toggleClientGroup(groupKey)}>
+                              {isCollapsed ? 'Mostrar' : 'Ocultar'}
+                            </Button>
+                          </div>
+                        </div>
                       </CardHeader>
                       <CardContent className="space-y-2">
-                        {group.items.map((item) => (
+                        {isCollapsed ? (
+                          <div className="text-xs text-muted-foreground">Grupo oculto para reduzir ruído visual.</div>
+                        ) : group.items.map((item) => (
                           <div key={item.id} className="rounded-md border border-border/50 bg-card/40 p-3 space-y-2">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="font-medium">{item.title}</div>
@@ -567,7 +586,8 @@ export default function MetaOpsPage() {
                         ))}
                       </CardContent>
                     </Card>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
