@@ -8,6 +8,8 @@ import { ClientSelect } from "@/components/optimization/client-select";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getOptimizationAudit, getOptimizationAuditSummary, type OptimizationAuditEvent } from "@/lib/api/client/optimization";
+import { apiClient } from "@/lib/api/client/http";
+import { useOptimizationStore } from "@/lib/stores/optimization-store";
 import { BarChart3, RefreshCw } from "lucide-react";
 
 type WindowHours = 6 | 24 | 72;
@@ -45,6 +47,9 @@ export default function OptimizationEffectivenessPage() {
     const [loading, setLoading] = useState(false);
     const [events, setEvents] = useState<OptimizationAuditEvent[]>([]);
     const [summary, setSummary] = useState<{ total: number; updates: number }>({ total: 0, updates: 0 });
+    const [applyingByRule, setApplyingByRule] = useState<Record<string, boolean>>({});
+    const [actionNote, setActionNote] = useState<string | null>(null);
+    const { rules, fetchRules } = useOptimizationStore();
 
     const loadData = useCallback(async () => {
         try {
@@ -73,6 +78,11 @@ export default function OptimizationEffectivenessPage() {
     useEffect(() => {
         loadData();
     }, [loadData]);
+
+    useEffect(() => {
+        const cid = clientId === "all" ? undefined : clientId;
+        void fetchRules(cid);
+    }, [clientId, fetchRules]);
 
     const metrics = useMemo(() => {
         const map = new Map<string, RuleMetric>();
@@ -129,6 +139,45 @@ export default function OptimizationEffectivenessPage() {
 
         return items.slice(0, 8);
     }, [usefulTop, noisyTop]);
+
+    const existingRuleIds = useMemo(() => new Set(rules.map((r) => r.id)), [rules]);
+
+    const applyChecklistAction = useCallback(
+        async (item: { key: string; action: "manter" | "ajustar" | "desligar" }) => {
+            if (clientId === "all") {
+                setActionNote("Selecione um cliente para executar ações nas regras.");
+                return;
+            }
+            if (!existingRuleIds.has(item.key)) {
+                setActionNote(`Regra ${item.key} não está disponível para execução direta nesta tela.`);
+                return;
+            }
+            if (item.action === "ajustar") {
+                setActionNote(`Ação "ajustar" exige revisão manual em Configurar Regras (${item.key}).`);
+                return;
+            }
+
+            setApplyingByRule((prev) => ({ ...prev, [item.key]: true }));
+            setActionNote(null);
+            try {
+                await apiClient.post(`/api/optimization/rules/${item.key}/toggle`, {
+                    clientId,
+                    enabled: item.action === "manter",
+                });
+                setActionNote(
+                    item.action === "manter"
+                        ? `Regra ${item.key} marcada como ativa.`
+                        : `Regra ${item.key} desligada para o cliente selecionado.`
+                );
+                await Promise.all([loadData(), fetchRules(clientId)]);
+            } catch {
+                setActionNote(`Falha ao aplicar ação na regra ${item.key}.`);
+            } finally {
+                setApplyingByRule((prev) => ({ ...prev, [item.key]: false }));
+            }
+        },
+        [clientId, existingRuleIds, fetchRules, loadData]
+    );
 
     return (
         <PageShell
@@ -206,29 +255,45 @@ export default function OptimizationEffectivenessPage() {
 
                     <div className="rounded-md border border-border/50 bg-background/50 p-3">
                         <div className="text-xs font-medium">Checklist de ações do dia</div>
+                        {actionNote && (
+                            <div className="mt-2 text-[11px] text-muted-foreground">{actionNote}</div>
+                        )}
                         {dailyChecklist.length === 0 ? (
                             <div className="text-[11px] text-muted-foreground mt-2">Sem ações recomendadas no momento.</div>
                         ) : (
                             <div className="mt-2 space-y-2">
-                                {dailyChecklist.map((item) => (
-                                    <div key={`${item.action}-${item.key}`} className="flex items-start justify-between gap-2 text-[11px]">
-                                        <div className="text-muted-foreground">{item.key} — {item.reason}</div>
-                                        <div className="flex items-center gap-2">
-                                            <span className={`uppercase tracking-wide px-2 py-0.5 rounded ${
-                                                item.action === "manter"
-                                                    ? "bg-emerald-500/15 text-emerald-300"
-                                                    : item.action === "ajustar"
-                                                        ? "bg-amber-500/15 text-amber-300"
-                                                        : "bg-destructive/15 text-destructive"
-                                            }`}>{item.action}</span>
-                                            <Button size="sm" variant="outline" asChild className="h-6 px-2 text-[10px]">
-                                                <Link href={item.action === "manter" ? `/optimization/board?clientId=${clientId}` : `/optimization/settings?clientId=${clientId}`}>
-                                                    {item.action === "manter" ? "Board" : "Regras"}
-                                                </Link>
-                                            </Button>
+                                {dailyChecklist.map((item) => {
+                                    const executable = (item.action === "manter" || item.action === "desligar") && existingRuleIds.has(item.key) && clientId !== "all";
+                                    const applying = Boolean(applyingByRule[item.key]);
+
+                                    return (
+                                        <div key={`${item.action}-${item.key}`} className="flex items-start justify-between gap-2 text-[11px]">
+                                            <div className="text-muted-foreground">{item.key} — {item.reason}</div>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`uppercase tracking-wide px-2 py-0.5 rounded ${
+                                                    item.action === "manter"
+                                                        ? "bg-emerald-500/15 text-emerald-300"
+                                                        : item.action === "ajustar"
+                                                            ? "bg-amber-500/15 text-amber-300"
+                                                            : "bg-destructive/15 text-destructive"
+                                                }`}>{item.action}</span>
+                                                <Button size="sm" variant="outline" asChild className="h-6 px-2 text-[10px]">
+                                                    <Link href={item.action === "manter" ? `/optimization/board?clientId=${clientId}` : `/optimization/settings?clientId=${clientId}`}>
+                                                        {item.action === "manter" ? "Board" : "Regras"}
+                                                    </Link>
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    className="h-6 px-2 text-[10px]"
+                                                    disabled={!executable || applying}
+                                                    onClick={() => void applyChecklistAction(item)}
+                                                >
+                                                    {applying ? "Aplicando..." : "Executar"}
+                                                </Button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
