@@ -51,6 +51,30 @@ const resolveState = (score: number | null) => {
   return { label: 'Crítico', className: 'bg-destructive/15 text-destructive' };
 };
 
+const resolveNextAction = (score: number | null, criticalCount: number, clientId: string) => {
+  if (criticalCount > 0 || (score ?? 0) < 50) {
+    return {
+      label: 'Ação imediata: revisar e ajustar regras',
+      href: `/optimization/settings?clientId=${clientId}`,
+      cta: 'Ajustar agora',
+    };
+  }
+
+  if ((score ?? 0) < 75) {
+    return {
+      label: 'Atenção: validar prioridades no board',
+      href: `/optimization/board?clientId=${clientId}`,
+      cta: 'Ir para board',
+    };
+  }
+
+  return {
+    label: 'Operação estável: manter e monitorar efetividade',
+    href: `/optimization/effectiveness?clientId=${clientId}`,
+    cta: 'Monitorar',
+  };
+};
+
 export default function SummaryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,6 +169,23 @@ export default function SummaryPage() {
       <div className="space-y-8">
         <SectionHeader title="Painel Consolidado" subtitle="Saúde por cliente e campanhas críticas." icon={BarChart3} />
 
+        <Card className="border-primary/30">
+          <CardHeader>
+            <CardTitle className="text-sm">O que fazer agora (guia rápido)</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2">
+              <strong className="text-destructive">Crítico</strong>: abrir <span className="text-foreground">Regras</span> e ajustar imediatamente.
+            </div>
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2">
+              <strong className="text-amber-300">Atenção</strong>: abrir <span className="text-foreground">Board</span> e priorizar ações do dia.
+            </div>
+            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2">
+              <strong className="text-emerald-300">Saudável</strong>: manter e monitorar em <span className="text-foreground">Efetividade</span>.
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader><CardTitle className="text-sm">Conversas (7d)</CardTitle></CardHeader>
@@ -171,9 +212,11 @@ export default function SummaryPage() {
             const campaigns = campaignHealthMap[client.clientId] ?? [];
             const criticalCount = campaigns.filter((c) => c.score < 50).length;
 
+            const nextAction = resolveNextAction(client.healthScore, criticalCount, client.clientId);
+
             return (
               <Card key={client.clientId}>
-                <CardContent className="pt-6">
+                <CardContent className="pt-6 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold">{client.clientName}</div>
@@ -186,8 +229,15 @@ export default function SummaryPage() {
                       {criticalCount > 0 && (
                         <Badge className="bg-destructive/15 text-destructive">{criticalCount} campanha(s) crítica(s)</Badge>
                       )}
-                      <Button asChild size="sm" variant="outline"><Link href={`/clients/${client.clientId}/performance`}>Abrir</Link></Button>
+                      <Button asChild size="sm" variant="outline"><Link href={`/clients/${client.clientId}/performance`}>Diagnóstico</Link></Button>
                     </div>
+                  </div>
+
+                  <div className="rounded-md border border-border/60 bg-muted/20 p-2 text-xs flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-muted-foreground">{nextAction.label}</span>
+                    <Button asChild size="sm" className="h-7 text-[10px]">
+                      <Link href={nextAction.href}>{nextAction.cta}</Link>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
