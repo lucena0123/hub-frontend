@@ -220,6 +220,7 @@ export function DiagnosticsPanel({
 }: DiagnosticsPanelProps) {
   const [tab, setTab] = useState<Tab>('recommendations');
   const [showAll, setShowAll] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   // --- Action proposals state ---
   const [proposals, setProposals] = useState<ActionProposal[]>([]);
@@ -237,7 +238,27 @@ export function DiagnosticsPanel({
   const summary = optimizationData?.summary ?? null;
   const items = optimizationData?.items ?? EMPTY_ITEMS;
   const theme = optimizationData?.theme ?? null;
-  const visibleItems = useMemo(() => (showAll ? items : items.slice(0, 8)), [items, showAll]);
+
+  const prioritizedItems = useMemo(() => {
+    const severityOrder: Record<OptimizationCenterSeverity, number> = {
+      critical: 0,
+      warning: 1,
+      opportunity: 2,
+      info: 3,
+    };
+
+    return [...items].sort((a, b) => {
+      const sa = severityOrder[a.severity] ?? 99;
+      const sb = severityOrder[b.severity] ?? 99;
+      if (sa !== sb) return sa - sb;
+      return a.title.localeCompare(b.title, 'pt-BR');
+    });
+  }, [items]);
+
+  const focusItems = useMemo(() => {
+    const base = showInfo ? prioritizedItems : prioritizedItems.filter((item) => item.severity !== 'info');
+    return showAll ? base : base.slice(0, 5);
+  }, [prioritizedItems, showInfo, showAll]);
 
   // --- Proposals API ---
   const refresh = useCallback(async () => {
@@ -465,33 +486,52 @@ export function DiagnosticsPanel({
           <>
             {optimizationLoading ? (
               <p className="text-sm text-muted-foreground py-4">Carregando recomendações...</p>
-            ) : visibleItems.length === 0 ? (
+            ) : focusItems.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4">
                 Nenhuma recomendação no período. Sincronize a Meta para gerar diagnósticos.
               </p>
             ) : (
               <div className="space-y-2">
-                {visibleItems.map((item) => (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-[2px] border border-border/60 bg-muted/20 p-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    Modo foco operacional: exibindo {focusItems.length} {showAll ? 'itens' : 'prioridades'}.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowInfo((p) => !p);
+                        setShowAll(false);
+                      }}
+                      className="h-7 text-[10px]"
+                    >
+                      {showInfo ? 'Ocultar info' : 'Mostrar info'}
+                    </Button>
+                    {(showInfo ? prioritizedItems.length : prioritizedItems.filter((item) => item.severity !== 'info').length) > 5 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAll((p) => !p)}
+                        className="h-7 text-[10px]"
+                      >
+                        {showAll ? (
+                          <>
+                            <ChevronUp className="h-3 w-3" /> Ver menos
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-3 w-3" /> Ver tudo
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {focusItems.map((item) => (
                   <RecommendationItem key={item.id} item={item} />
                 ))}
-                {items.length > 8 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAll((p) => !p)}
-                    className="w-full text-xs"
-                  >
-                    {showAll ? (
-                      <>
-                        <ChevronUp className="h-3 w-3" /> Ver menos
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="h-3 w-3" /> Ver tudo ({items.length})
-                      </>
-                    )}
-                  </Button>
-                )}
               </div>
             )}
           </>
