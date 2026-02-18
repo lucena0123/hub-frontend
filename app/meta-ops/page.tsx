@@ -24,6 +24,9 @@ type OpsItem = {
   source: 'alert' | 'proposal';
   priority: 'critical' | 'warning' | 'info';
   bucket: OpsBucket;
+  evidence: string;
+  successCriterion: string;
+  confidence: 'alta' | 'média';
 };
 
 const DONE_KEY = 'meta-ops-done-v1';
@@ -32,6 +35,11 @@ const priorityClass: Record<OpsItem['priority'], string> = {
   critical: 'bg-destructive/15 text-destructive',
   warning: 'bg-amber-500/15 text-amber-300',
   info: 'bg-muted text-muted-foreground',
+};
+
+const confidenceClass: Record<OpsItem['confidence'], string> = {
+  alta: 'bg-emerald-500/15 text-emerald-300',
+  média: 'bg-amber-500/15 text-amber-300',
 };
 
 const bucketMeta: Record<OpsBucket, { title: string; icon: React.ComponentType<{ className?: string }> }> = {
@@ -58,6 +66,12 @@ const bucketFromProposal = (proposal: ActionProposal): OpsBucket => {
   if (['refresh', 'review', 'duplicate_adset'].includes(action)) return 'creative_copy';
   if (['track', 'sync'].includes(action)) return 'audience';
   return 'budget_scale';
+};
+
+const successCriterionByBucket = (bucket: OpsBucket) => {
+  if (bucket === 'creative_copy') return 'Meta de sucesso: aumentar conversas ou CTR em até 24h.';
+  if (bucket === 'audience') return 'Meta de sucesso: recuperar volume sem elevar CPL em 24h.';
+  return 'Meta de sucesso: reduzir CPL ou estabilizar gasto em 24h.';
 };
 
 export default function MetaOpsPage() {
@@ -115,29 +129,43 @@ export default function MetaOpsPage() {
   }, []);
 
   const opsItems = useMemo<OpsItem[]>(() => {
-    const fromAlerts: OpsItem[] = alerts.map((alert) => ({
-      id: `alert:${alert.id}`,
-      clientId: alert.clientId,
-      clientName: alert.clientName,
-      title: alert.campaignName ?? alert.metric,
-      description: alert.message,
-      source: 'alert',
-      priority: toPriority(alert.type),
-      bucket: bucketFromAlert(alert),
-    }));
+    const fromAlerts: OpsItem[] = alerts
+      .filter((alert) => alert.type === 'critical' || alert.type === 'warning')
+      .map((alert) => {
+        const bucket = bucketFromAlert(alert);
+        return {
+          id: `alert:${alert.id}`,
+          clientId: alert.clientId,
+          clientName: alert.clientName,
+          title: alert.campaignName ?? alert.metric,
+          description: alert.message,
+          source: 'alert',
+          priority: toPriority(alert.type),
+          bucket,
+          evidence: `${alert.metric}: atual ${alert.currentValue} vs referência ${alert.threshold}`,
+          successCriterion: successCriterionByBucket(bucket),
+          confidence: 'alta',
+        };
+      });
 
     const fromProposals: OpsItem[] = proposals
       .filter((proposal) => proposal.status === 'pending' || proposal.status === 'approved')
-      .map((proposal) => ({
-        id: `proposal:${proposal.proposalId}`,
-        clientId: proposal.clientId,
-        clientName: proposal.clientName ?? 'Cliente',
-        title: proposal.title ?? 'Ação proposta',
-        description: proposal.description ?? `Ação sugerida: ${proposal.action ?? 'review'}`,
-        source: 'proposal',
-        priority: toPriority(proposal.severity ?? 'info'),
-        bucket: bucketFromProposal(proposal),
-      }));
+      .map((proposal) => {
+        const bucket = bucketFromProposal(proposal);
+        return {
+          id: `proposal:${proposal.proposalId}`,
+          clientId: proposal.clientId,
+          clientName: proposal.clientName ?? 'Cliente',
+          title: proposal.title ?? 'Ação proposta',
+          description: proposal.description ?? `Ação sugerida: ${proposal.action ?? 'review'}`,
+          source: 'proposal',
+          priority: toPriority(proposal.severity ?? 'info'),
+          bucket,
+          evidence: `Proposta ${proposal.status} em ${new Date(proposal.createdAt).toLocaleString('pt-BR')}`,
+          successCriterion: successCriterionByBucket(bucket),
+          confidence: proposal.status === 'approved' ? 'alta' : 'média',
+        };
+      });
 
     const all = [...fromAlerts, ...fromProposals];
 
@@ -184,7 +212,7 @@ export default function MetaOpsPage() {
     <PageShell
       eyebrow="Meta Ads / Operação"
       title="Central de Implementação"
-      description="Tela única para buscar sugestões, executar no Meta Ads e marcar implementação."
+      description="Tela única com recomendações baseadas em evidência interna para executar no Meta Ads."
       meta={
         <div className="space-y-2 text-xs text-muted-foreground">
           <div className="signal-chip">Itens {opsItems.length}</div>
@@ -246,10 +274,15 @@ export default function MetaOpsPage() {
                           <div className="font-medium">{item.title}</div>
                           <div className="flex items-center gap-2">
                             <Badge className={priorityClass[item.priority]}>{item.priority}</Badge>
+                            <Badge className={confidenceClass[item.confidence]}>confiança {item.confidence}</Badge>
                             <Badge variant="outline">{item.source === 'alert' ? 'Alerta' : 'Proposta'}</Badge>
                           </div>
                         </div>
                         <p className="text-xs text-muted-foreground">{item.clientName} · {item.description}</p>
+                        <div className="rounded-md border border-border/50 bg-background/60 p-2 text-[11px] text-muted-foreground space-y-1">
+                          <p><strong className="text-foreground/80">Evidência:</strong> {item.evidence}</p>
+                          <p><strong className="text-foreground/80">Critério de sucesso:</strong> {item.successCriterion}</p>
+                        </div>
                         <div className="flex flex-wrap items-center gap-2 pt-1">
                           <Button asChild size="sm" variant="outline" className="h-7 text-[10px]">
                             <Link href={`/clients/${item.clientId}/performance`}>Diagnóstico</Link>
@@ -281,7 +314,7 @@ export default function MetaOpsPage() {
 
         <div className="rounded-[12px] border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4" />
-          Esta central é assistida: ela organiza o que implementar no Meta Ads e registra o checklist operacional.
+          Esta central é assistida e orientada por evidência interna (alertas e propostas). Benchmark externo é apenas insumo, não decisão final.
         </div>
       </div>
     </PageShell>
