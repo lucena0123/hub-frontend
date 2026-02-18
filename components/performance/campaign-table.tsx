@@ -238,14 +238,12 @@ const resolveObjectiveKey = (campaign: PerformanceSummary) => {
 
 const buildPyramidLayers = (campaign: PerformanceSummary) => {
   const objectiveKey = resolveObjectiveKey(campaign);
-  const clickRate = getStepRate(campaign.totalClicks, campaign.totalImpressions);
   const lpRate = getStepRate(campaign.totalLandingPageViews || 0, campaign.totalClicks);
   const messageRate = getStepRate(campaign.totalMessagingConversations || 0, campaign.totalClicks);
   const responseRate = getStepRate(campaign.totalMessagingFirstReply || 0, campaign.totalMessagingConversations || 0);
   const conversionRate = getStepRate(campaign.totalConversions, campaign.totalClicks);
   const budgetPercent = formatPercent(campaign.budgetUtilization || 0);
   const hasRevenue = Number.isFinite(campaign.totalRevenue) && campaign.totalRevenue > 0;
-  const hasResponseTime = campaign.avgResponseTimeHours != null && Number.isFinite(campaign.avgResponseTimeHours);
 
   const baseLayer: PyramidLayer = {
     key: 'base',
