@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { CheckCircle2, ClipboardCheck, Copy, Loader2, Megaphone, Target, Wallet } from 'lucide-react';
 
 import { getAlerts, getClients, listActionProposals, type ActionProposal } from '@/lib/api/client';
+import { apiClient } from '@/lib/api/client/http';
+import type { OptimizationRule } from '@/types/optimization';
 import { PageShell } from '@/components/layout/page-shell';
 import { SectionHeader } from '@/components/performance/section-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,6 +48,7 @@ type OpsStatus =
 
 const DONE_KEY = 'meta-ops-done-v1';
 const STATUS_KEY = 'meta-ops-status-v2';
+const ROLLBACK_KEY = 'meta-ops-rule-rollback-v1';
 
 const priorityClass: Record<OpsItem['priority'], string> = {
   critical: 'bg-destructive/15 text-destructive',
@@ -114,6 +117,42 @@ const inferCreativeName = (title: string, description: string) => {
   return 'Criativo a definir';
 };
 
+const ruleSuggestionByBucket = (
+  bucket: OpsBucket,
+  priority: OpsItem['priority']
+): { ruleId: string; parameters: Record<string, unknown>; rationale: string } => {
+  if (bucket === 'creative_copy') {
+    return {
+      ruleId: 'creative.fatigued',
+      parameters: {
+        frequencyThreshold: priority === 'critical' ? 2.1 : 2.4,
+        windowDays: 5,
+      },
+      rationale: 'Ajuste para detectar fadiga criativa mais cedo quando necessário.',
+    };
+  }
+
+  if (bucket === 'audience') {
+    return {
+      ruleId: 'campaign.no-contacts',
+      parameters: {
+        minSpend: priority === 'critical' ? 28 : 35,
+        windowDays: 2,
+      },
+      rationale: 'Antecipar alerta de falta de contatos para reagir no mesmo ciclo.',
+    };
+  }
+
+  return {
+    ruleId: 'campaign.cpl-high',
+    parameters: {
+      cplThreshold: priority === 'critical' ? 16 : 18,
+      windowDays: 3,
+    },
+    rationale: 'Ajustar limiar de CPL para cortar desperdício mais cedo.',
+  };
+};
+
 const buildPlaybook = (item: {
   title: string;
   priority: OpsItem['priority'];
@@ -157,6 +196,10 @@ export default function MetaOpsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | OpsStatus>('all');
   const [statusMap, setStatusMap] = useState<Record<string, OpsStatus>>({});
   const [collapsedClientGroup, setCollapsedClientGroup] = useState<Record<string, boolean>>({});
+  const [rulesByClient, setRulesByClient] = useState<Record<string, OptimizationRule[]>>({});
+  const [rollbackByItem, setRollbackByItem] = useState<Record<string, { clientId: string; ruleId: string; previous: Record<string, unknown> }>>({});
+  const [ruleFeedback, setRuleFeedback] = useState<string | null>(null);
+  const [savingRuleItemId, setSavingRuleItemId] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -185,6 +228,19 @@ export default function MetaOpsPage() {
   }, [statusMap]);
 
   useEffect(() => {
+    try {
+      const rawRollback = localStorage.getItem(ROLLBACK_KEY);
+      if (rawRollback) setRollbackByItem(JSON.parse(rawRollback) as Record<string, { clientId: string; ruleId: string; previous: Record<string, unknown> }>);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ROLLBACK_KEY, JSON.stringify(rollbackByItem));
+  }, [rollbackByItem]);
+
+  useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
@@ -194,18 +250,31 @@ export default function MetaOpsPage() {
         setClients(clientData);
         setAlerts(alertsData.alerts ?? []);
 
-        const proposalGroups = await Promise.all(
-          clientData.map(async (client) => {
-            try {
-              const response = await listActionProposals(client.id, { limit: 50 });
-              return response.proposals ?? [];
-            } catch {
-              return [];
-            }
-          })
-        );
+        const [proposalGroups, rulesGroups] = await Promise.all([
+          Promise.all(
+            clientData.map(async (client) => {
+              try {
+                const response = await listActionProposals(client.id, { limit: 50 });
+                return response.proposals ?? [];
+              } catch {
+                return [];
+              }
+            })
+          ),
+          Promise.all(
+            clientData.map(async (client) => {
+              try {
+                const response = await apiClient.get<OptimizationRule[]>('/api/optimization/rules', { params: { clientId: client.id } });
+                return [client.id, response.data] as const;
+              } catch {
+                return [client.id, [] as OptimizationRule[]] as const;
+              }
+            })
+          ),
+        ]);
 
         setProposals(proposalGroups.flat());
+        setRulesByClient(Object.fromEntries(rulesGroups));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Falha ao carregar central de operação Meta Ads.');
       } finally {
@@ -372,6 +441,83 @@ export default function MetaOpsPage() {
     setStatusMap((prev) => ({ ...prev, [id]: status }));
   };
 
+  const currentRuleParams = (item: OpsItem) => {
+    const suggestion = ruleSuggestionByBucket(item.bucket, item.priority);
+    const currentRule = (rulesByClient[item.clientId] ?? []).find((rule) => rule.id === suggestion.ruleId);
+    return {
+      ruleId: suggestion.ruleId,
+      current: (currentRule?.parameters ?? {}) as Record<string, unknown>,
+      suggested: suggestion.parameters,
+      rationale: suggestion.rationale,
+    };
+  };
+
+  const applyRuleSuggestion = async (item: OpsItem) => {
+    const { ruleId, current, suggested } = currentRuleParams(item);
+    const ok = window.confirm(`Aplicar sugestão de regra para ${item.clientName}?\n\nRegra: ${ruleId}`);
+    if (!ok) return;
+
+    try {
+      setSavingRuleItemId(item.id);
+      await apiClient.post(`/api/optimization/rules/${ruleId}/config`, {
+        clientId: item.clientId,
+        parameters: suggested,
+      });
+
+      setRulesByClient((prev) => ({
+        ...prev,
+        [item.clientId]: (prev[item.clientId] ?? []).map((rule) =>
+          rule.id === ruleId ? { ...rule, parameters: suggested } : rule
+        ),
+      }));
+
+      setRollbackByItem((prev) => ({
+        ...prev,
+        [item.id]: { clientId: item.clientId, ruleId, previous: current },
+      }));
+
+      setRuleFeedback(`Regra ${ruleId} atualizada para ${item.clientName}.`);
+    } catch {
+      setRuleFeedback(`Falha ao atualizar regra ${ruleId}.`);
+    } finally {
+      setSavingRuleItemId(null);
+    }
+  };
+
+  const rollbackRuleSuggestion = async (item: OpsItem) => {
+    const rollback = rollbackByItem[item.id];
+    if (!rollback) return;
+
+    const ok = window.confirm(`Reverter ajuste da regra ${rollback.ruleId} para ${item.clientName}?`);
+    if (!ok) return;
+
+    try {
+      setSavingRuleItemId(item.id);
+      await apiClient.post(`/api/optimization/rules/${rollback.ruleId}/config`, {
+        clientId: rollback.clientId,
+        parameters: rollback.previous,
+      });
+
+      setRulesByClient((prev) => ({
+        ...prev,
+        [rollback.clientId]: (prev[rollback.clientId] ?? []).map((rule) =>
+          rule.id === rollback.ruleId ? { ...rule, parameters: rollback.previous } : rule
+        ),
+      }));
+
+      setRollbackByItem((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+      setRuleFeedback(`Rollback aplicado na regra ${rollback.ruleId}.`);
+    } catch {
+      setRuleFeedback(`Falha ao aplicar rollback da regra ${rollback.ruleId}.`);
+    } finally {
+      setSavingRuleItemId(null);
+    }
+  };
+
   const toggleClientGroup = (key: string) => {
     setCollapsedClientGroup((prev) => ({ ...prev, [key]: !prev[key] }));
   };
@@ -430,6 +576,10 @@ export default function MetaOpsPage() {
             <div className="rounded-md border border-border/50 bg-muted/20 p-2">3) Marque como implementado e valide resultado em 24h.</div>
           </CardContent>
         </Card>
+
+        {ruleFeedback ? (
+          <div className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs">{ruleFeedback}</div>
+        ) : null}
 
         <div className="rounded-[12px] border border-border/60 bg-card/40 p-3 flex flex-wrap items-center gap-2">
           <select
@@ -587,6 +737,38 @@ export default function MetaOpsPage() {
                                 <p className="text-muted-foreground">{item.budgetSuggestion}</p>
                               </div>
                             </div>
+
+                            {(() => {
+                              const ruleView = currentRuleParams(item);
+                              return (
+                                <div className="rounded-md border border-border/50 bg-background/60 p-2 text-[11px] space-y-2">
+                                  <p className="font-medium text-foreground/90">Sugestão de atualização de regra ({ruleView.ruleId})</p>
+                                  <p className="text-muted-foreground">{ruleView.rationale}</p>
+                                  <p className="text-muted-foreground"><strong className="text-foreground/80">Atual:</strong> {JSON.stringify(ruleView.current)}</p>
+                                  <p className="text-muted-foreground"><strong className="text-foreground/80">Sugerido:</strong> {JSON.stringify(ruleView.suggested)}</p>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-[10px]"
+                                      disabled={savingRuleItemId === item.id}
+                                      onClick={() => void applyRuleSuggestion(item)}
+                                    >
+                                      Aplicar sugestão
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-[10px]"
+                                      disabled={savingRuleItemId === item.id || !rollbackByItem[item.id]}
+                                      onClick={() => void rollbackRuleSuggestion(item)}
+                                    >
+                                      Rollback
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })()}
 
                             <div className="flex flex-wrap items-center gap-2 pt-1">
                               <Button asChild size="sm" variant="outline" className="h-7 text-[10px]">
