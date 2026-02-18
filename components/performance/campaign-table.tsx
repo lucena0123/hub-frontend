@@ -199,13 +199,25 @@ const buildLearningRows = (summary?: LearningSummary | null) => {
   const targetLine = `${summary.adsetsMeetingTarget}/${summary.adsetCount} ≥ ${summary.eventTarget}`;
   const budgetLine = `${formatLearningValue(summary.budgetDailyAverage)} · necessário ${formatLearningValue(summary.budgetDailyRequired)}`;
 
+  const anchorLabel =
+    summary.windowBasis === 'since_start'
+      ? 'Desde início'
+      : summary.windowBasis === 'since_reset'
+        ? 'Desde reset'
+        : summary.windowBasis === 'mixed'
+          ? 'Misto (início/reset)'
+          : 'Sem âncora';
+
+  const anchorCoverage = summary.dataCoverage.withStartAnchor ?? 0;
+
   return [
     { label: 'Ad sets', value: `${summary.adsetCount} (${statusLine})` },
-    { label: 'Eventos (7d)', value: `${eventsLine} | ${targetLine}` },
+    { label: 'Janela (7d)', value: `${anchorLabel} | ${targetLine}` },
+    { label: 'Eventos da janela', value: eventsLine },
     { label: 'Budget diário', value: budgetLine },
     {
       label: 'Cobertura',
-      value: `${summary.dataCoverage.withLastEdit}/${summary.adsetCount} com edição · ${summary.dataCoverage.withBudgetData}/${summary.adsetCount} com budget`,
+      value: `${anchorCoverage}/${summary.adsetCount} com âncora · ${summary.dataCoverage.withBudgetData}/${summary.adsetCount} com budget`,
     },
   ];
 };
