@@ -33,6 +33,7 @@ type OpsItem = {
   imageSuggestion: string;
   audienceSuggestion: string;
   budgetSuggestion: string;
+  relatedEvidence: string[];
 };
 
 type OpsStatus =
@@ -243,6 +244,7 @@ export default function MetaOpsPage() {
           evidence: `${alert.metric}: atual ${alert.currentValue} vs referência ${alert.threshold}`,
           successCriterion: successCriterionByBucket(bucket),
           confidence: 'alta',
+          relatedEvidence: [],
           ...playbook,
         };
       });
@@ -271,13 +273,46 @@ export default function MetaOpsPage() {
           evidence: `Proposta ${proposal.status} em ${new Date(proposal.createdAt).toLocaleString('pt-BR')}`,
           successCriterion: successCriterionByBucket(bucket),
           confidence: proposal.status === 'approved' ? 'alta' : 'média',
+          relatedEvidence: [],
           ...playbook,
         };
       });
 
     const all = [...fromAlerts, ...fromProposals];
 
-    return all
+    const priorityWeight: Record<OpsItem['priority'], number> = { critical: 3, warning: 2, info: 1 };
+    const confidenceWeight: Record<OpsItem['confidence'], number> = { alta: 2, média: 1 };
+
+    const dedupedMap = new Map<string, OpsItem>();
+
+    all.forEach((item) => {
+      const dedupeKey = [item.clientId, item.campaignName.toLowerCase(), item.bucket, item.priority].join('::');
+      const existing = dedupedMap.get(dedupeKey);
+
+      if (!existing) {
+        dedupedMap.set(dedupeKey, { ...item, relatedEvidence: [...item.relatedEvidence] });
+        return;
+      }
+
+      const existingScore = priorityWeight[existing.priority] * 10 + confidenceWeight[existing.confidence] + (existing.source === 'alert' ? 3 : 1);
+      const incomingScore = priorityWeight[item.priority] * 10 + confidenceWeight[item.confidence] + (item.source === 'alert' ? 3 : 1);
+
+      const mergedEvidence = Array.from(
+        new Set([
+          ...existing.relatedEvidence,
+          `${existing.source === 'alert' ? 'Alerta' : 'Proposta'}: ${existing.evidence}`,
+          `${item.source === 'alert' ? 'Alerta' : 'Proposta'}: ${item.evidence}`,
+        ])
+      );
+
+      if (incomingScore > existingScore) {
+        dedupedMap.set(dedupeKey, { ...item, relatedEvidence: mergedEvidence });
+      } else {
+        dedupedMap.set(dedupeKey, { ...existing, relatedEvidence: mergedEvidence });
+      }
+    });
+
+    return Array.from(dedupedMap.values())
       .filter((item) => clientFilter === 'all' || item.clientId === clientFilter)
       .filter((item) => priorityFilter === 'all' || item.priority === priorityFilter)
       .filter((item) => confidenceFilter === 'all' || item.confidence === confidenceFilter)
@@ -504,7 +539,10 @@ export default function MetaOpsPage() {
 
                             <p className="text-xs text-muted-foreground">{item.description}</p>
                             <div className="rounded-md border border-border/50 bg-background/60 p-2 text-[11px] text-muted-foreground space-y-1">
-                              <p><strong className="text-foreground/80">Evidência:</strong> {item.evidence}</p>
+                              <p><strong className="text-foreground/80">Evidência principal:</strong> {item.evidence}</p>
+                              {item.relatedEvidence.length > 1 ? (
+                                <p><strong className="text-foreground/80">Evidências relacionadas:</strong> {item.relatedEvidence.length - 1}</p>
+                              ) : null}
                               <p><strong className="text-foreground/80">Critério de sucesso:</strong> {item.successCriterion}</p>
                             </div>
 
