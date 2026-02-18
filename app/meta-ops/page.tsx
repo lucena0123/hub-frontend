@@ -19,6 +19,8 @@ type OpsItem = {
   id: string;
   clientId: string;
   clientName: string;
+  campaignName: string;
+  creativeName: string;
   title: string;
   description: string;
   source: 'alert' | 'proposal';
@@ -76,6 +78,12 @@ const successCriterionByBucket = (bucket: OpsBucket) => {
   if (bucket === 'creative_copy') return 'Meta de sucesso: aumentar conversas ou CTR em até 24h.';
   if (bucket === 'audience') return 'Meta de sucesso: recuperar volume sem elevar CPL em 24h.';
   return 'Meta de sucesso: reduzir CPL ou estabilizar gasto em 24h.';
+};
+
+const inferCreativeName = (title: string, description: string) => {
+  const text = `${title} ${description}`.toLowerCase();
+  if (text.includes('criativo') || text.includes('copy') || text.includes('anúncio')) return 'Criativo principal';
+  return 'Criativo a definir';
 };
 
 const buildPlaybook = (item: {
@@ -177,11 +185,14 @@ export default function MetaOpsPage() {
           clientName: alert.clientName,
         });
 
+        const campaignName = alert.campaignName ?? 'Campanha não identificada';
         return {
           id: `alert:${alert.id}`,
           clientId: alert.clientId,
           clientName: alert.clientName,
-          title: alert.campaignName ?? alert.metric,
+          campaignName,
+          creativeName: inferCreativeName(campaignName, alert.message),
+          title: campaignName,
           description: alert.message,
           source: 'alert',
           priority,
@@ -200,14 +211,17 @@ export default function MetaOpsPage() {
         const priority = toPriority(proposal.severity ?? 'info');
         const clientName = proposal.clientName ?? 'Cliente';
         const title = proposal.title ?? 'Ação proposta';
+        const description = proposal.description ?? `Ação sugerida: ${proposal.action ?? 'review'}`;
         const playbook = buildPlaybook({ title, priority, bucket, clientName });
 
         return {
           id: `proposal:${proposal.proposalId}`,
           clientId: proposal.clientId,
           clientName,
+          campaignName: title,
+          creativeName: inferCreativeName(title, description),
           title,
-          description: proposal.description ?? `Ação sugerida: ${proposal.action ?? 'review'}`,
+          description,
           source: 'proposal',
           priority,
           bucket,
@@ -236,6 +250,24 @@ export default function MetaOpsPage() {
       budget_scale: opsItems.filter((i) => i.bucket === 'budget_scale'),
     };
   }, [opsItems]);
+
+  const groupedByBucketClient = useMemo(() => {
+    const group = (items: OpsItem[]) => {
+      const map = new Map<string, { clientId: string; clientName: string; items: OpsItem[] }>();
+      items.forEach((item) => {
+        const current = map.get(item.clientId) ?? { clientId: item.clientId, clientName: item.clientName, items: [] };
+        current.items.push(item);
+        map.set(item.clientId, current);
+      });
+      return Array.from(map.values()).sort((a, b) => a.clientName.localeCompare(b.clientName, 'pt-BR'));
+    };
+
+    return {
+      creative_copy: group(byBucket.creative_copy),
+      audience: group(byBucket.audience),
+      budget_scale: group(byBucket.budget_scale),
+    };
+  }, [byBucket]);
 
   const doneCount = useMemo(() => opsItems.filter((item) => doneMap[item.id]).length, [opsItems, doneMap]);
 
@@ -312,7 +344,7 @@ export default function MetaOpsPage() {
 
         {(Object.keys(bucketMeta) as OpsBucket[]).map((bucket) => {
           const Icon = bucketMeta[bucket].icon;
-          const items = byBucket[bucket];
+          const groups = groupedByBucketClient[bucket];
 
           return (
             <div key={bucket} className="space-y-3">
@@ -322,91 +354,104 @@ export default function MetaOpsPage() {
                 icon={Icon}
               />
 
-              {items.length === 0 ? (
+              {groups.length === 0 ? (
                 <Card>
                   <CardContent className="pt-6 text-sm text-muted-foreground">Sem itens neste grupo para o filtro atual.</CardContent>
                 </Card>
               ) : (
-                <div className="space-y-2">
-                  {items.map((item) => (
-                    <Card key={item.id}>
-                      <CardContent className="pt-6 space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="font-medium">{item.title}</div>
-                          <div className="flex items-center gap-2">
-                            <Badge className={priorityClass[item.priority]}>{item.priority}</Badge>
-                            <Badge className={confidenceClass[item.confidence]}>confiança {item.confidence}</Badge>
-                            <Badge variant="outline">{item.source === 'alert' ? 'Alerta' : 'Proposta'}</Badge>
-                          </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{item.clientName} · {item.description}</p>
-                        <div className="rounded-md border border-border/50 bg-background/60 p-2 text-[11px] text-muted-foreground space-y-1">
-                          <p><strong className="text-foreground/80">Evidência:</strong> {item.evidence}</p>
-                          <p><strong className="text-foreground/80">Critério de sucesso:</strong> {item.successCriterion}</p>
-                        </div>
+                <div className="space-y-3">
+                  {groups.map((group) => (
+                    <Card key={`${bucket}:${group.clientId}`} className="border-primary/20">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Cliente: {group.clientName}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {group.items.map((item) => (
+                          <div key={item.id} className="rounded-md border border-border/50 bg-card/40 p-3 space-y-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="font-medium">{item.title}</div>
+                              <div className="flex items-center gap-2">
+                                <Badge className={priorityClass[item.priority]}>{item.priority}</Badge>
+                                <Badge className={confidenceClass[item.confidence]}>confiança {item.confidence}</Badge>
+                                <Badge variant="outline">{item.source === 'alert' ? 'Alerta' : 'Proposta'}</Badge>
+                              </div>
+                            </div>
 
-                        <div className="grid gap-2 text-[11px]">
-                          <div className="rounded-md border border-border/50 bg-muted/20 p-2 space-y-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="font-medium text-foreground/90">Copy (copia e cola)</p>
-                              <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => void copyField(`${item.id}:copy`, item.copyText)}>
-                                <Copy className="h-3 w-3 mr-1" /> {copiedKey === `${item.id}:copy` ? 'Copiado' : 'Copiar'}
+                            <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                              <Badge variant="outline">Campanha: {item.campaignName}</Badge>
+                              <Badge variant="outline">Criativo: {item.creativeName}</Badge>
+                            </div>
+
+                            <p className="text-xs text-muted-foreground">{item.description}</p>
+                            <div className="rounded-md border border-border/50 bg-background/60 p-2 text-[11px] text-muted-foreground space-y-1">
+                              <p><strong className="text-foreground/80">Evidência:</strong> {item.evidence}</p>
+                              <p><strong className="text-foreground/80">Critério de sucesso:</strong> {item.successCriterion}</p>
+                            </div>
+
+                            <div className="grid gap-2 text-[11px]">
+                              <div className="rounded-md border border-border/50 bg-muted/20 p-2 space-y-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="font-medium text-foreground/90">Copy (copia e cola)</p>
+                                  <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => void copyField(`${item.id}:copy`, item.copyText)}>
+                                    <Copy className="h-3 w-3 mr-1" /> {copiedKey === `${item.id}:copy` ? 'Copiado' : 'Copiar'}
+                                  </Button>
+                                </div>
+                                <p className="text-muted-foreground whitespace-pre-wrap">{item.copyText}</p>
+                              </div>
+
+                              <div className="rounded-md border border-border/50 bg-muted/20 p-2 space-y-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="font-medium text-foreground/90">Imagem/Vídeo sugerido</p>
+                                  <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => void copyField(`${item.id}:image`, item.imageSuggestion)}>
+                                    <Copy className="h-3 w-3 mr-1" /> {copiedKey === `${item.id}:image` ? 'Copiado' : 'Copiar'}
+                                  </Button>
+                                </div>
+                                <p className="text-muted-foreground">{item.imageSuggestion}</p>
+                              </div>
+
+                              <div className="rounded-md border border-border/50 bg-muted/20 p-2 space-y-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="font-medium text-foreground/90">Público sugerido</p>
+                                  <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => void copyField(`${item.id}:audience`, item.audienceSuggestion)}>
+                                    <Copy className="h-3 w-3 mr-1" /> {copiedKey === `${item.id}:audience` ? 'Copiado' : 'Copiar'}
+                                  </Button>
+                                </div>
+                                <p className="text-muted-foreground">{item.audienceSuggestion}</p>
+                              </div>
+
+                              <div className="rounded-md border border-border/50 bg-muted/20 p-2 space-y-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="font-medium text-foreground/90">Orçamento sugerido</p>
+                                  <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => void copyField(`${item.id}:budget`, item.budgetSuggestion)}>
+                                    <Copy className="h-3 w-3 mr-1" /> {copiedKey === `${item.id}:budget` ? 'Copiado' : 'Copiar'}
+                                  </Button>
+                                </div>
+                                <p className="text-muted-foreground">{item.budgetSuggestion}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                              <Button asChild size="sm" variant="outline" className="h-7 text-[10px]">
+                                <Link href={`/clients/${item.clientId}/performance`}>Diagnóstico</Link>
+                              </Button>
+                              <Button asChild size="sm" variant="outline" className="h-7 text-[10px]">
+                                <Link href={`/optimization/settings?clientId=${item.clientId}`}>Regras</Link>
+                              </Button>
+                              <Button asChild size="sm" variant="outline" className="h-7 text-[10px]">
+                                <Link href={`/optimization/board?clientId=${item.clientId}`}>Board</Link>
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="h-7 text-[10px]"
+                                variant={doneMap[item.id] ? 'secondary' : 'default'}
+                                onClick={() => toggleDone(item.id)}
+                              >
+                                <ClipboardCheck className="h-3 w-3 mr-1" />
+                                {doneMap[item.id] ? 'Implementado' : 'Marcar implementado'}
                               </Button>
                             </div>
-                            <p className="text-muted-foreground whitespace-pre-wrap">{item.copyText}</p>
                           </div>
-
-                          <div className="rounded-md border border-border/50 bg-muted/20 p-2 space-y-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="font-medium text-foreground/90">Imagem/Vídeo sugerido</p>
-                              <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => void copyField(`${item.id}:image`, item.imageSuggestion)}>
-                                <Copy className="h-3 w-3 mr-1" /> {copiedKey === `${item.id}:image` ? 'Copiado' : 'Copiar'}
-                              </Button>
-                            </div>
-                            <p className="text-muted-foreground">{item.imageSuggestion}</p>
-                          </div>
-
-                          <div className="rounded-md border border-border/50 bg-muted/20 p-2 space-y-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="font-medium text-foreground/90">Público sugerido</p>
-                              <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => void copyField(`${item.id}:audience`, item.audienceSuggestion)}>
-                                <Copy className="h-3 w-3 mr-1" /> {copiedKey === `${item.id}:audience` ? 'Copiado' : 'Copiar'}
-                              </Button>
-                            </div>
-                            <p className="text-muted-foreground">{item.audienceSuggestion}</p>
-                          </div>
-
-                          <div className="rounded-md border border-border/50 bg-muted/20 p-2 space-y-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="font-medium text-foreground/90">Orçamento sugerido</p>
-                              <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => void copyField(`${item.id}:budget`, item.budgetSuggestion)}>
-                                <Copy className="h-3 w-3 mr-1" /> {copiedKey === `${item.id}:budget` ? 'Copiado' : 'Copiar'}
-                              </Button>
-                            </div>
-                            <p className="text-muted-foreground">{item.budgetSuggestion}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                          <Button asChild size="sm" variant="outline" className="h-7 text-[10px]">
-                            <Link href={`/clients/${item.clientId}/performance`}>Diagnóstico</Link>
-                          </Button>
-                          <Button asChild size="sm" variant="outline" className="h-7 text-[10px]">
-                            <Link href={`/optimization/settings?clientId=${item.clientId}`}>Regras</Link>
-                          </Button>
-                          <Button asChild size="sm" variant="outline" className="h-7 text-[10px]">
-                            <Link href={`/optimization/board?clientId=${item.clientId}`}>Board</Link>
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="h-7 text-[10px]"
-                            variant={doneMap[item.id] ? 'secondary' : 'default'}
-                            onClick={() => toggleDone(item.id)}
-                          >
-                            <ClipboardCheck className="h-3 w-3 mr-1" />
-                            {doneMap[item.id] ? 'Implementado' : 'Marcar implementado'}
-                          </Button>
-                        </div>
+                        ))}
                       </CardContent>
                     </Card>
                   ))}
