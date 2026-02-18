@@ -35,7 +35,16 @@ type OpsItem = {
   budgetSuggestion: string;
 };
 
+type OpsStatus =
+  | 'pendente'
+  | 'em_execucao'
+  | 'implementado'
+  | 'validado_ganhou'
+  | 'validado_neutro'
+  | 'validado_piorou';
+
 const DONE_KEY = 'meta-ops-done-v1';
+const STATUS_KEY = 'meta-ops-status-v2';
 
 const priorityClass: Record<OpsItem['priority'], string> = {
   critical: 'bg-destructive/15 text-destructive',
@@ -46,6 +55,24 @@ const priorityClass: Record<OpsItem['priority'], string> = {
 const confidenceClass: Record<OpsItem['confidence'], string> = {
   alta: 'bg-emerald-500/15 text-emerald-300',
   média: 'bg-amber-500/15 text-amber-300',
+};
+
+const statusLabel: Record<OpsStatus, string> = {
+  pendente: 'Pendente',
+  em_execucao: 'Em execução',
+  implementado: 'Implementado',
+  validado_ganhou: 'Validado (Ganhou)',
+  validado_neutro: 'Validado (Neutro)',
+  validado_piorou: 'Validado (Piorou)',
+};
+
+const statusClass: Record<OpsStatus, string> = {
+  pendente: 'bg-muted text-muted-foreground',
+  em_execucao: 'bg-blue-500/15 text-blue-300',
+  implementado: 'bg-violet-500/15 text-violet-300',
+  validado_ganhou: 'bg-emerald-500/15 text-emerald-300',
+  validado_neutro: 'bg-amber-500/15 text-amber-300',
+  validado_piorou: 'bg-destructive/15 text-destructive',
 };
 
 const bucketMeta: Record<OpsBucket, { title: string; icon: React.ComponentType<{ className?: string }> }> = {
@@ -124,21 +151,36 @@ export default function MetaOpsPage() {
   const [alerts, setAlerts] = useState<PerformanceAlert[]>([]);
   const [proposals, setProposals] = useState<ActionProposal[]>([]);
   const [clientFilter, setClientFilter] = useState<string>('all');
-  const [doneMap, setDoneMap] = useState<Record<string, boolean>>({});
+  const [priorityFilter, setPriorityFilter] = useState<'all' | OpsItem['priority']>('all');
+  const [confidenceFilter, setConfidenceFilter] = useState<'all' | OpsItem['confidence']>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | OpsStatus>('all');
+  const [statusMap, setStatusMap] = useState<Record<string, OpsStatus>>({});
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(DONE_KEY);
-      if (raw) setDoneMap(JSON.parse(raw) as Record<string, boolean>);
+      const rawStatus = localStorage.getItem(STATUS_KEY);
+      if (rawStatus) {
+        setStatusMap(JSON.parse(rawStatus) as Record<string, OpsStatus>);
+        return;
+      }
+
+      const rawDone = localStorage.getItem(DONE_KEY);
+      if (rawDone) {
+        const parsed = JSON.parse(rawDone) as Record<string, boolean>;
+        const migrated = Object.fromEntries(
+          Object.entries(parsed).map(([key, value]) => [key, value ? 'implementado' : 'pendente'])
+        ) as Record<string, OpsStatus>;
+        setStatusMap(migrated);
+      }
     } catch {
       // ignore
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(DONE_KEY, JSON.stringify(doneMap));
-  }, [doneMap]);
+    localStorage.setItem(STATUS_KEY, JSON.stringify(statusMap));
+  }, [statusMap]);
 
   useEffect(() => {
     const load = async () => {
@@ -236,12 +278,15 @@ export default function MetaOpsPage() {
 
     return all
       .filter((item) => clientFilter === 'all' || item.clientId === clientFilter)
+      .filter((item) => priorityFilter === 'all' || item.priority === priorityFilter)
+      .filter((item) => confidenceFilter === 'all' || item.confidence === confidenceFilter)
+      .filter((item) => statusFilter === 'all' || (statusMap[item.id] ?? 'pendente') === statusFilter)
       .sort((a, b) => {
         const pOrder = { critical: 0, warning: 1, info: 2 } as const;
         if (pOrder[a.priority] !== pOrder[b.priority]) return pOrder[a.priority] - pOrder[b.priority];
         return a.clientName.localeCompare(b.clientName, 'pt-BR');
       });
-  }, [alerts, proposals, clientFilter]);
+  }, [alerts, proposals, clientFilter, priorityFilter, confidenceFilter, statusFilter, statusMap]);
 
   const byBucket = useMemo(() => {
     return {
@@ -269,10 +314,26 @@ export default function MetaOpsPage() {
     };
   }, [byBucket]);
 
-  const doneCount = useMemo(() => opsItems.filter((item) => doneMap[item.id]).length, [opsItems, doneMap]);
+  const statusMetrics = useMemo(() => {
+    const counts: Record<OpsStatus, number> = {
+      pendente: 0,
+      em_execucao: 0,
+      implementado: 0,
+      validado_ganhou: 0,
+      validado_neutro: 0,
+      validado_piorou: 0,
+    };
 
-  const toggleDone = (id: string) => {
-    setDoneMap((prev) => ({ ...prev, [id]: !prev[id] }));
+    opsItems.forEach((item) => {
+      const status = statusMap[item.id] ?? 'pendente';
+      counts[status] += 1;
+    });
+
+    return counts;
+  }, [opsItems, statusMap]);
+
+  const setItemStatus = (id: string, status: OpsStatus) => {
+    setStatusMap((prev) => ({ ...prev, [id]: status }));
   };
 
   const copyField = async (key: string, text: string) => {
@@ -308,9 +369,13 @@ export default function MetaOpsPage() {
       description="Tela única com recomendações baseadas em evidência interna para executar no Meta Ads."
       meta={
         <div className="space-y-2 text-xs text-muted-foreground">
-          <div className="signal-chip">Itens {opsItems.length}</div>
-          <div className="signal-chip">Implementados {doneCount}</div>
-          <div className="signal-chip">Pendentes {Math.max(0, opsItems.length - doneCount)}</div>
+          <div className="signal-chip">Total {opsItems.length}</div>
+          <div className="signal-chip">Pendentes {statusMetrics.pendente}</div>
+          <div className="signal-chip">Em execução {statusMetrics.em_execucao}</div>
+          <div className="signal-chip">Implementados {statusMetrics.implementado}</div>
+          <div className="signal-chip">Validados ✅ {statusMetrics.validado_ganhou}</div>
+          <div className="signal-chip">Validados ➖ {statusMetrics.validado_neutro}</div>
+          <div className="signal-chip">Validados ⛔ {statusMetrics.validado_piorou}</div>
         </div>
       }
     >
@@ -337,6 +402,41 @@ export default function MetaOpsPage() {
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
+
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value as 'all' | OpsItem['priority'])}
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+          >
+            <option value="all">Prioridade: todas</option>
+            <option value="critical">Prioridade: critical</option>
+            <option value="warning">Prioridade: warning</option>
+          </select>
+
+          <select
+            value={confidenceFilter}
+            onChange={(e) => setConfidenceFilter(e.target.value as 'all' | OpsItem['confidence'])}
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+          >
+            <option value="all">Confiança: todas</option>
+            <option value="alta">Confiança: alta</option>
+            <option value="média">Confiança: média</option>
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as 'all' | OpsStatus)}
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+          >
+            <option value="all">Status: todos</option>
+            <option value="pendente">Pendente</option>
+            <option value="em_execucao">Em execução</option>
+            <option value="implementado">Implementado</option>
+            <option value="validado_ganhou">Validado (ganhou)</option>
+            <option value="validado_neutro">Validado (neutro)</option>
+            <option value="validado_piorou">Validado (piorou)</option>
+          </select>
+
           <Button asChild variant="outline" size="sm"><Link href="/summary">Resumo</Link></Button>
           <Button asChild variant="outline" size="sm"><Link href="/alerts">Alertas</Link></Button>
           <Button asChild variant="outline" size="sm"><Link href="/tasks">Tarefas</Link></Button>
@@ -373,6 +473,7 @@ export default function MetaOpsPage() {
                               <div className="flex items-center gap-2">
                                 <Badge className={priorityClass[item.priority]}>{item.priority}</Badge>
                                 <Badge className={confidenceClass[item.confidence]}>confiança {item.confidence}</Badge>
+                                <Badge className={statusClass[(statusMap[item.id] ?? 'pendente')]}>{statusLabel[statusMap[item.id] ?? 'pendente']}</Badge>
                                 <Badge variant="outline">{item.source === 'alert' ? 'Alerta' : 'Proposta'}</Badge>
                               </div>
                             </div>
@@ -440,14 +541,26 @@ export default function MetaOpsPage() {
                               <Button asChild size="sm" variant="outline" className="h-7 text-[10px]">
                                 <Link href={`/optimization/board?clientId=${item.clientId}`}>Board</Link>
                               </Button>
-                              <Button
-                                size="sm"
-                                className="h-7 text-[10px]"
-                                variant={doneMap[item.id] ? 'secondary' : 'default'}
-                                onClick={() => toggleDone(item.id)}
-                              >
-                                <ClipboardCheck className="h-3 w-3 mr-1" />
-                                {doneMap[item.id] ? 'Implementado' : 'Marcar implementado'}
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                              <Button size="sm" className="h-7 text-[10px]" variant="outline" onClick={() => setItemStatus(item.id, 'pendente')}>
+                                Pendente
+                              </Button>
+                              <Button size="sm" className="h-7 text-[10px]" variant="outline" onClick={() => setItemStatus(item.id, 'em_execucao')}>
+                                Em execução
+                              </Button>
+                              <Button size="sm" className="h-7 text-[10px]" variant="outline" onClick={() => setItemStatus(item.id, 'implementado')}>
+                                <ClipboardCheck className="h-3 w-3 mr-1" /> Implementado
+                              </Button>
+                              <Button size="sm" className="h-7 text-[10px]" variant="outline" onClick={() => setItemStatus(item.id, 'validado_ganhou')}>
+                                Validou: ganhou
+                              </Button>
+                              <Button size="sm" className="h-7 text-[10px]" variant="outline" onClick={() => setItemStatus(item.id, 'validado_neutro')}>
+                                Validou: neutro
+                              </Button>
+                              <Button size="sm" className="h-7 text-[10px]" variant="outline" onClick={() => setItemStatus(item.id, 'validado_piorou')}>
+                                Validou: piorou
                               </Button>
                             </div>
                           </div>
