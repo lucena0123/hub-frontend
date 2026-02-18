@@ -751,7 +751,7 @@ export default function MetaOpsPage() {
                                       size="sm"
                                       variant="outline"
                                       className="h-7 text-[10px]"
-                                      disabled={savingRuleItemId === item.id}
+                                      disabled={savingRuleItemId === item.id || clientFilter === 'all'}
                                       onClick={() => void applyRuleSuggestion(item)}
                                     >
                                       Aplicar sugestão
@@ -766,6 +766,9 @@ export default function MetaOpsPage() {
                                       Rollback
                                     </Button>
                                   </div>
+                                  {clientFilter === 'all' ? (
+                                    <p className="text-[10px] text-amber-300">Selecione um cliente no filtro para habilitar aplicação de regra.</p>
+                                  ) : null}
                                 </div>
                               );
                             })()}
