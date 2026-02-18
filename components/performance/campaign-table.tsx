@@ -1012,7 +1012,7 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
               Nenhuma campanha encontrada
             </div>
           ) : (
-            sortedCampaigns.map((campaign) => {
+            sortedCampaigns.map((campaign, index) => {
               const themeKey = resolveThemeKey(campaign);
               const subthemeKey = resolveSubthemeKey(campaign);
               const draftSubtheme = subthemeDrafts[campaign.campaignId] ?? subthemeKey ?? '';
@@ -1100,8 +1100,17 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
                   ? `Baseado na taxa ${formatPercent(conversionRate)} em ${formatOptionalNumber(campaign.totalClicks)} clique(s).`
                   : 'Sem volume suficiente de cliques para leitura estável.';
 
+              const isTopPriority = index === 0 && priorityScore > 0;
+
               return (
-                <div key={campaign.campaignId} className="rounded-[16px] border border-border/60 bg-card/70 p-5">
+                <div
+                  key={campaign.campaignId}
+                  className={`rounded-[16px] border bg-card/70 p-5 ${
+                    isTopPriority
+                      ? 'border-rose-500/60 shadow-[0_0_0_1px_rgba(244,63,94,0.35),0_0_24px_rgba(244,63,94,0.18)]'
+                      : 'border-border/60'
+                  }`}
+                >
                   <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)_minmax(0,0.9fr)]">
                     <div className="space-y-3">
                       <div className="flex items-start justify-between gap-2">
@@ -1144,6 +1153,11 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
                             >
                               {campaign.status}
                             </Badge>
+                            {isTopPriority && (
+                              <Badge className="bg-rose-600 text-white text-[10px]" title="Card com maior prioridade operacional no cliente.">
+                                Ação imediata
+                              </Badge>
+                            )}
                             <Badge
                               className={`text-[10px] ${priorityMeta.className}`}
                               title={`Score de prioridade: ${priorityScore}`}
