@@ -157,6 +157,14 @@ export default function OptimizationEffectivenessPage() {
                 return;
             }
 
+            if (item.action === "desligar") {
+                const confirmed = window.confirm(`Confirmar desligamento da regra ${item.key} para este cliente?`);
+                if (!confirmed) {
+                    setActionNote(`Desligamento cancelado para ${item.key}.`);
+                    return;
+                }
+            }
+
             setApplyingByRule((prev) => ({ ...prev, [item.key]: true }));
             setActionNote(null);
             try {
