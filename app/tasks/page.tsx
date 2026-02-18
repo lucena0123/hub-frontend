@@ -16,14 +16,18 @@ export default function OptimizationTasksPage() {
     const [clientFilter, setClientFilter] = useState('all');
     const [severityFilter, setSeverityFilter] = useState('all');
     const [query, setQuery] = useState('');
+    const [statusMessage, setStatusMessage] = useState<string | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const fetchTasks = async () => {
         try {
             setLoading(true);
+            setErrorMessage(null);
             const data = await getOptimizationTasks();
             setTasks(data);
         } catch (error) {
             console.error('Failed to fetch tasks', error);
+            setErrorMessage('Falha ao carregar tarefas.');
         } finally {
             setLoading(false);
         }
@@ -75,6 +79,17 @@ export default function OptimizationTasksPage() {
                     )}
                 />
 
+                {statusMessage && (
+                    <div className="rounded-[12px] border border-emerald-500/40 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+                        {statusMessage}
+                    </div>
+                )}
+                {errorMessage && (
+                    <div className="rounded-[12px] border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+                        {errorMessage}
+                    </div>
+                )}
+
                 <div className="rounded-[12px] border border-border/60 bg-card/40 p-3 flex flex-wrap items-center gap-2">
                     <Input
                         placeholder="Buscar por nome, descrição ou cliente"
@@ -119,8 +134,9 @@ export default function OptimizationTasksPage() {
                             <TaskActionCard
                                 key={task.id}
                                 task={task}
-                                onActionComplete={() => {
+                                onActionComplete={(message) => {
                                     setTasks(prev => prev.filter(t => t.id !== task.id));
+                                    setStatusMessage(message ?? 'Ação concluída com sucesso.');
                                 }}
                             />
                         ))}

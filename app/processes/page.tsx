@@ -16,6 +16,7 @@ export default function ProcessesPage() {
   const [processes, setProcesses] = useState<ProcessInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastRefreshAt, setLastRefreshAt] = useState<Date | null>(null);
 
   useEffect(() => {
     const fetchProcesses = async () => {
@@ -24,6 +25,7 @@ export default function ProcessesPage() {
         const data = await getProcesses();
         setProcesses(data);
         setError(null);
+        setLastRefreshAt(new Date());
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch processes');
       } finally {
@@ -81,7 +83,30 @@ export default function ProcessesPage() {
           title="Resumo de Execução"
           subtitle="Indicadores rápidos do pipeline."
           icon={PlayCircle}
+          action={(
+            <Button variant="outline" size="sm" onClick={() => void (async () => {
+              try {
+                setLoading(true);
+                const data = await getProcesses();
+                setProcesses(data);
+                setError(null);
+                setLastRefreshAt(new Date());
+              } catch (err) {
+                setError(err instanceof Error ? err.message : 'Falha ao atualizar processos');
+              } finally {
+                setLoading(false);
+              }
+            })()}>
+              Atualizar
+            </Button>
+          )}
         />
+
+        {lastRefreshAt && (
+          <div className="rounded-[12px] border border-border/60 bg-card/40 p-3 text-xs text-muted-foreground">
+            Última atualização: {lastRefreshAt.toLocaleString('pt-BR')}
+          </div>
+        )}
 
         <Reveal>
           <div className="flex flex-wrap gap-4">

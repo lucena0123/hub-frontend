@@ -10,7 +10,7 @@ import { Play, Pause, DollarSign, AlertTriangle, Loader2 } from 'lucide-react';
 
 interface TaskActionCardProps {
     task: Task;
-    onActionComplete: () => void;
+    onActionComplete: (message?: string) => void;
 }
 
 export function TaskActionCard({ task, onActionComplete }: TaskActionCardProps) {
@@ -59,7 +59,7 @@ export function TaskActionCard({ task, onActionComplete }: TaskActionCardProps) 
                 dryRun: true // Safety first!
             });
 
-            onActionComplete();
+            onActionComplete(`Ação executada para ${task.name}.`);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Action failed');
         } finally {
