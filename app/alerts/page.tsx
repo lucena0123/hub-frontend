@@ -11,17 +11,17 @@ import { Reveal } from '@/components/layout/reveal';
 import { SectionHeader } from '@/components/performance/section-header';
 
 const categories = [
-  { value: 'all', label: 'ALL_SYSTEMS' },
-  { value: 'contacts', label: 'Contacts' },
-  { value: 'qualification', label: 'Qualification' },
-  { value: 'trend', label: 'Trend' },
-  { value: 'stalled', label: 'Stalled' },
-  { value: 'sync', label: 'Sync' },
-  { value: 'budget', label: 'Budget' },
+  { value: 'all', label: 'TODOS' },
+  { value: 'contacts', label: 'Contatos' },
+  { value: 'qualification', label: 'Qualificação' },
+  { value: 'trend', label: 'Tendência' },
+  { value: 'stalled', label: 'Sem entrega' },
+  { value: 'sync', label: 'Sincronização' },
+  { value: 'budget', label: 'Orçamento' },
   { value: 'roas', label: 'ROAS' },
   { value: 'ctr', label: 'CTR' },
   { value: 'cpl', label: 'CPL' },
-  { value: 'conversions', label: 'Conversions' },
+  { value: 'conversions', label: 'Conversões' },
   { value: 'bpmn', label: 'BPMN' },
 ];
 

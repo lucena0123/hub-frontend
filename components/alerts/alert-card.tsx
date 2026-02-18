@@ -12,12 +12,12 @@ const typeConfig: Record<
   { label: string; className: string; icon: LucideIcon }
 > = {
   critical: {
-    label: 'Critical',
+    label: 'Crítico',
     className: 'border border-destructive/50 bg-destructive/10 text-destructive',
     icon: AlertOctagon,
   },
   warning: {
-    label: 'Warning',
+    label: 'Alerta',
     className: 'border border-amber-400/50 bg-amber-400/10 text-amber-300',
     icon: AlertTriangle,
   },
@@ -48,7 +48,7 @@ const formatValue = (category: string, value: number) => {
     case 'budget':
       return `${value.toFixed(1)}%`;
     case 'cpl':
-      return `$${value.toFixed(2)}`;
+      return `R$ ${value.toFixed(2)}`;
     case 'conversions':
       return Math.round(value).toString();
     case 'bpmn':
@@ -85,7 +85,7 @@ export function AlertCard({ alert }: { alert: PerformanceAlert }) {
       <CardContent className="space-y-3">
         <div className="text-sm text-muted-foreground">
           <span className="font-medium text-foreground">
-            {alert.campaignName ?? 'Client level'}
+            {alert.campaignName ?? 'Nível cliente'}
           </span>
           {alert.campaignName && (
             <span className="ml-2 text-xs text-muted-foreground">

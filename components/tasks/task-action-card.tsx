@@ -79,11 +79,11 @@ export function TaskActionCard({ task, onActionComplete }: TaskActionCardProps) 
 
     const getActionLabel = () => {
         switch (action.type) {
-            case 'pause_ad': return 'Pause Ad';
-            case 'resume_ad': return 'Resume Ad';
-            case 'set_adset_budget': return `Set Budget to ${action.amount}`;
-            case 'set_campaign_budget': return `Set Budget to ${action.amount}`;
-            default: return 'Execute';
+            case 'pause_ad': return 'Pausar anúncio';
+            case 'resume_ad': return 'Retomar anúncio';
+            case 'set_adset_budget': return `Definir orçamento em ${action.amount}`;
+            case 'set_campaign_budget': return `Definir orçamento em ${action.amount}`;
+            default: return 'Executar';
         }
     };
 
