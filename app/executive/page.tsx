@@ -104,8 +104,8 @@ export default function ExecutiveDashboardPage() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground font-mono">
-        SYSTEM_ERROR: DASHBOARD_DATA_UNAVAILABLE
+      <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">
+        Falha ao carregar o painel executivo.
       </div>
     );
   }

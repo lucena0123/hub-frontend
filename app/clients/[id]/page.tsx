@@ -183,12 +183,12 @@ export default function ClientDetailsPage() {
         <Reveal>
           <Tabs defaultValue={defaultTab} className="space-y-6">
             <TabsList className="premium-subtabs flex-wrap justify-start">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-              <TabsTrigger value="optimization">Optimization</TabsTrigger>
+              <TabsTrigger value="overview">Visão geral</TabsTrigger>
+              <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
+              <TabsTrigger value="optimization">Otimização</TabsTrigger>
               <TabsTrigger value="lead-tracking">Lead Tracking</TabsTrigger>
-              <TabsTrigger value="processes">Processes</TabsTrigger>
-              <TabsTrigger value="edit">Edit</TabsTrigger>
+              <TabsTrigger value="processes">Processos</TabsTrigger>
+              <TabsTrigger value="edit">Editar</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview">
