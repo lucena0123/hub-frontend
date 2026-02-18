@@ -213,13 +213,20 @@ export default function OptimizationEffectivenessPage() {
                                 {dailyChecklist.map((item) => (
                                     <div key={`${item.action}-${item.key}`} className="flex items-start justify-between gap-2 text-[11px]">
                                         <div className="text-muted-foreground">{item.key} — {item.reason}</div>
-                                        <span className={`uppercase tracking-wide px-2 py-0.5 rounded ${
-                                            item.action === "manter"
-                                                ? "bg-emerald-500/15 text-emerald-300"
-                                                : item.action === "ajustar"
-                                                    ? "bg-amber-500/15 text-amber-300"
-                                                    : "bg-destructive/15 text-destructive"
-                                        }`}>{item.action}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`uppercase tracking-wide px-2 py-0.5 rounded ${
+                                                item.action === "manter"
+                                                    ? "bg-emerald-500/15 text-emerald-300"
+                                                    : item.action === "ajustar"
+                                                        ? "bg-amber-500/15 text-amber-300"
+                                                        : "bg-destructive/15 text-destructive"
+                                            }`}>{item.action}</span>
+                                            <Button size="sm" variant="outline" asChild className="h-6 px-2 text-[10px]">
+                                                <Link href={item.action === "manter" ? `/optimization/board?clientId=${clientId}` : `/optimization/settings?clientId=${clientId}`}>
+                                                    {item.action === "manter" ? "Board" : "Regras"}
+                                                </Link>
+                                            </Button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
