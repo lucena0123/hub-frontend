@@ -428,7 +428,32 @@ export default function ComercialPage() {
 
       <div className="grid grid-cols-1 2xl:grid-cols-[1fr_340px] gap-4 items-start">
         {loading ? (
-          <div className="text-sm text-muted-foreground">Carregando pipeline...</div>
+          <section className="rounded-[12px] border border-border/60 bg-card/20 p-4 space-y-3">
+            <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Carregando pipeline</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <div className="h-20 rounded-md bg-muted/20 animate-pulse" />
+              <div className="h-20 rounded-md bg-muted/20 animate-pulse" />
+              <div className="h-20 rounded-md bg-muted/20 animate-pulse" />
+            </div>
+          </section>
+        ) : filteredLeads.length === 0 ? (
+          <section className="rounded-[12px] border border-border/60 bg-card/20 p-6 text-center space-y-3">
+            <p className="text-sm font-medium">Nenhum lead encontrado com os filtros atuais.</p>
+            <p className="text-xs text-muted-foreground">Ajuste os filtros ou cadastre um novo lead para iniciar o pipeline.</p>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                className="h-8 px-3 rounded-md border border-border text-xs"
+                onClick={() => {
+                  setSearch('');
+                  setOrigemFilter('all');
+                  setResponsavelFilter('all');
+                  setStatusFilter('all');
+                }}
+              >
+                Limpar filtros
+              </button>
+            </div>
+          </section>
         ) : (
           <section className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-9 gap-3">
             {COLUMNS.map((col) => (
