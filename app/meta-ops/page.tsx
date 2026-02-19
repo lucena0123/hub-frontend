@@ -36,6 +36,8 @@ type OpsItem = {
   audienceSuggestion: string;
   budgetSuggestion: string;
   relatedEvidence: string[];
+  analysisWindow: string;
+  learningWindow: string;
 };
 
 type OpsStatus =
@@ -49,6 +51,7 @@ type OpsStatus =
 const DONE_KEY = 'meta-ops-done-v1';
 const STATUS_KEY = 'meta-ops-status-v2';
 const ROLLBACK_KEY = 'meta-ops-rule-rollback-v1';
+const IMPLEMENTED_AT_KEY = 'meta-ops-implemented-at-v1';
 
 const priorityClass: Record<OpsItem['priority'], string> = {
   critical: 'bg-destructive/15 text-destructive',
@@ -115,6 +118,23 @@ const inferCreativeName = (title: string, description: string) => {
   const text = `${title} ${description}`.toLowerCase();
   if (text.includes('criativo') || text.includes('copy') || text.includes('anúncio')) return 'Criativo principal';
   return 'Criativo a definir';
+};
+
+const windowsBySource = (source: OpsItem['source'], description: string) => {
+  if (source === 'alert') {
+    const hasStartResetHint = /start|reset/i.test(description);
+    return {
+      analysisWindow: 'Acumulado (métrica consolidada da campanha)',
+      learningWindow: hasStartResetHint
+        ? 'Aprendizado (start/reset explícito no dado)'
+        : 'Aprendizado (start/reset não explícito; validar na tela de Performance)',
+    };
+  }
+
+  return {
+    analysisWindow: 'Operacional atual (item de proposta)',
+    learningWindow: 'Sem base de aprendizado no item; validar start/reset na tela de Performance',
+  };
 };
 
 const ruleSuggestionByBucket = (
@@ -195,6 +215,7 @@ export default function MetaOpsPage() {
   const [confidenceFilter, setConfidenceFilter] = useState<'all' | OpsItem['confidence']>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | OpsStatus>('all');
   const [statusMap, setStatusMap] = useState<Record<string, OpsStatus>>({});
+  const [implementedAtMap, setImplementedAtMap] = useState<Record<string, string>>({});
   const [collapsedClientGroup, setCollapsedClientGroup] = useState<Record<string, boolean>>({});
   const [rulesByClient, setRulesByClient] = useState<Record<string, OptimizationRule[]>>({});
   const [rollbackByItem, setRollbackByItem] = useState<Record<string, { clientId: string; ruleId: string; previous: Record<string, unknown> }>>({});
@@ -226,6 +247,19 @@ export default function MetaOpsPage() {
   useEffect(() => {
     localStorage.setItem(STATUS_KEY, JSON.stringify(statusMap));
   }, [statusMap]);
+
+  useEffect(() => {
+    try {
+      const rawImplemented = localStorage.getItem(IMPLEMENTED_AT_KEY);
+      if (rawImplemented) setImplementedAtMap(JSON.parse(rawImplemented) as Record<string, string>);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(IMPLEMENTED_AT_KEY, JSON.stringify(implementedAtMap));
+  }, [implementedAtMap]);
 
   useEffect(() => {
     try {
@@ -299,6 +333,7 @@ export default function MetaOpsPage() {
         });
 
         const campaignName = alert.campaignName ?? 'Campanha não identificada';
+        const windows = windowsBySource('alert', alert.message);
         return {
           id: `alert:${alert.id}`,
           clientId: alert.clientId,
@@ -314,6 +349,7 @@ export default function MetaOpsPage() {
           successCriterion: successCriterionByBucket(bucket),
           confidence: 'alta',
           relatedEvidence: [],
+          ...windows,
           ...playbook,
         };
       });
@@ -327,6 +363,7 @@ export default function MetaOpsPage() {
         const title = proposal.title ?? 'Ação proposta';
         const description = proposal.description ?? `Ação sugerida: ${proposal.action ?? 'review'}`;
         const playbook = buildPlaybook({ title, priority, bucket, clientName });
+        const windows = windowsBySource('proposal', description);
 
         return {
           id: `proposal:${proposal.proposalId}`,
@@ -343,6 +380,7 @@ export default function MetaOpsPage() {
           successCriterion: successCriterionByBucket(bucket),
           confidence: proposal.status === 'approved' ? 'alta' : 'média',
           relatedEvidence: [],
+          ...windows,
           ...playbook,
         };
       });
@@ -437,8 +475,65 @@ export default function MetaOpsPage() {
     return counts;
   }, [opsItems, statusMap]);
 
+  const hasImplementationTimestamp = (id: string) => Boolean(implementedAtMap[id]);
+
   const setItemStatus = (id: string, status: OpsStatus) => {
+    if (
+      (status === 'validado_ganhou' || status === 'validado_neutro' || status === 'validado_piorou') &&
+      !hasImplementationTimestamp(id)
+    ) {
+      setRuleFeedback('Para validar resultado, marque primeiro como implementado (com timestamp).');
+      return;
+    }
+
     setStatusMap((prev) => ({ ...prev, [id]: status }));
+
+    if (status === 'implementado') {
+      setImplementedAtMap((prev) => ({ ...prev, [id]: prev[id] ?? new Date().toISOString() }));
+      return;
+    }
+
+    if (status === 'pendente') {
+      setImplementedAtMap((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
+  };
+
+  const validationView = (id: string, status: OpsStatus) => {
+    const implementedAt = implementedAtMap[id];
+    if (!implementedAt) {
+      return {
+        implementedAtLabel: status === 'implementado' ? 'Implementado sem data (legado)' : 'Ainda não implementado',
+        checkpoint24: 'pendente',
+        checkpoint48: 'pendente',
+        nextCheckpoint: 'Próximo checkpoint: implementar para iniciar 24h/48h.',
+      };
+    }
+
+    const implementedMs = new Date(implementedAt).getTime();
+    const elapsedHours = Math.max(0, (Date.now() - implementedMs) / (1000 * 60 * 60));
+    const validated = status === 'validado_ganhou' || status === 'validado_neutro' || status === 'validado_piorou';
+
+    const checkpoint24 = validated ? 'validado' : elapsedHours >= 24 ? 'pronto para validar' : 'pendente';
+    const checkpoint48 = validated ? 'validado' : elapsedHours >= 48 ? 'pronto para validar' : 'pendente';
+
+    const nextCheckpoint = validated
+      ? 'Próximo checkpoint: validação concluída.'
+      : elapsedHours < 24
+        ? `Próximo checkpoint: 24h em ~${Math.ceil(24 - elapsedHours)}h.`
+        : elapsedHours < 48
+          ? `Próximo checkpoint: 48h em ~${Math.ceil(48 - elapsedHours)}h.`
+          : 'Próximo checkpoint: 24h/48h já prontos para validação.';
+
+    return {
+      implementedAtLabel: `Implementado em ${new Date(implementedAt).toLocaleString('pt-BR')}`,
+      checkpoint24,
+      checkpoint48,
+      nextCheckpoint,
+    };
   };
 
   const currentRuleParams = (item: OpsItem) => {
@@ -573,7 +668,7 @@ export default function MetaOpsPage() {
           <CardContent className="grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
             <div className="rounded-md border border-border/50 bg-muted/20 p-2">1) Filtre cliente e priorize itens críticos.</div>
             <div className="rounded-md border border-border/50 bg-muted/20 p-2">2) Abra a tela alvo (Performance/Board/Regras) e implemente no Meta Ads.</div>
-            <div className="rounded-md border border-border/50 bg-muted/20 p-2">3) Marque como implementado e valide resultado em 24h.</div>
+            <div className="rounded-md border border-border/50 bg-muted/20 p-2">3) Marque como implementado e valide resultado em 24h e 48h.</div>
           </CardContent>
         </Card>
 
@@ -693,7 +788,19 @@ export default function MetaOpsPage() {
                               {item.relatedEvidence.length > 1 ? (
                                 <p><strong className="text-foreground/80">Evidências relacionadas:</strong> {item.relatedEvidence.length - 1}</p>
                               ) : null}
+                              <p><strong className="text-foreground/80">Janela de análise:</strong> {item.analysisWindow}</p>
+                              <p><strong className="text-foreground/80">Janela de aprendizado:</strong> {item.learningWindow}</p>
                               <p><strong className="text-foreground/80">Critério de sucesso:</strong> {item.successCriterion}</p>
+                              <p>
+                                <strong className="text-foreground/80">Próximo checkpoint:</strong>{' '}
+                                {validationView(item.id, statusMap[item.id] ?? 'pendente').nextCheckpoint}
+                              </p>
+                            </div>
+
+                            <div className="rounded-md border border-border/50 bg-muted/20 p-2 text-[11px] text-muted-foreground space-y-1">
+                              <p><strong className="text-foreground/80">Validação 24h:</strong> {validationView(item.id, statusMap[item.id] ?? 'pendente').checkpoint24}</p>
+                              <p><strong className="text-foreground/80">Validação 48h:</strong> {validationView(item.id, statusMap[item.id] ?? 'pendente').checkpoint48}</p>
+                              <p><strong className="text-foreground/80">Implementação:</strong> {validationView(item.id, statusMap[item.id] ?? 'pendente').implementedAtLabel}</p>
                             </div>
 
                             <div className="grid gap-2 text-[11px]">
@@ -795,13 +902,31 @@ export default function MetaOpsPage() {
                               <Button size="sm" className="h-7 text-[10px]" variant="outline" onClick={() => setItemStatus(item.id, 'implementado')}>
                                 <ClipboardCheck className="h-3 w-3 mr-1" /> Implementado
                               </Button>
-                              <Button size="sm" className="h-7 text-[10px]" variant="outline" onClick={() => setItemStatus(item.id, 'validado_ganhou')}>
+                              <Button
+                                size="sm"
+                                className="h-7 text-[10px]"
+                                variant="outline"
+                                disabled={!hasImplementationTimestamp(item.id)}
+                                onClick={() => setItemStatus(item.id, 'validado_ganhou')}
+                              >
                                 Validou: ganhou
                               </Button>
-                              <Button size="sm" className="h-7 text-[10px]" variant="outline" onClick={() => setItemStatus(item.id, 'validado_neutro')}>
+                              <Button
+                                size="sm"
+                                className="h-7 text-[10px]"
+                                variant="outline"
+                                disabled={!hasImplementationTimestamp(item.id)}
+                                onClick={() => setItemStatus(item.id, 'validado_neutro')}
+                              >
                                 Validou: neutro
                               </Button>
-                              <Button size="sm" className="h-7 text-[10px]" variant="outline" onClick={() => setItemStatus(item.id, 'validado_piorou')}>
+                              <Button
+                                size="sm"
+                                className="h-7 text-[10px]"
+                                variant="outline"
+                                disabled={!hasImplementationTimestamp(item.id)}
+                                onClick={() => setItemStatus(item.id, 'validado_piorou')}
+                              >
                                 Validou: piorou
                               </Button>
                             </div>
