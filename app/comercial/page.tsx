@@ -53,6 +53,9 @@ export default function ComercialPage() {
   const [nomeEscritorio, setNomeEscritorio] = useState('');
   const [origem, setOrigem] = useState<'instagram' | 'indicacao' | 'site' | 'whatsapp' | 'outro'>('instagram');
   const [responsavel, setResponsavel] = useState('Matheus');
+  const [search, setSearch] = useState('');
+  const [origemFilter, setOrigemFilter] = useState<'all' | 'instagram' | 'indicacao' | 'site' | 'whatsapp' | 'outro'>('all');
+  const [responsavelFilter, setResponsavelFilter] = useState<'all' | string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | CommercialLeadStatus>('all');
   const [selectedLead, setSelectedLead] = useState<CommercialLead | null>(null);
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
@@ -172,15 +175,32 @@ export default function ComercialPage() {
     await onMoveLead(lead, targetStatus);
   };
 
+  const responsavelOptions = useMemo(() => {
+    return Array.from(new Set(leads.map((lead) => lead.responsavel).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [leads]);
+
+  const filteredLeads = useMemo(() => {
+    return leads.filter((lead) => {
+      if (statusFilter !== 'all' && lead.statusAtual !== statusFilter) return false;
+      if (origemFilter !== 'all' && lead.origem !== origemFilter) return false;
+      if (responsavelFilter !== 'all' && lead.responsavel !== responsavelFilter) return false;
+      if (search.trim()) {
+        const q = search.trim().toLowerCase();
+        const hay = `${lead.nomeEscritorio} ${lead.origem} ${lead.responsavel}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [leads, statusFilter, origemFilter, responsavelFilter, search]);
+
   const leadsByStatus = useMemo(() => {
     const grouped: Record<string, CommercialLead[]> = {};
     for (const col of COLUMNS) grouped[col.key] = [];
 
-    const baseLeads = statusFilter === 'all' ? leads : leads.filter((lead) => lead.statusAtual === statusFilter);
-    for (const lead of baseLeads) grouped[lead.statusAtual]?.push(lead);
+    for (const lead of filteredLeads) grouped[lead.statusAtual]?.push(lead);
 
     return grouped;
-  }, [leads, statusFilter]);
+  }, [filteredLeads]);
 
   const kpis = useMemo(() => {
     const total = leads.length;
@@ -222,18 +242,55 @@ export default function ComercialPage() {
         {error && <p className="text-xs text-destructive">{error}</p>}
       </section>
 
-      <section className="rounded-[12px] border border-border/60 bg-card/20 p-3 flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted-foreground uppercase tracking-[0.15em]">Filtro</span>
-        <select
-          className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as 'all' | CommercialLeadStatus)}
-        >
-          <option value="all">Todos</option>
-          {COLUMNS.map((col) => (
-            <option key={col.key} value={col.key}>{col.label}</option>
-          ))}
-        </select>
+      <section className="rounded-[12px] border border-border/60 bg-card/20 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground uppercase tracking-[0.15em]">Filtros</span>
+          <span className="text-[11px] text-muted-foreground">Exibindo {filteredLeads.length} de {leads.length}</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <input
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+            placeholder="Buscar por escritório, origem ou responsável"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+
+          <select
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as 'all' | CommercialLeadStatus)}
+          >
+            <option value="all">Status: Todos</option>
+            {COLUMNS.map((col) => (
+              <option key={col.key} value={col.key}>{col.label}</option>
+            ))}
+          </select>
+
+          <select
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+            value={origemFilter}
+            onChange={(e) => setOrigemFilter(e.target.value as typeof origemFilter)}
+          >
+            <option value="all">Origem: Todas</option>
+            <option value="instagram">instagram</option>
+            <option value="indicacao">indicação</option>
+            <option value="site">site</option>
+            <option value="whatsapp">whatsapp</option>
+            <option value="outro">outro</option>
+          </select>
+
+          <select
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+            value={responsavelFilter}
+            onChange={(e) => setResponsavelFilter(e.target.value)}
+          >
+            <option value="all">Responsável: Todos</option>
+            {responsavelOptions.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+        </div>
       </section>
 
       <section className="grid grid-cols-2 md:grid-cols-5 gap-2">
