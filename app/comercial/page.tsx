@@ -60,6 +60,7 @@ export default function ComercialPage() {
   const [origemFilter, setOrigemFilter] = useState<'all' | 'instagram' | 'indicacao' | 'site' | 'whatsapp' | 'outro'>('all');
   const [responsavelFilter, setResponsavelFilter] = useState<'all' | string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | CommercialLeadStatus>('all');
+  const [kpiRange, setKpiRange] = useState<'all' | 7 | 30>('all');
   const [sortBy, setSortBy] = useState<'updated_desc' | 'name_asc'>('updated_desc');
   const [page, setPage] = useState(1);
   const pageSize = 50;
@@ -82,7 +83,7 @@ export default function ComercialPage() {
           limit: pageSize,
           offset: (page - 1) * pageSize,
         }),
-        getCommercialDashboard(),
+        getCommercialDashboard(kpiRange === 'all' ? undefined : kpiRange),
       ]);
       setLeads(data);
       setKpis(dashboard);
@@ -91,7 +92,7 @@ export default function ComercialPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, responsavelFilter, page]);
+  }, [statusFilter, responsavelFilter, page, kpiRange]);
 
   useEffect(() => {
     fetchLeads();
@@ -388,8 +389,21 @@ export default function ComercialPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-2 md:grid-cols-5 gap-2">
-        <div className="rounded-[10px] border border-border/60 bg-card/30 p-3">
+      <section className="space-y-2">
+        <div className="flex items-center justify-end">
+          <select
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+            value={kpiRange}
+            onChange={(e) => setKpiRange(e.target.value === 'all' ? 'all' : (Number(e.target.value) as 7 | 30))}
+          >
+            <option value="all">KPI: Todo período</option>
+            <option value="7">KPI: Últimos 7 dias</option>
+            <option value="30">KPI: Últimos 30 dias</option>
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          <div className="rounded-[10px] border border-border/60 bg-card/30 p-3">
           <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Leads totais</p>
           <p className="text-xl font-semibold">{kpis.total}</p>
         </div>
@@ -405,9 +419,10 @@ export default function ComercialPage() {
           <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Propostas</p>
           <p className="text-xl font-semibold">{kpis.propostas}</p>
         </div>
-        <div className="rounded-[10px] border border-border/60 bg-card/30 p-3">
-          <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Fechados</p>
-          <p className="text-xl font-semibold text-emerald-300">{kpis.fechados}</p>
+          <div className="rounded-[10px] border border-border/60 bg-card/30 p-3">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Fechados</p>
+            <p className="text-xl font-semibold text-emerald-300">{kpis.fechados}</p>
+          </div>
         </div>
       </section>
 

@@ -58,8 +58,10 @@ export async function getCommercialLeads(params?: {
   return data;
 }
 
-export async function getCommercialDashboard(): Promise<CommercialDashboard> {
-  const { data } = await apiClient.get<CommercialDashboard>('/api/comercial/dashboard');
+export async function getCommercialDashboard(rangeDays?: 7 | 30): Promise<CommercialDashboard> {
+  const { data } = await apiClient.get<CommercialDashboard>('/api/comercial/dashboard', {
+    params: rangeDays ? { rangeDays } : undefined,
+  });
   return data;
 }
 
