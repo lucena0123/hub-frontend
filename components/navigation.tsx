@@ -56,6 +56,11 @@ const navItems = [
     icon: Kanban,
   },
   {
+    href: '/comercial',
+    label: 'Comercial',
+    icon: Users,
+  },
+  {
     href: '/alerts',
     label: 'Alertas',
     icon: Bell,

@@ -118,6 +118,14 @@ export {
 } from './client/auth';
 
 export {
+  getCommercialLeads,
+  createCommercialLead,
+  moveCommercialLead,
+  type CommercialLead,
+  type CommercialLeadStatus,
+} from './client/commercial';
+
+export {
   getAnomalies,
   getGlobalAnomalies,
   getCampaignHealth,
