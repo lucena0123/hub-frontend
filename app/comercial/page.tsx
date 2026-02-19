@@ -182,6 +182,16 @@ export default function ComercialPage() {
     return grouped;
   }, [leads, statusFilter]);
 
+  const kpis = useMemo(() => {
+    const total = leads.length;
+    const novos = leads.filter((lead) => lead.statusAtual === 'novo_lead').length;
+    const diagnosticos = leads.filter((lead) => ['diagnostico_agendado', 'diagnostico_concluido'].includes(lead.statusAtual)).length;
+    const propostas = leads.filter((lead) => ['proposta_enviada', 'negociacao'].includes(lead.statusAtual)).length;
+    const fechados = leads.filter((lead) => lead.statusAtual === 'fechado').length;
+
+    return { total, novos, diagnosticos, propostas, fechados };
+  }, [leads]);
+
   return (
     <PageShell
       eyebrow="Comercial"
@@ -224,6 +234,29 @@ export default function ComercialPage() {
             <option key={col.key} value={col.key}>{col.label}</option>
           ))}
         </select>
+      </section>
+
+      <section className="grid grid-cols-2 md:grid-cols-5 gap-2">
+        <div className="rounded-[10px] border border-border/60 bg-card/30 p-3">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Leads totais</p>
+          <p className="text-xl font-semibold">{kpis.total}</p>
+        </div>
+        <div className="rounded-[10px] border border-border/60 bg-card/30 p-3">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Novos</p>
+          <p className="text-xl font-semibold">{kpis.novos}</p>
+        </div>
+        <div className="rounded-[10px] border border-border/60 bg-card/30 p-3">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Diagnósticos</p>
+          <p className="text-xl font-semibold">{kpis.diagnosticos}</p>
+        </div>
+        <div className="rounded-[10px] border border-border/60 bg-card/30 p-3">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Propostas</p>
+          <p className="text-xl font-semibold">{kpis.propostas}</p>
+        </div>
+        <div className="rounded-[10px] border border-border/60 bg-card/30 p-3">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Fechados</p>
+          <p className="text-xl font-semibold text-emerald-300">{kpis.fechados}</p>
+        </div>
       </section>
 
       <div className="grid grid-cols-1 2xl:grid-cols-[1fr_340px] gap-4 items-start">
