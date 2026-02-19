@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AxiosError } from 'axios';
 import { X } from 'lucide-react';
 import { PageShell } from '@/components/layout/page-shell';
@@ -60,6 +60,9 @@ export default function ComercialPage() {
   const [origemFilter, setOrigemFilter] = useState<'all' | 'instagram' | 'indicacao' | 'site' | 'whatsapp' | 'outro'>('all');
   const [responsavelFilter, setResponsavelFilter] = useState<'all' | string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | CommercialLeadStatus>('all');
+  const [sortBy, setSortBy] = useState<'updated_desc' | 'name_asc'>('updated_desc');
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
   const [selectedLead, setSelectedLead] = useState<CommercialLead | null>(null);
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
   const [hoverColumn, setHoverColumn] = useState<CommercialLeadStatus | null>(null);
@@ -69,11 +72,16 @@ export default function ComercialPage() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchLeads = async () => {
+  const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
       const [data, dashboard] = await Promise.all([
-        getCommercialLeads(),
+        getCommercialLeads({
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          responsavel: responsavelFilter === 'all' ? undefined : responsavelFilter,
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+        }),
         getCommercialDashboard(),
       ]);
       setLeads(data);
@@ -83,11 +91,15 @@ export default function ComercialPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, responsavelFilter, page]);
 
   useEffect(() => {
     fetchLeads();
-  }, []);
+  }, [fetchLeads]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, responsavelFilter, origemFilter, search]);
 
   const onCreateLead = async () => {
     try {
@@ -187,7 +199,7 @@ export default function ComercialPage() {
   }, [leads]);
 
   const filteredLeads = useMemo(() => {
-    return leads.filter((lead) => {
+    const base = leads.filter((lead) => {
       if (statusFilter !== 'all' && lead.statusAtual !== statusFilter) return false;
       if (origemFilter !== 'all' && lead.origem !== origemFilter) return false;
       if (responsavelFilter !== 'all' && lead.responsavel !== responsavelFilter) return false;
@@ -198,7 +210,13 @@ export default function ComercialPage() {
       }
       return true;
     });
-  }, [leads, statusFilter, origemFilter, responsavelFilter, search]);
+
+    if (sortBy === 'name_asc') {
+      return [...base].sort((a, b) => a.nomeEscritorio.localeCompare(b.nomeEscritorio, 'pt-BR'));
+    }
+
+    return base;
+  }, [leads, statusFilter, origemFilter, responsavelFilter, search, sortBy]);
 
   const leadsByStatus = useMemo(() => {
     const grouped: Record<string, CommercialLead[]> = {};
@@ -244,10 +262,10 @@ export default function ComercialPage() {
       <section className="rounded-[12px] border border-border/60 bg-card/20 p-3 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground uppercase tracking-[0.15em]">Filtros</span>
-          <span className="text-[11px] text-muted-foreground">Exibindo {filteredLeads.length} de {leads.length}</span>
+          <span className="text-[11px] text-muted-foreground">Exibindo {filteredLeads.length} de {leads.length} · Página {page}</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
           <input
             className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
             placeholder="Buscar por escritório, origem ou responsável"
@@ -289,6 +307,32 @@ export default function ComercialPage() {
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
+
+          <select
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'updated_desc' | 'name_asc')}
+          >
+            <option value="updated_desc">Ordenação: Atualização (desc)</option>
+            <option value="name_asc">Ordenação: Nome (A-Z)</option>
+          </select>
+        </div>
+
+        <div className="flex items-center justify-end gap-2">
+          <button
+            className="h-8 px-3 rounded-md border border-border text-xs disabled:opacity-50"
+            disabled={page <= 1 || loading}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Página anterior
+          </button>
+          <button
+            className="h-8 px-3 rounded-md border border-border text-xs disabled:opacity-50"
+            disabled={loading || leads.length < pageSize}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Próxima página
+          </button>
         </div>
       </section>
 

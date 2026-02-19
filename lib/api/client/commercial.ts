@@ -46,9 +46,14 @@ export interface MoveLeadPayload {
   dataProximaAcao?: string;
 }
 
-export async function getCommercialLeads(status?: CommercialLeadStatus): Promise<CommercialLead[]> {
+export async function getCommercialLeads(params?: {
+  status?: CommercialLeadStatus;
+  responsavel?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<CommercialLead[]> {
   const { data } = await apiClient.get<CommercialLead[]>('/api/comercial/leads', {
-    params: status ? { status } : undefined,
+    params,
   });
   return data;
 }
