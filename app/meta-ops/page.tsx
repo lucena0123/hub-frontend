@@ -38,6 +38,7 @@ type OpsItem = {
   relatedEvidence: string[];
   analysisWindow: string;
   learningWindow: string;
+  learningWindowBasis?: 'since_start' | 'since_reset' | 'mixed' | 'unknown';
 };
 
 type OpsStatus =
@@ -82,6 +83,13 @@ const statusClass: Record<OpsStatus, string> = {
   validado_piorou: 'bg-destructive/15 text-destructive',
 };
 
+const learningBasisLabel: Record<NonNullable<OpsItem['learningWindowBasis']>, string> = {
+  since_start: 'base: desde início',
+  since_reset: 'base: desde reset',
+  mixed: 'base: mista',
+  unknown: 'base: não definida',
+};
+
 const bucketMeta: Record<OpsBucket, { title: string; icon: React.ComponentType<{ className?: string }> }> = {
   creative_copy: { title: 'Criativo & Copy', icon: Megaphone },
   audience: { title: 'Público & Segmentação', icon: Target },
@@ -123,14 +131,17 @@ const inferCreativeName = (title: string, description: string) => {
 const windowsBySource = (
   source: OpsItem['source'],
   description: string,
-  hinted?: { analysisWindow?: string; learningWindow?: string; learningWindowBasis?: string }
+  hinted?: {
+    analysisWindow?: string;
+    learningWindow?: string;
+    learningWindowBasis?: 'since_start' | 'since_reset' | 'mixed' | 'unknown';
+  }
 ) => {
   if (hinted?.analysisWindow || hinted?.learningWindow) {
-    const basisText = hinted.learningWindowBasis ? ` (base: ${hinted.learningWindowBasis})` : '';
     return {
       analysisWindow: hinted.analysisWindow ?? 'Acumulado (métrica consolidada da campanha)',
-      learningWindow:
-        (hinted.learningWindow ?? 'Aprendizado (start/reset não explícito; validar na tela de Performance)') + basisText,
+      learningWindow: hinted.learningWindow ?? 'Aprendizado (start/reset não explícito; validar na tela de Performance)',
+      learningWindowBasis: hinted.learningWindowBasis ?? 'unknown',
     };
   }
 
@@ -141,12 +152,14 @@ const windowsBySource = (
       learningWindow: hasStartResetHint
         ? 'Aprendizado (start/reset explícito no dado)'
         : 'Aprendizado (start/reset não explícito; validar na tela de Performance)',
+      learningWindowBasis: hasStartResetHint ? 'mixed' : 'unknown',
     };
   }
 
   return {
     analysisWindow: 'Operacional atual (item de proposta)',
     learningWindow: 'Sem base de aprendizado no item; validar start/reset na tela de Performance',
+    learningWindowBasis: 'unknown',
   };
 };
 
@@ -797,6 +810,7 @@ export default function MetaOpsPage() {
                             <div className="flex flex-wrap items-center gap-2 text-[11px]">
                               <Badge variant="outline">Campanha: {item.campaignName}</Badge>
                               <Badge variant="outline">Criativo: {item.creativeName}</Badge>
+                              <Badge variant="outline">{learningBasisLabel[item.learningWindowBasis ?? 'unknown']}</Badge>
                             </div>
 
                             <p className="text-xs text-muted-foreground">{item.description}</p>
