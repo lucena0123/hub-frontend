@@ -227,6 +227,51 @@ export default function ComercialPage() {
     return grouped;
   }, [filteredLeads]);
 
+  const exportFilteredLeadsCsv = () => {
+    const headers = [
+      'leadId',
+      'nomeEscritorio',
+      'origem',
+      'responsavel',
+      'statusAtual',
+      'dor01Ok',
+      'dor02Ok',
+      'dor03Ok',
+      'dataEntrada',
+      'updatedAt',
+    ];
+
+    const rows = filteredLeads.map((lead) => [
+      lead.leadId,
+      lead.nomeEscritorio,
+      lead.origem,
+      lead.responsavel,
+      lead.statusAtual,
+      lead.dor01Ok ? 'true' : 'false',
+      lead.dor02Ok ? 'true' : 'false',
+      lead.dor03Ok ? 'true' : 'false',
+      lead.dataEntrada,
+      lead.updatedAt,
+    ]);
+
+    const escapeCsv = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
+    const content = [headers, ...rows]
+      .map((cols) => cols.map((col) => escapeCsv(String(col ?? ''))).join(','))
+      .join('\n');
+
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `comercial-leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setStatusMessage('Exportação CSV concluída.');
+  };
+
   // KPIs são carregados do backend em /api/comercial/dashboard
 
   return (
@@ -319,6 +364,13 @@ export default function ComercialPage() {
         </div>
 
         <div className="flex items-center justify-end gap-2">
+          <button
+            className="h-8 px-3 rounded-md border border-emerald-500/50 text-emerald-300 text-xs hover:bg-emerald-500/10 disabled:opacity-50"
+            disabled={filteredLeads.length === 0}
+            onClick={exportFilteredLeadsCsv}
+          >
+            Exportar CSV
+          </button>
           <button
             className="h-8 px-3 rounded-md border border-border text-xs disabled:opacity-50"
             disabled={page <= 1 || loading}
