@@ -50,6 +50,8 @@ export default function ComercialPage() {
   const [responsavel, setResponsavel] = useState('Matheus');
   const [statusFilter, setStatusFilter] = useState<'all' | CommercialLeadStatus>('all');
   const [selectedLead, setSelectedLead] = useState<CommercialLead | null>(null);
+  const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
+  const [hoverColumn, setHoverColumn] = useState<CommercialLeadStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchLeads = async () => {
@@ -114,6 +116,17 @@ export default function ComercialPage() {
     }
   };
 
+  const handleDropToColumn = async (targetStatus: CommercialLeadStatus, leadId?: string) => {
+    const effectiveLeadId = leadId || draggingLeadId;
+    if (!effectiveLeadId) return;
+
+    const lead = leads.find((item) => item.leadId === effectiveLeadId);
+    if (!lead) return;
+    if (lead.statusAtual === targetStatus) return;
+
+    await onMoveLead(lead, targetStatus);
+  };
+
   const leadsByStatus = useMemo(() => {
     const grouped: Record<string, CommercialLead[]> = {};
     for (const col of COLUMNS) grouped[col.key] = [];
@@ -173,7 +186,22 @@ export default function ComercialPage() {
         ) : (
           <section className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-9 gap-3">
             {COLUMNS.map((col) => (
-              <div key={col.key} className="rounded-[12px] border border-border/60 bg-card/30 p-3 space-y-2 min-h-[220px]">
+              <div
+                key={col.key}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setHoverColumn(col.key);
+                }}
+                onDragLeave={() => setHoverColumn((prev) => (prev === col.key ? null : prev))}
+                onDrop={async (e) => {
+                  e.preventDefault();
+                  const droppedLeadId = e.dataTransfer.getData('text/plain');
+                  await handleDropToColumn(col.key, droppedLeadId || undefined);
+                  setDraggingLeadId(null);
+                  setHoverColumn(null);
+                }}
+                className={`rounded-[12px] border bg-card/30 p-3 space-y-2 min-h-[220px] ${hoverColumn === col.key ? 'border-primary/70' : 'border-border/60'}`}
+              >
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{col.label}</h3>
                   <span className="text-[11px] text-muted-foreground">{(leadsByStatus[col.key] || []).length}</span>
@@ -185,6 +213,15 @@ export default function ComercialPage() {
                     return (
                       <article
                         key={lead.leadId}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', lead.leadId);
+                          setDraggingLeadId(lead.leadId);
+                        }}
+                        onDragEnd={() => {
+                          setDraggingLeadId(null);
+                          setHoverColumn(null);
+                        }}
                         className={`rounded-lg border p-2 space-y-2 cursor-pointer transition-colors ${selectedLead?.leadId === lead.leadId ? 'border-primary/70 bg-primary/5' : 'border-border/60 bg-background/60'}`}
                         onClick={() => setSelectedLead(lead)}
                       >
