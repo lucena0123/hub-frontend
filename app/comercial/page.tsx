@@ -5,9 +5,11 @@ import { AxiosError } from 'axios';
 import { X } from 'lucide-react';
 import { PageShell } from '@/components/layout/page-shell';
 import {
+  CommercialDashboard,
   CommercialLead,
   CommercialLeadStatus,
   createCommercialLead,
+  getCommercialDashboard,
   getCommercialLeads,
   moveCommercialLead,
 } from '@/lib/api/client/commercial';
@@ -50,6 +52,7 @@ export default function ComercialPage() {
   const [leads, setLeads] = useState<CommercialLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [kpis, setKpis] = useState<CommercialDashboard>({ total: 0, novos: 0, diagnosticos: 0, propostas: 0, fechados: 0 });
   const [nomeEscritorio, setNomeEscritorio] = useState('');
   const [origem, setOrigem] = useState<'instagram' | 'indicacao' | 'site' | 'whatsapp' | 'outro'>('instagram');
   const [responsavel, setResponsavel] = useState('Matheus');
@@ -69,8 +72,12 @@ export default function ComercialPage() {
   const fetchLeads = async () => {
     try {
       setLoading(true);
-      const data = await getCommercialLeads();
+      const [data, dashboard] = await Promise.all([
+        getCommercialLeads(),
+        getCommercialDashboard(),
+      ]);
       setLeads(data);
+      setKpis(dashboard);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Falha ao carregar pipeline.'));
     } finally {
@@ -202,15 +209,7 @@ export default function ComercialPage() {
     return grouped;
   }, [filteredLeads]);
 
-  const kpis = useMemo(() => {
-    const total = leads.length;
-    const novos = leads.filter((lead) => lead.statusAtual === 'novo_lead').length;
-    const diagnosticos = leads.filter((lead) => ['diagnostico_agendado', 'diagnostico_concluido'].includes(lead.statusAtual)).length;
-    const propostas = leads.filter((lead) => ['proposta_enviada', 'negociacao'].includes(lead.statusAtual)).length;
-    const fechados = leads.filter((lead) => lead.statusAtual === 'fechado').length;
-
-    return { total, novos, diagnosticos, propostas, fechados };
-  }, [leads]);
+  // KPIs são carregados do backend em /api/comercial/dashboard
 
   return (
     <PageShell

@@ -119,10 +119,12 @@ export {
 
 export {
   getCommercialLeads,
+  getCommercialDashboard,
   createCommercialLead,
   moveCommercialLead,
   type CommercialLead,
   type CommercialLeadStatus,
+  type CommercialDashboard,
 } from './client/commercial';
 
 export {

@@ -26,6 +26,14 @@ export interface CommercialLead {
   updatedAt: string;
 }
 
+export interface CommercialDashboard {
+  total: number;
+  novos: number;
+  diagnosticos: number;
+  propostas: number;
+  fechados: number;
+}
+
 export interface MoveLeadPayload {
   to: CommercialLeadStatus;
   observacao?: string;
@@ -42,6 +50,11 @@ export async function getCommercialLeads(status?: CommercialLeadStatus): Promise
   const { data } = await apiClient.get<CommercialLead[]>('/api/comercial/leads', {
     params: status ? { status } : undefined,
   });
+  return data;
+}
+
+export async function getCommercialDashboard(): Promise<CommercialDashboard> {
+  const { data } = await apiClient.get<CommercialDashboard>('/api/comercial/dashboard');
   return data;
 }
 
