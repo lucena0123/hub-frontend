@@ -120,7 +120,20 @@ const inferCreativeName = (title: string, description: string) => {
   return 'Criativo a definir';
 };
 
-const windowsBySource = (source: OpsItem['source'], description: string) => {
+const windowsBySource = (
+  source: OpsItem['source'],
+  description: string,
+  hinted?: { analysisWindow?: string; learningWindow?: string; learningWindowBasis?: string }
+) => {
+  if (hinted?.analysisWindow || hinted?.learningWindow) {
+    const basisText = hinted.learningWindowBasis ? ` (base: ${hinted.learningWindowBasis})` : '';
+    return {
+      analysisWindow: hinted.analysisWindow ?? 'Acumulado (métrica consolidada da campanha)',
+      learningWindow:
+        (hinted.learningWindow ?? 'Aprendizado (start/reset não explícito; validar na tela de Performance)') + basisText,
+    };
+  }
+
   if (source === 'alert') {
     const hasStartResetHint = /start|reset/i.test(description);
     return {
@@ -333,7 +346,11 @@ export default function MetaOpsPage() {
         });
 
         const campaignName = alert.campaignName ?? 'Campanha não identificada';
-        const windows = windowsBySource('alert', alert.message);
+        const windows = windowsBySource('alert', alert.message, {
+          analysisWindow: alert.analysisWindow,
+          learningWindow: alert.learningWindow,
+          learningWindowBasis: alert.learningWindowBasis,
+        });
         return {
           id: `alert:${alert.id}`,
           clientId: alert.clientId,
