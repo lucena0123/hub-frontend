@@ -49,7 +49,7 @@ type OpsStatus =
   | 'validado_neutro'
   | 'validado_piorou';
 
-type CheckpointFilter = 'all' | 'ready24' | 'ready48' | 'pending';
+type CheckpointFilter = 'all' | 'ready24' | 'ready48' | 'pending' | 'mandatory';
 
 type StatusHistoryEntry = { status: OpsStatus; at: string };
 
@@ -514,8 +514,13 @@ export default function MetaOpsPage() {
       .filter((item) => {
         if (checkpointFilter === 'all') return true;
         const cp = checkpointStateFor(item.id);
+        const status = statusMap[item.id] ?? 'pendente';
         if (checkpointFilter === 'ready24') return cp.ready24;
         if (checkpointFilter === 'ready48') return cp.ready48;
+        if (checkpointFilter === 'mandatory') {
+          const validated = status === 'validado_ganhou' || status === 'validado_neutro' || status === 'validado_piorou';
+          return !validated && (cp.ready24 || cp.ready48);
+        }
         return cp.pending;
       })
       .sort((a, b) => {
@@ -817,7 +822,12 @@ export default function MetaOpsPage() {
         ) : null}
 
         <div className="rounded-[12px] border border-amber-500/30 bg-amber-500/10 p-3 space-y-2">
-          <p className="text-xs font-medium text-amber-200">Ações obrigatórias de validação (24h/48h)</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-amber-200">Ações obrigatórias de validação (24h/48h)</p>
+            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setCheckpointFilter('mandatory')}>
+              Ver só obrigatórias
+            </Button>
+          </div>
           {mandatoryValidationToday.length === 0 ? (
             <p className="text-xs text-amber-100/80">Sem ações obrigatórias no momento.</p>
           ) : (
@@ -886,6 +896,7 @@ export default function MetaOpsPage() {
             className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
           >
             <option value="all">Checkpoint: todos</option>
+            <option value="mandatory">Checkpoint: obrigatórias (24h/48h)</option>
             <option value="pending">Checkpoint: pendente</option>
             <option value="ready24">Checkpoint: pronto 24h</option>
             <option value="ready48">Checkpoint: pronto 48h</option>
