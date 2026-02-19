@@ -584,6 +584,25 @@ export default function MetaOpsPage() {
     return counts;
   }, [opsItems, statusMap]);
 
+  const mandatoryValidationToday = useMemo(() => {
+    return opsItems
+      .filter((item) => {
+        const status = statusMap[item.id] ?? 'pendente';
+        if (status === 'validado_ganhou' || status === 'validado_neutro' || status === 'validado_piorou') return false;
+        const cp = checkpointStateFor(item.id);
+        return cp.ready24 || cp.ready48;
+      })
+      .sort((a, b) => {
+        const aCp = checkpointStateFor(a.id);
+        const bCp = checkpointStateFor(b.id);
+        if (aCp.ready48 !== bCp.ready48) return aCp.ready48 ? -1 : 1;
+        const pOrder = { critical: 0, warning: 1, info: 2 } as const;
+        if (pOrder[a.priority] !== pOrder[b.priority]) return pOrder[a.priority] - pOrder[b.priority];
+        return a.clientName.localeCompare(b.clientName, 'pt-BR');
+      })
+      .slice(0, 10);
+  }, [opsItems, statusMap, checkpointStateFor]);
+
   const hasImplementationTimestamp = (id: string) => Boolean(implementedAtMap[id]);
 
   const setItemStatus = (id: string, status: OpsStatus) => {
@@ -796,6 +815,24 @@ export default function MetaOpsPage() {
         {ruleFeedback ? (
           <div className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs">{ruleFeedback}</div>
         ) : null}
+
+        <div className="rounded-[12px] border border-amber-500/30 bg-amber-500/10 p-3 space-y-2">
+          <p className="text-xs font-medium text-amber-200">Ações obrigatórias de validação (24h/48h)</p>
+          {mandatoryValidationToday.length === 0 ? (
+            <p className="text-xs text-amber-100/80">Sem ações obrigatórias no momento.</p>
+          ) : (
+            <div className="grid gap-1">
+              {mandatoryValidationToday.map((item) => {
+                const cp = checkpointStateFor(item.id);
+                return (
+                  <p key={`must:${item.id}`} className="text-xs text-amber-100/90">
+                    • {cp.ready48 ? '[48h]' : '[24h]'} {item.clientName} · {item.campaignName}
+                  </p>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         <div className="rounded-[12px] border border-border/60 bg-card/40 p-3 flex flex-wrap items-center gap-2">
           <select
