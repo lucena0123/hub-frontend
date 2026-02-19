@@ -541,7 +541,22 @@ export default function MetaOpsPage() {
         current.items.push(item);
         map.set(item.clientId, current);
       });
-      return Array.from(map.values()).sort((a, b) => a.clientName.localeCompare(b.clientName, 'pt-BR'));
+
+      const priorityRank: Record<OpsItem['priority'], number> = { critical: 0, warning: 1, info: 2 };
+
+      return Array.from(map.values())
+        .map((grouped) => ({
+          ...grouped,
+          items: grouped.items.sort((a, b) => {
+            const ac = checkpointStateFor(a.id);
+            const bc = checkpointStateFor(b.id);
+            if (ac.ready48 !== bc.ready48) return ac.ready48 ? -1 : 1;
+            if (ac.ready24 !== bc.ready24) return ac.ready24 ? -1 : 1;
+            if (priorityRank[a.priority] !== priorityRank[b.priority]) return priorityRank[a.priority] - priorityRank[b.priority];
+            return a.title.localeCompare(b.title, 'pt-BR');
+          }),
+        }))
+        .sort((a, b) => a.clientName.localeCompare(b.clientName, 'pt-BR'));
     };
 
     return {
@@ -549,7 +564,7 @@ export default function MetaOpsPage() {
       audience: group(byBucket.audience),
       budget_scale: group(byBucket.budget_scale),
     };
-  }, [byBucket]);
+  }, [byBucket, checkpointStateFor]);
 
   const statusMetrics = useMemo(() => {
     const counts: Record<OpsStatus, number> = {
@@ -882,14 +897,24 @@ export default function MetaOpsPage() {
                       <CardContent className="space-y-2">
                         {isCollapsed ? (
                           <div className="text-xs text-muted-foreground">Grupo oculto para reduzir ruído visual.</div>
-                        ) : group.items.map((item) => (
-                          <div key={item.id} className="rounded-md border border-border/50 bg-card/40 p-3 space-y-2">
+                        ) : group.items.map((item) => {
+                          const checkpointState = checkpointStateFor(item.id);
+                          const checkpointBadge = checkpointState.ready48 ? 'Pronto 48h' : checkpointState.ready24 ? 'Pronto 24h' : 'Checkpoint pendente';
+                          const checkpointClass = checkpointState.ready48
+                            ? 'border-emerald-500/40 bg-emerald-500/5'
+                            : checkpointState.ready24
+                              ? 'border-amber-500/40 bg-amber-500/5'
+                              : 'border-border/50 bg-card/40';
+
+                          return (
+                          <div key={item.id} className={`rounded-md border ${checkpointClass} p-3 space-y-2`}>
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="font-medium">{item.title}</div>
                               <div className="flex items-center gap-2">
                                 <Badge className={priorityClass[item.priority]}>{item.priority}</Badge>
                                 <Badge className={confidenceClass[item.confidence]}>confiança {item.confidence}</Badge>
                                 <Badge className={statusClass[(statusMap[item.id] ?? 'pendente')]}>{statusLabel[statusMap[item.id] ?? 'pendente']}</Badge>
+                                <Badge variant="outline">{checkpointBadge}</Badge>
                                 <Badge variant="outline">{item.source === 'alert' ? 'Alerta' : 'Proposta'}</Badge>
                               </div>
                             </div>
@@ -1062,7 +1087,8 @@ export default function MetaOpsPage() {
                               </Button>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </CardContent>
                     </Card>
                     );
