@@ -33,6 +33,11 @@ const NEXT_STATUS: Partial<Record<CommercialLeadStatus, CommercialLeadStatus>> =
   negociacao: 'fechado',
 };
 
+type PendingTransition = {
+  lead: CommercialLead;
+  to: 'nutricao' | 'perdido';
+};
+
 const getApiErrorMessage = (err: unknown, fallback: string): string => {
   if (err instanceof AxiosError) {
     const payload = err.response?.data as { message?: string } | undefined;
@@ -52,6 +57,10 @@ export default function ComercialPage() {
   const [selectedLead, setSelectedLead] = useState<CommercialLead | null>(null);
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
   const [hoverColumn, setHoverColumn] = useState<CommercialLeadStatus | null>(null);
+  const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
+  const [transitionReason, setTransitionReason] = useState('');
+  const [transitionDate, setTransitionDate] = useState('');
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchLeads = async () => {
@@ -76,6 +85,7 @@ export default function ComercialPage() {
       setError(null);
       await createCommercialLead({ nomeEscritorio, origem, responsavel });
       setNomeEscritorio('');
+      setStatusMessage('Lead criado com sucesso.');
       await fetchLeads();
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Falha ao criar lead.'));
@@ -84,7 +94,11 @@ export default function ComercialPage() {
     }
   };
 
-  const onMoveLead = async (lead: CommercialLead, to: CommercialLeadStatus) => {
+  const onMoveLead = async (
+    lead: CommercialLead,
+    to: CommercialLeadStatus,
+    options?: { motivoNutricao?: string; motivoPerda?: string; dataProximaAcao?: string },
+  ) => {
     try {
       setSaving(true);
       setError(null);
@@ -101,19 +115,50 @@ export default function ComercialPage() {
       if (to === 'proposta_enviada') payload.dor02Ok = true;
       if (to === 'fechado') payload.dor03Ok = true;
       if (to === 'nutricao') {
-        payload.motivoNutricao = 'Lead em acompanhamento';
-        payload.dataProximaAcao = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+        payload.motivoNutricao = options?.motivoNutricao || 'Lead em acompanhamento';
+        payload.dataProximaAcao = options?.dataProximaAcao || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
       }
       if (to === 'perdido') {
-        payload.motivoPerda = 'Sem avanço na negociação';
+        payload.motivoPerda = options?.motivoPerda || 'Sem avanço na negociação';
       }
       await moveCommercialLead(lead.leadId, payload);
+      setStatusMessage(`Lead movido para ${COLUMNS.find((c) => c.key === to)?.label}.`);
       await fetchLeads();
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Falha ao mover lead.'));
     } finally {
       setSaving(false);
     }
+  };
+
+  const requestSpecialTransition = (lead: CommercialLead, to: 'nutricao' | 'perdido') => {
+    setPendingTransition({ lead, to });
+    setTransitionReason('');
+    setTransitionDate('');
+  };
+
+  const confirmSpecialTransition = async () => {
+    if (!pendingTransition) return;
+
+    if (!transitionReason.trim()) {
+      setError('Informe o motivo para continuar.');
+      return;
+    }
+
+    if (pendingTransition.to === 'nutricao' && !transitionDate) {
+      setError('Informe a data da próxima ação para Nutrição.');
+      return;
+    }
+
+    await onMoveLead(pendingTransition.lead, pendingTransition.to, {
+      motivoNutricao: pendingTransition.to === 'nutricao' ? transitionReason : undefined,
+      motivoPerda: pendingTransition.to === 'perdido' ? transitionReason : undefined,
+      dataProximaAcao: pendingTransition.to === 'nutricao' ? new Date(`${transitionDate}T09:00:00`).toISOString() : undefined,
+    });
+
+    setPendingTransition(null);
+    setTransitionReason('');
+    setTransitionDate('');
   };
 
   const handleDropToColumn = async (targetStatus: CommercialLeadStatus, leadId?: string) => {
@@ -163,6 +208,7 @@ export default function ComercialPage() {
             {saving ? 'Salvando...' : 'Criar lead'}
           </button>
         </div>
+        {statusMessage && <p className="text-xs text-emerald-300">{statusMessage}</p>}
         {error && <p className="text-xs text-destructive">{error}</p>}
       </section>
 
@@ -274,7 +320,7 @@ export default function ComercialPage() {
                   <button
                     className="h-8 rounded-md border border-amber-500/50 text-amber-300 text-xs hover:bg-amber-500/10"
                     disabled={saving}
-                    onClick={() => onMoveLead(selectedLead, 'nutricao')}
+                    onClick={() => requestSpecialTransition(selectedLead, 'nutricao')}
                   >
                     Mover para Nutrição
                   </button>
@@ -283,7 +329,7 @@ export default function ComercialPage() {
                   <button
                     className="h-8 rounded-md border border-destructive/60 text-destructive text-xs hover:bg-destructive/10"
                     disabled={saving}
-                    onClick={() => onMoveLead(selectedLead, 'perdido')}
+                    onClick={() => requestSpecialTransition(selectedLead, 'perdido')}
                   >
                     Marcar como Perdido
                   </button>
@@ -293,6 +339,49 @@ export default function ComercialPage() {
           )}
         </aside>
       </div>
+
+      {pendingTransition && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-[12px] border border-border bg-card p-4 space-y-3">
+            <h3 className="text-sm font-semibold">
+              Confirmar transição: {pendingTransition.to === 'nutricao' ? 'Nutrição' : 'Perdido'}
+            </h3>
+            <p className="text-xs text-muted-foreground">Lead: {pendingTransition.lead.nomeEscritorio}</p>
+
+            <textarea
+              className="w-full min-h-[84px] rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+              placeholder="Motivo da transição"
+              value={transitionReason}
+              onChange={(e) => setTransitionReason(e.target.value)}
+            />
+
+            {pendingTransition.to === 'nutricao' && (
+              <input
+                type="date"
+                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                value={transitionDate}
+                onChange={(e) => setTransitionDate(e.target.value)}
+              />
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                className="h-8 px-3 rounded-md border border-border text-xs"
+                onClick={() => setPendingTransition(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs disabled:opacity-50"
+                onClick={confirmSpecialTransition}
+                disabled={saving}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }
