@@ -51,10 +51,13 @@ type OpsStatus =
 
 type CheckpointFilter = 'all' | 'ready24' | 'ready48' | 'pending';
 
+type StatusHistoryEntry = { status: OpsStatus; at: string };
+
 const DONE_KEY = 'meta-ops-done-v1';
 const STATUS_KEY = 'meta-ops-status-v2';
 const ROLLBACK_KEY = 'meta-ops-rule-rollback-v1';
 const IMPLEMENTED_AT_KEY = 'meta-ops-implemented-at-v1';
+const STATUS_HISTORY_KEY = 'meta-ops-status-history-v1';
 
 const priorityClass: Record<OpsItem['priority'], string> = {
   critical: 'bg-destructive/15 text-destructive',
@@ -270,6 +273,7 @@ export default function MetaOpsPage() {
   const [checkpointFilter, setCheckpointFilter] = useState<CheckpointFilter>('all');
   const [statusMap, setStatusMap] = useState<Record<string, OpsStatus>>({});
   const [implementedAtMap, setImplementedAtMap] = useState<Record<string, string>>({});
+  const [statusHistoryMap, setStatusHistoryMap] = useState<Record<string, StatusHistoryEntry[]>>({});
   const [collapsedClientGroup, setCollapsedClientGroup] = useState<Record<string, boolean>>({});
   const [rulesByClient, setRulesByClient] = useState<Record<string, OptimizationRule[]>>({});
   const [rollbackByItem, setRollbackByItem] = useState<Record<string, { clientId: string; ruleId: string; previous: Record<string, unknown> }>>({});
@@ -314,6 +318,19 @@ export default function MetaOpsPage() {
   useEffect(() => {
     localStorage.setItem(IMPLEMENTED_AT_KEY, JSON.stringify(implementedAtMap));
   }, [implementedAtMap]);
+
+  useEffect(() => {
+    try {
+      const rawHistory = localStorage.getItem(STATUS_HISTORY_KEY);
+      if (rawHistory) setStatusHistoryMap(JSON.parse(rawHistory) as Record<string, StatusHistoryEntry[]>);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STATUS_HISTORY_KEY, JSON.stringify(statusHistoryMap));
+  }, [statusHistoryMap]);
 
   useEffect(() => {
     try {
@@ -563,10 +580,20 @@ export default function MetaOpsPage() {
       return;
     }
 
+    const nowIso = new Date().toISOString();
     setStatusMap((prev) => ({ ...prev, [id]: status }));
+    setStatusHistoryMap((prev) => {
+      const current = prev[id] ?? [];
+      const last = current[current.length - 1];
+      if (last?.status === status) return prev;
+      return {
+        ...prev,
+        [id]: [...current, { status, at: nowIso }].slice(-8),
+      };
+    });
 
     if (status === 'implementado') {
-      setImplementedAtMap((prev) => ({ ...prev, [id]: prev[id] ?? new Date().toISOString() }));
+      setImplementedAtMap((prev) => ({ ...prev, [id]: prev[id] ?? nowIso }));
       return;
     }
 
@@ -892,6 +919,19 @@ export default function MetaOpsPage() {
                               <p><strong className="text-foreground/80">Validação 24h:</strong> {validationView(item.id, statusMap[item.id] ?? 'pendente').checkpoint24}</p>
                               <p><strong className="text-foreground/80">Validação 48h:</strong> {validationView(item.id, statusMap[item.id] ?? 'pendente').checkpoint48}</p>
                               <p><strong className="text-foreground/80">Implementação:</strong> {validationView(item.id, statusMap[item.id] ?? 'pendente').implementedAtLabel}</p>
+                            </div>
+
+                            <div className="rounded-md border border-border/50 bg-muted/20 p-2 text-[11px] text-muted-foreground space-y-1">
+                              <p><strong className="text-foreground/80">Trilha de status (recente):</strong></p>
+                              {(statusHistoryMap[item.id] ?? []).length === 0 ? (
+                                <p>Sem movimentação registrada ainda.</p>
+                              ) : (
+                                <ul className="space-y-1">
+                                  {(statusHistoryMap[item.id] ?? []).slice().reverse().map((entry, idx) => (
+                                    <li key={`${item.id}:history:${idx}`}>• {statusLabel[entry.status]} — {new Date(entry.at).toLocaleString('pt-BR')}</li>
+                                  ))}
+                                </ul>
+                              )}
                             </div>
 
                             <div className="grid gap-2 text-[11px]">
