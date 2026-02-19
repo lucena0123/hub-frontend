@@ -835,9 +835,13 @@ export default function MetaOpsPage() {
               {mandatoryValidationToday.map((item) => {
                 const cp = checkpointStateFor(item.id);
                 return (
-                  <p key={`must:${item.id}`} className="text-xs text-amber-100/90">
+                  <a
+                    key={`must:${item.id}`}
+                    href={`#card-${item.id.replace(':', '-')}`}
+                    className="text-xs text-amber-100/90 hover:underline"
+                  >
                     • {cp.ready48 ? '[48h]' : '[24h]'} {item.clientName} · {item.campaignName}
-                  </p>
+                  </a>
                 );
               })}
             </div>
@@ -955,7 +959,7 @@ export default function MetaOpsPage() {
                               : 'border-border/50 bg-card/40';
 
                           return (
-                          <div key={item.id} className={`rounded-md border ${checkpointClass} p-3 space-y-2`}>
+                          <div id={`card-${item.id.replace(':', '-')}`} key={item.id} className={`rounded-md border ${checkpointClass} p-3 space-y-2`}>
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="font-medium">{item.title}</div>
                               <div className="flex items-center gap-2">
