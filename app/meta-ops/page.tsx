@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, ClipboardCheck, Copy, Loader2, Megaphone, Target, Wallet } from 'lucide-react';
 
@@ -48,6 +48,8 @@ type OpsStatus =
   | 'validado_ganhou'
   | 'validado_neutro'
   | 'validado_piorou';
+
+type CheckpointFilter = 'all' | 'ready24' | 'ready48' | 'pending';
 
 const DONE_KEY = 'meta-ops-done-v1';
 const STATUS_KEY = 'meta-ops-status-v2';
@@ -265,6 +267,7 @@ export default function MetaOpsPage() {
   const [priorityFilter, setPriorityFilter] = useState<'all' | OpsItem['priority']>('all');
   const [confidenceFilter, setConfidenceFilter] = useState<'all' | OpsItem['confidence']>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | OpsStatus>('all');
+  const [checkpointFilter, setCheckpointFilter] = useState<CheckpointFilter>('all');
   const [statusMap, setStatusMap] = useState<Record<string, OpsStatus>>({});
   const [implementedAtMap, setImplementedAtMap] = useState<Record<string, string>>({});
   const [collapsedClientGroup, setCollapsedClientGroup] = useState<Record<string, boolean>>({});
@@ -369,6 +372,18 @@ export default function MetaOpsPage() {
 
     void load();
   }, []);
+
+  const checkpointStateFor = useCallback((id: string) => {
+    const implementedAt = implementedAtMap[id];
+    if (!implementedAt) return { ready24: false, ready48: false, pending: true };
+
+    const elapsedHours = Math.max(0, (Date.now() - new Date(implementedAt).getTime()) / (1000 * 60 * 60));
+    return {
+      ready24: elapsedHours >= 24,
+      ready48: elapsedHours >= 48,
+      pending: elapsedHours < 24,
+    };
+  }, [implementedAtMap]);
 
   const opsItems = useMemo<OpsItem[]>(() => {
     const fromAlerts: OpsItem[] = alerts
@@ -479,12 +494,19 @@ export default function MetaOpsPage() {
       .filter((item) => priorityFilter === 'all' || item.priority === priorityFilter)
       .filter((item) => confidenceFilter === 'all' || item.confidence === confidenceFilter)
       .filter((item) => statusFilter === 'all' || (statusMap[item.id] ?? 'pendente') === statusFilter)
+      .filter((item) => {
+        if (checkpointFilter === 'all') return true;
+        const cp = checkpointStateFor(item.id);
+        if (checkpointFilter === 'ready24') return cp.ready24;
+        if (checkpointFilter === 'ready48') return cp.ready48;
+        return cp.pending;
+      })
       .sort((a, b) => {
         const pOrder = { critical: 0, warning: 1, info: 2 } as const;
         if (pOrder[a.priority] !== pOrder[b.priority]) return pOrder[a.priority] - pOrder[b.priority];
         return a.clientName.localeCompare(b.clientName, 'pt-BR');
       });
-  }, [alerts, proposals, clientFilter, priorityFilter, confidenceFilter, statusFilter, statusMap]);
+  }, [alerts, proposals, clientFilter, priorityFilter, confidenceFilter, statusFilter, checkpointFilter, statusMap, checkpointStateFor]);
 
   const byBucket = useMemo(() => {
     return {
@@ -712,6 +734,8 @@ export default function MetaOpsPage() {
           <div className="signal-chip">Validados ✅ {statusMetrics.validado_ganhou}</div>
           <div className="signal-chip">Validados ➖ {statusMetrics.validado_neutro}</div>
           <div className="signal-chip">Validados ⛔ {statusMetrics.validado_piorou}</div>
+          <div className="signal-chip">Prontos 24h {opsItems.filter((i) => checkpointStateFor(i.id).ready24).length}</div>
+          <div className="signal-chip">Prontos 48h {opsItems.filter((i) => checkpointStateFor(i.id).ready48).length}</div>
         </div>
       }
     >
@@ -775,6 +799,17 @@ export default function MetaOpsPage() {
             <option value="validado_ganhou">Validado (ganhou)</option>
             <option value="validado_neutro">Validado (neutro)</option>
             <option value="validado_piorou">Validado (piorou)</option>
+          </select>
+
+          <select
+            value={checkpointFilter}
+            onChange={(e) => setCheckpointFilter(e.target.value as CheckpointFilter)}
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+          >
+            <option value="all">Checkpoint: todos</option>
+            <option value="pending">Checkpoint: pendente</option>
+            <option value="ready24">Checkpoint: pronto 24h</option>
+            <option value="ready48">Checkpoint: pronto 48h</option>
           </select>
 
           <Button asChild variant="outline" size="sm"><Link href="/summary">Resumo</Link></Button>
