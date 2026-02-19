@@ -13,6 +13,7 @@ export type CommercialLeadStatus =
 
 export interface CommercialLead {
   leadId: string;
+  dataEntrada: string;
   nomeEscritorio: string;
   origem: string;
   responsavel: string;
