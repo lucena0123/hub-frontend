@@ -255,3 +255,36 @@ export async function getCommercialLeadFormLink(leadId: string, formType: Commer
   });
   return data;
 }
+
+export type CommercialDispatchChannel = 'whatsapp' | 'gmail';
+
+export type CommercialDispatchStage =
+  | 'primeiro_contato'
+  | 'diagnostico_agendado'
+  | 'proposta_enviada'
+  | 'negociacao'
+  | 'fechado';
+
+export interface DispatchCommercialCommunicationInput {
+  leadId: string;
+  channel: CommercialDispatchChannel;
+  stage: CommercialDispatchStage;
+  templateKey: string;
+  recipient?: string;
+  variables?: Record<string, unknown>;
+}
+
+export interface DispatchCommercialCommunicationResponse {
+  ok: true;
+  leadId: string;
+  channel: CommercialDispatchChannel;
+  stage: CommercialDispatchStage;
+  eventId: string;
+}
+
+export const dispatchCommercialCommunication = async (
+  input: DispatchCommercialCommunicationInput,
+): Promise<DispatchCommercialCommunicationResponse> => {
+  const { data } = await apiClient.post<DispatchCommercialCommunicationResponse>('/api/comercial/dispatch', input);
+  return data;
+};

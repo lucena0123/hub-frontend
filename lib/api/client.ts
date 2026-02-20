@@ -167,3 +167,11 @@ export {
   type OptimizationAuditSummary,
 } from './client/optimization';
 
+export {
+  dispatchCommercialCommunication,
+  type CommercialDispatchChannel,
+  type CommercialDispatchStage,
+  type DispatchCommercialCommunicationInput,
+  type DispatchCommercialCommunicationResponse,
+} from './client/commercial';
+
