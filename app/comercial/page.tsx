@@ -9,8 +9,10 @@ import {
   CommercialLead,
   CommercialLeadStatus,
   CommercialSlaAlert,
+  CommercialDailySummary,
   createCommercialLead,
   getCommercialDashboard,
+  getCommercialDailySummary,
   getCommercialLeads,
   getCommercialSlaAlerts,
   moveCommercialLead,
@@ -58,6 +60,7 @@ export default function ComercialPage() {
   const [saving, setSaving] = useState(false);
   const [kpis, setKpis] = useState<CommercialDashboard>({ total: 0, novos: 0, diagnosticos: 0, propostas: 0, fechados: 0 });
   const [slaAlerts, setSlaAlerts] = useState<CommercialSlaAlert[]>([]);
+  const [dailySummary, setDailySummary] = useState<CommercialDailySummary | null>(null);
   const [nomeEscritorio, setNomeEscritorio] = useState('');
   const [origem, setOrigem] = useState<'instagram' | 'indicacao' | 'site' | 'whatsapp' | 'outro'>('instagram');
   const [responsavel, setResponsavel] = useState('Matheus');
@@ -81,7 +84,7 @@ export default function ComercialPage() {
   const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
-      const [data, dashboard, alerts] = await Promise.all([
+      const [data, dashboard, alerts, summary] = await Promise.all([
         getCommercialLeads({
           status: statusFilter === 'all' ? undefined : statusFilter,
           responsavel: responsavelFilter === 'all' ? undefined : responsavelFilter,
@@ -90,10 +93,12 @@ export default function ComercialPage() {
         }),
         getCommercialDashboard(kpiRange === 'all' ? undefined : kpiRange),
         getCommercialSlaAlerts({ maxAgeHours: 24, limit: 5 }),
+        getCommercialDailySummary(),
       ]);
       setLeads(data);
       setKpis(dashboard);
       setSlaAlerts(alerts);
+      setDailySummary(summary);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Falha ao carregar pipeline.'));
     } finally {
@@ -467,8 +472,38 @@ export default function ComercialPage() {
         </div>
       </section>
 
-      <section className="rounded-[12px] border border-border/60 bg-card/20 p-3 space-y-2">
+      <section className="rounded-[12px] border border-border/60 bg-card/20 p-3 space-y-3">
         <div className="flex items-center justify-between">
+          <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Resumo diário operacional</p>
+          <p className="text-xs text-muted-foreground">{dailySummary?.date || '—'}</p>
+        </div>
+
+        {dailySummary && (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <div className="rounded-md border border-border/50 bg-background/40 px-2 py-1">
+              <p className="text-[10px] uppercase text-muted-foreground">Novos leads</p>
+              <p className="text-sm font-semibold">{dailySummary.novosLeads}</p>
+            </div>
+            <div className="rounded-md border border-border/50 bg-background/40 px-2 py-1">
+              <p className="text-[10px] uppercase text-muted-foreground">Atrasados SLA</p>
+              <p className="text-sm font-semibold text-amber-300">{dailySummary.leadsAtrasadosSla24h}</p>
+            </div>
+            <div className="rounded-md border border-border/50 bg-background/40 px-2 py-1">
+              <p className="text-[10px] uppercase text-muted-foreground">Propostas sem follow-up</p>
+              <p className="text-sm font-semibold">{dailySummary.propostasSemFollowup}</p>
+            </div>
+            <div className="rounded-md border border-border/50 bg-background/40 px-2 py-1">
+              <p className="text-[10px] uppercase text-muted-foreground">Negociações abertas</p>
+              <p className="text-sm font-semibold">{dailySummary.negociacoesAbertas}</p>
+            </div>
+            <div className="rounded-md border border-border/50 bg-background/40 px-2 py-1">
+              <p className="text-[10px] uppercase text-muted-foreground">Fechados hoje</p>
+              <p className="text-sm font-semibold text-emerald-300">{dailySummary.fechadosHoje}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-1">
           <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Alertas de SLA (24h)</p>
           <p className="text-xs text-muted-foreground">{slaAlerts.length} lead(s) atrasado(s)</p>
         </div>

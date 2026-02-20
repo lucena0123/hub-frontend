@@ -57,6 +57,15 @@ export interface CommercialSlaAlert {
   hoursInStatus: number;
 }
 
+export interface CommercialDailySummary {
+  date: string;
+  novosLeads: number;
+  leadsAtrasadosSla24h: number;
+  propostasSemFollowup: number;
+  negociacoesAbertas: number;
+  fechadosHoje: number;
+}
+
 export interface MoveLeadPayload {
   to: CommercialLeadStatus;
   observacao?: string;
@@ -102,6 +111,11 @@ export async function getCommercialDashboard(rangeDays?: 7 | 30): Promise<Commer
 
 export async function getCommercialSlaAlerts(params?: { maxAgeHours?: number; limit?: number }): Promise<CommercialSlaAlert[]> {
   const { data } = await apiClient.get<CommercialSlaAlert[]>('/api/comercial/alerts', { params });
+  return data;
+}
+
+export async function getCommercialDailySummary(): Promise<CommercialDailySummary> {
+  const { data } = await apiClient.get<CommercialDailySummary>('/api/comercial/daily-summary');
   return data;
 }
 
