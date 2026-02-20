@@ -11,6 +11,8 @@ export type CommercialLeadStatus =
   | 'nutricao'
   | 'perdido';
 
+export type CommercialFormType = 'briefing' | 'onboarding' | 'custom';
+
 export interface CommercialLead {
   leadId: string;
   dataEntrada: string;
@@ -23,6 +25,10 @@ export interface CommercialLead {
   dor01Ok: boolean;
   dor02Ok: boolean;
   dor03Ok: boolean;
+  formToken?: string;
+  formType?: CommercialFormType;
+  formSubmittedAt?: string;
+  formPayloadJson?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
@@ -45,6 +51,12 @@ export interface MoveLeadPayload {
   motivoNutricao?: string;
   motivoPerda?: string;
   dataProximaAcao?: string;
+}
+
+export interface SubmitCommercialFormPayload {
+  formType: CommercialFormType;
+  payload: Record<string, unknown>;
+  submittedAt?: string;
 }
 
 export async function getCommercialLeads(params?: {
@@ -77,5 +89,10 @@ export async function createCommercialLead(input: {
 
 export async function moveCommercialLead(leadId: string, payload: MoveLeadPayload): Promise<CommercialLead> {
   const { data } = await apiClient.post<CommercialLead>(`/api/comercial/leads/${leadId}/move`, payload);
+  return data;
+}
+
+export async function submitCommercialForm(leadId: string, payload: SubmitCommercialFormPayload): Promise<CommercialLead> {
+  const { data } = await apiClient.post<CommercialLead>(`/api/comercial/leads/${leadId}/forms/submit`, payload);
   return data;
 }

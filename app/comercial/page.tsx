@@ -12,6 +12,7 @@ import {
   getCommercialDashboard,
   getCommercialLeads,
   moveCommercialLead,
+  submitCommercialForm,
 } from '@/lib/api/client/commercial';
 
 const COLUMNS: Array<{ key: CommercialLeadStatus; label: string }> = [
@@ -149,6 +150,26 @@ export default function ComercialPage() {
       await fetchLeads();
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Falha ao mover lead.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onSubmitBriefing = async (lead: CommercialLead) => {
+    try {
+      setSaving(true);
+      setError(null);
+      await submitCommercialForm(lead.leadId, {
+        formType: 'briefing',
+        payload: {
+          source: 'hub-manual',
+          note: 'Briefing registrado via painel comercial',
+        },
+      });
+      setStatusMessage('Briefing registrado com sucesso no lead.');
+      await fetchLeads();
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Falha ao registrar briefing.'));
     } finally {
       setSaving(false);
     }
@@ -539,8 +560,20 @@ export default function ComercialPage() {
               <p><span className="text-muted-foreground">Responsável:</span> {selectedLead.responsavel}</p>
               <p><span className="text-muted-foreground">Status:</span> {COLUMNS.find((c) => c.key === selectedLead.statusAtual)?.label}</p>
               <p><span className="text-muted-foreground">DoR:</span> 01 {selectedLead.dor01Ok ? '✅' : '❌'} · 02 {selectedLead.dor02Ok ? '✅' : '❌'} · 03 {selectedLead.dor03Ok ? '✅' : '❌'}</p>
+              <p><span className="text-muted-foreground">Form token:</span> {selectedLead.formToken || '—'}</p>
+              <p><span className="text-muted-foreground">Form status:</span> {selectedLead.formType ? `${selectedLead.formType} enviado` : 'não enviado'}</p>
+              <p><span className="text-muted-foreground">Última submissão:</span> {selectedLead.formSubmittedAt ? new Date(selectedLead.formSubmittedAt).toLocaleString('pt-BR') : '—'}</p>
 
               <div className="pt-2 grid grid-cols-1 gap-2">
+                {!selectedLead.formType && (
+                  <button
+                    className="h-8 rounded-md border border-sky-500/60 text-sky-300 text-xs hover:bg-sky-500/10"
+                    disabled={saving}
+                    onClick={() => onSubmitBriefing(selectedLead)}
+                  >
+                    Registrar briefing
+                  </button>
+                )}
                 {selectedLead.statusAtual !== 'nutricao' && selectedLead.statusAtual !== 'perdido' && selectedLead.statusAtual !== 'fechado' && (
                   <button
                     className="h-8 rounded-md border border-amber-500/50 text-amber-300 text-xs hover:bg-amber-500/10"
