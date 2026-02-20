@@ -19,6 +19,7 @@ import {
   getCommercialDailySummary,
   getCommercialFollowupsDue,
   getCommercialRetentionDue,
+  getCommercialLeadFormLink,
   getCommercialLeadTimeline,
   getCommercialLeads,
   getCommercialSlaAlerts,
@@ -234,6 +235,20 @@ export default function ComercialPage() {
       await fetchLeads();
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Falha ao registrar briefing.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onGenerateBriefingLink = async (lead: CommercialLead) => {
+    try {
+      setSaving(true);
+      setError(null);
+      const form = await getCommercialLeadFormLink(lead.leadId, 'briefing');
+      await navigator.clipboard.writeText(form.url);
+      setStatusMessage('Link de briefing gerado e copiado para a área de transferência.');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Falha ao gerar link de briefing.'));
     } finally {
       setSaving(false);
     }
@@ -805,6 +820,13 @@ export default function ComercialPage() {
               <p><span className="text-muted-foreground">DoR:</span> 01 {selectedLead.dor01Ok ? '✅' : '❌'} · 02 {selectedLead.dor02Ok ? '✅' : '❌'} · 03 {selectedLead.dor03Ok ? '✅' : '❌'}</p>
               <p><span className="text-muted-foreground">Form token:</span> {selectedLead.formToken || '—'}</p>
               <p><span className="text-muted-foreground">Form status:</span> {selectedLead.formType ? `${selectedLead.formType} enviado` : 'não enviado'}</p>
+              <button
+                className="h-8 rounded-md border border-sky-500/60 text-sky-300 text-xs hover:bg-sky-500/10"
+                disabled={saving}
+                onClick={() => onGenerateBriefingLink(selectedLead)}
+              >
+                Gerar e copiar link de briefing
+              </button>
               <p><span className="text-muted-foreground">Última submissão:</span> {selectedLead.formSubmittedAt ? new Date(selectedLead.formSubmittedAt).toLocaleString('pt-BR') : '—'}</p>
               <p><span className="text-muted-foreground">Contrato:</span> {selectedLead.contractStatus}</p>
               <p><span className="text-muted-foreground">Pagamento:</span> {selectedLead.paymentStatus}</p>

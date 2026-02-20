@@ -101,6 +101,13 @@ export interface CommercialRetentionAlert {
   daysOverdue: number;
 }
 
+export interface CommercialFormLink {
+  leadId: string;
+  formType: CommercialFormType;
+  formToken: string;
+  url: string;
+}
+
 export interface MoveLeadPayload {
   to: CommercialLeadStatus;
   observacao?: string;
@@ -221,5 +228,12 @@ export async function updateCommercialLeadOnboarding(leadId: string, payload: Up
 
 export async function updateCommercialLeadPrivacy(leadId: string, payload: UpdateCommercialLeadPrivacyPayload): Promise<CommercialLead> {
   const { data } = await apiClient.post<CommercialLead>(`/api/comercial/leads/${leadId}/privacy`, payload);
+  return data;
+}
+
+export async function getCommercialLeadFormLink(leadId: string, formType: CommercialFormType = 'briefing'): Promise<CommercialFormLink> {
+  const { data } = await apiClient.get<CommercialFormLink>(`/api/comercial/leads/${leadId}/forms/link`, {
+    params: { formType },
+  });
   return data;
 }

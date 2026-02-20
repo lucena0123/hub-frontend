@@ -131,6 +131,7 @@ export {
   updateCommercialLeadProofs,
   updateCommercialLeadOnboarding,
   updateCommercialLeadPrivacy,
+  getCommercialLeadFormLink,
   type CommercialLead,
   type CommercialLeadStatus,
   type CommercialDashboard,
@@ -140,6 +141,7 @@ export {
   type CommercialFollowupDue,
   type CommercialRetentionAlert,
   type CommercialFormType,
+  type CommercialFormLink,
   type ContractStatus,
   type PaymentStatus,
 } from './client/commercial';
