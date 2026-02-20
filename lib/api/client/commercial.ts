@@ -34,6 +34,8 @@ export interface CommercialLead {
   formPayloadJson?: Record<string, unknown>;
   contractStatus: ContractStatus;
   paymentStatus: PaymentStatus;
+  followupD2At?: string;
+  followupD5At?: string;
   createdAt: string;
   updatedAt: string;
 }

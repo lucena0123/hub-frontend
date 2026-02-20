@@ -580,6 +580,8 @@ export default function ComercialPage() {
               <p><span className="text-muted-foreground">Última submissão:</span> {selectedLead.formSubmittedAt ? new Date(selectedLead.formSubmittedAt).toLocaleString('pt-BR') : '—'}</p>
               <p><span className="text-muted-foreground">Contrato:</span> {selectedLead.contractStatus}</p>
               <p><span className="text-muted-foreground">Pagamento:</span> {selectedLead.paymentStatus}</p>
+              <p><span className="text-muted-foreground">Follow-up D+2:</span> {selectedLead.followupD2At ? new Date(selectedLead.followupD2At).toLocaleString('pt-BR') : '—'}</p>
+              <p><span className="text-muted-foreground">Follow-up D+5:</span> {selectedLead.followupD5At ? new Date(selectedLead.followupD5At).toLocaleString('pt-BR') : '—'}</p>
 
               <div className="pt-2 grid grid-cols-1 gap-2">
                 {selectedLead.contractStatus !== 'assinado' && (
