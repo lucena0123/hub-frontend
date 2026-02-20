@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { CheckCircle2, ClipboardCheck, Copy, Loader2, Megaphone, Target, Wallet, type LucideIcon } from 'lucide-react';
 
 import { getAlerts, getClients, listActionProposals, type ActionProposal } from '@/lib/api/client';
@@ -270,6 +271,7 @@ const buildPlaybook = (item: {
 };
 
 export default function MetaOpsPage() {
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
@@ -289,6 +291,16 @@ export default function MetaOpsPage() {
   const [ruleFeedback, setRuleFeedback] = useState<string | null>(null);
   const [savingRuleItemId, setSavingRuleItemId] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const qClient = searchParams.get('clientId');
+    const qCheckpoint = searchParams.get('checkpoint');
+
+    if (qClient) setClientFilter(qClient);
+    if (qCheckpoint === 'mandatory' || qCheckpoint === 'ready24' || qCheckpoint === 'ready48' || qCheckpoint === 'pending') {
+      setCheckpointFilter(qCheckpoint as CheckpointFilter);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     try {
@@ -617,6 +629,20 @@ export default function MetaOpsPage() {
       .slice(0, 10);
   }, [opsItems, statusMap, checkpointStateFor]);
 
+  const mandatoryByClient = useMemo(() => {
+    const map = new Map<string, { clientId: string; clientName: string; total: number; ready48: number }>();
+
+    mandatoryValidationToday.forEach((item) => {
+      const cp = checkpointStateFor(item.id);
+      const current = map.get(item.clientId) ?? { clientId: item.clientId, clientName: item.clientName, total: 0, ready48: 0 };
+      current.total += 1;
+      if (cp.ready48) current.ready48 += 1;
+      map.set(item.clientId, current);
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.total - a.total || a.clientName.localeCompare(b.clientName, 'pt-BR'));
+  }, [mandatoryValidationToday, checkpointStateFor]);
+
   const hasImplementationTimestamp = (id: string) => Boolean(implementedAtMap[id]);
 
   const setItemStatus = (id: string, status: OpsStatus) => {
@@ -840,20 +866,37 @@ export default function MetaOpsPage() {
           {mandatoryValidationToday.length === 0 ? (
             <p className="text-xs text-amber-100/80">Sem ações obrigatórias no momento.</p>
           ) : (
-            <div className="grid gap-1">
-              {mandatoryValidationToday.map((item) => {
-                const cp = checkpointStateFor(item.id);
-                return (
-                  <a
-                    key={`must:${item.id}`}
-                    href={`#card-${item.id.replace(':', '-')}`}
-                    className="text-xs text-amber-100/90 hover:underline"
-                  >
-                    • {cp.ready48 ? '[48h]' : '[24h]'} {item.clientName} · {item.campaignName}
-                  </a>
-                );
-              })}
-            </div>
+            <>
+              <div className="grid gap-1">
+                {mandatoryValidationToday.map((item) => {
+                  const cp = checkpointStateFor(item.id);
+                  return (
+                    <a
+                      key={`must:${item.id}`}
+                      href={`#card-${item.id.replace(':', '-')}`}
+                      className="text-xs text-amber-100/90 hover:underline"
+                    >
+                      • {cp.ready48 ? '[48h]' : '[24h]'} {item.clientName} · {item.campaignName}
+                    </a>
+                  );
+                })}
+              </div>
+
+              <div className="pt-1 border-t border-amber-400/20">
+                <p className="text-[11px] text-amber-100/80 mb-1">O que validar agora por cliente</p>
+                <div className="flex flex-wrap gap-1">
+                  {mandatoryByClient.map((group) => (
+                    <Link
+                      key={`must-client:${group.clientId}`}
+                      href={`/meta-ops?clientId=${group.clientId}&checkpoint=mandatory`}
+                      className="inline-flex items-center gap-1 rounded border border-amber-400/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-100 hover:bg-amber-500/15"
+                    >
+                      {group.clientName} · {group.total} ({group.ready48} em 48h)
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
         </div>
 
