@@ -128,6 +128,7 @@ export {
   submitCommercialForm,
   updateCommercialLeadProofs,
   updateCommercialLeadOnboarding,
+  updateCommercialLeadPrivacy,
   type CommercialLead,
   type CommercialLeadStatus,
   type CommercialDashboard,

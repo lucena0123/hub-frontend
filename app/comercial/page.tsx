@@ -20,6 +20,7 @@ import {
   moveCommercialLead,
   submitCommercialForm,
   updateCommercialLeadOnboarding,
+  updateCommercialLeadPrivacy,
   updateCommercialLeadProofs,
 } from '@/lib/api/client/commercial';
 
@@ -246,6 +247,20 @@ export default function ComercialPage() {
       await fetchLeads();
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Falha ao atualizar onboarding.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onUpdatePrivacy = async (lead: CommercialLead, update: { consentGiven?: boolean; retentionUntil?: string; observacao?: string }) => {
+    try {
+      setSaving(true);
+      setError(null);
+      await updateCommercialLeadPrivacy(lead.leadId, update);
+      setStatusMessage('Dados de LGPD atualizados.');
+      await fetchLeads();
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Falha ao atualizar LGPD.'));
     } finally {
       setSaving(false);
     }
@@ -692,8 +707,24 @@ export default function ComercialPage() {
               <p><span className="text-muted-foreground">Follow-up D+2:</span> {selectedLead.followupD2At ? new Date(selectedLead.followupD2At).toLocaleString('pt-BR') : '—'}</p>
               <p><span className="text-muted-foreground">Follow-up D+5:</span> {selectedLead.followupD5At ? new Date(selectedLead.followupD5At).toLocaleString('pt-BR') : '—'}</p>
               <p><span className="text-muted-foreground">Onboarding:</span> D0 {selectedLead.onboardingD0Ok ? '✅' : '❌'} · D1 {selectedLead.onboardingD1Ok ? '✅' : '❌'} · D2 {selectedLead.onboardingD2Ok ? '✅' : '❌'} · D3-4 {selectedLead.onboardingD3D4Ok ? '✅' : '❌'} · D5-7 {selectedLead.onboardingD5D7Ok ? '✅' : '❌'}</p>
+              <p><span className="text-muted-foreground">Consentimento LGPD:</span> {selectedLead.consentGiven ? '✅ confirmado' : '❌ pendente'}</p>
+              <p><span className="text-muted-foreground">Consentimento em:</span> {selectedLead.consentGivenAt ? new Date(selectedLead.consentGivenAt).toLocaleString('pt-BR') : '—'}</p>
+              <p><span className="text-muted-foreground">Retenção até:</span> {selectedLead.retentionUntil ? new Date(selectedLead.retentionUntil).toLocaleDateString('pt-BR') : '—'}</p>
 
               <div className="pt-2 grid grid-cols-1 gap-2">
+                {!selectedLead.consentGiven && (
+                  <button
+                    className="h-8 rounded-md border border-fuchsia-500/60 text-fuchsia-300 text-xs hover:bg-fuchsia-500/10"
+                    disabled={saving}
+                    onClick={() => onUpdatePrivacy(selectedLead, {
+                      consentGiven: true,
+                      retentionUntil: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
+                      observacao: 'Consentimento LGPD confirmado',
+                    })}
+                  >
+                    Confirmar consentimento LGPD
+                  </button>
+                )}
                 {selectedLead.statusAtual === 'fechado' && !selectedLead.onboardingD0Ok && (
                   <button
                     className="h-8 rounded-md border border-cyan-500/60 text-cyan-300 text-xs hover:bg-cyan-500/10"

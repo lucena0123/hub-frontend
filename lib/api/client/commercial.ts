@@ -41,6 +41,9 @@ export interface CommercialLead {
   onboardingD2Ok: boolean;
   onboardingD3D4Ok: boolean;
   onboardingD5D7Ok: boolean;
+  consentGiven: boolean;
+  consentGivenAt?: string;
+  retentionUntil?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -114,6 +117,12 @@ export interface UpdateCommercialLeadOnboardingPayload {
   observacao?: string;
 }
 
+export interface UpdateCommercialLeadPrivacyPayload {
+  consentGiven?: boolean;
+  retentionUntil?: string;
+  observacao?: string;
+}
+
 export async function getCommercialLeads(params?: {
   status?: CommercialLeadStatus;
   responsavel?: string;
@@ -176,5 +185,10 @@ export async function updateCommercialLeadProofs(leadId: string, payload: Update
 
 export async function updateCommercialLeadOnboarding(leadId: string, payload: UpdateCommercialLeadOnboardingPayload): Promise<CommercialLead> {
   const { data } = await apiClient.post<CommercialLead>(`/api/comercial/leads/${leadId}/onboarding`, payload);
+  return data;
+}
+
+export async function updateCommercialLeadPrivacy(leadId: string, payload: UpdateCommercialLeadPrivacyPayload): Promise<CommercialLead> {
+  const { data } = await apiClient.post<CommercialLead>(`/api/comercial/leads/${leadId}/privacy`, payload);
   return data;
 }
