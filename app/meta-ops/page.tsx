@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, ClipboardCheck, Copy, Loader2, Megaphone, Target, Wallet } from 'lucide-react';
+import { CheckCircle2, ClipboardCheck, Copy, Loader2, Megaphone, Target, Wallet, type LucideIcon } from 'lucide-react';
 
 import { getAlerts, getClients, listActionProposals, type ActionProposal } from '@/lib/api/client';
 import { apiClient } from '@/lib/api/client/http';
@@ -95,7 +95,7 @@ const learningBasisLabel: Record<NonNullable<OpsItem['learningWindowBasis']>, st
   unknown: 'base: não definida',
 };
 
-const bucketMeta: Record<OpsBucket, { title: string; icon: React.ComponentType<{ className?: string }> }> = {
+const bucketMeta: Record<OpsBucket, { title: string; icon: LucideIcon }> = {
   creative_copy: { title: 'Criativo & Copy', icon: Megaphone },
   audience: { title: 'Público & Segmentação', icon: Target },
   budget_scale: { title: 'Orçamento & Escala', icon: Wallet },
@@ -133,6 +133,15 @@ const inferCreativeName = (title: string, description: string) => {
   return 'Criativo a definir';
 };
 
+const normalizeLearningWindowBasis = (
+  value: unknown,
+): OpsItem['learningWindowBasis'] => {
+  if (value === 'since_start' || value === 'since_reset' || value === 'mixed' || value === 'unknown') {
+    return value;
+  }
+  return undefined;
+};
+
 const windowsBySource = (
   source: OpsItem['source'],
   description: string,
@@ -142,7 +151,7 @@ const windowsBySource = (
     learningWindow?: string;
     learningWindowBasis?: 'since_start' | 'since_reset' | 'mixed' | 'unknown';
   }
-) => {
+): Pick<OpsItem, 'analysisWindow' | 'learningWindow' | 'learningWindowBasis'> => {
   if (hinted?.analysisWindow || hinted?.learningWindow) {
     return {
       analysisWindow: hinted.analysisWindow ?? 'Acumulado (métrica consolidada da campanha)',
@@ -419,7 +428,7 @@ export default function MetaOpsPage() {
         const windows = windowsBySource('alert', alert.message, bucket, {
           analysisWindow: alert.analysisWindow,
           learningWindow: alert.learningWindow,
-          learningWindowBasis: alert.learningWindowBasis,
+          learningWindowBasis: normalizeLearningWindowBasis(alert.learningWindowBasis),
         });
         return {
           id: `alert:${alert.id}`,
@@ -446,7 +455,7 @@ export default function MetaOpsPage() {
       .map((proposal) => {
         const bucket = bucketFromProposal(proposal);
         const priority = toPriority(proposal.severity ?? 'info');
-        const clientName = proposal.clientName ?? 'Cliente';
+        const clientName = clients.find((client) => client.id === proposal.clientId)?.name ?? 'Cliente';
         const title = proposal.title ?? 'Ação proposta';
         const description = proposal.description ?? `Ação sugerida: ${proposal.action ?? 'review'}`;
         const playbook = buildPlaybook({ title, priority, bucket, clientName });
@@ -528,7 +537,7 @@ export default function MetaOpsPage() {
         if (pOrder[a.priority] !== pOrder[b.priority]) return pOrder[a.priority] - pOrder[b.priority];
         return a.clientName.localeCompare(b.clientName, 'pt-BR');
       });
-  }, [alerts, proposals, clientFilter, priorityFilter, confidenceFilter, statusFilter, checkpointFilter, statusMap, checkpointStateFor]);
+  }, [alerts, proposals, clients, clientFilter, priorityFilter, confidenceFilter, statusFilter, checkpointFilter, statusMap, checkpointStateFor]);
 
   const byBucket = useMemo(() => {
     return {
