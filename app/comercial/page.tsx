@@ -10,9 +10,11 @@ import {
   CommercialLeadStatus,
   CommercialSlaAlert,
   CommercialDailySummary,
+  CommercialLeadTimelineEvent,
   createCommercialLead,
   getCommercialDashboard,
   getCommercialDailySummary,
+  getCommercialLeadTimeline,
   getCommercialLeads,
   getCommercialSlaAlerts,
   moveCommercialLead,
@@ -78,6 +80,7 @@ export default function ComercialPage() {
   const [kpis, setKpis] = useState<CommercialDashboard>({ total: 0, novos: 0, diagnosticos: 0, propostas: 0, fechados: 0 });
   const [slaAlerts, setSlaAlerts] = useState<CommercialSlaAlert[]>([]);
   const [dailySummary, setDailySummary] = useState<CommercialDailySummary | null>(null);
+  const [timeline, setTimeline] = useState<CommercialLeadTimelineEvent[]>([]);
   const [nomeEscritorio, setNomeEscritorio] = useState('');
   const [origem, setOrigem] = useState<'instagram' | 'indicacao' | 'site' | 'whatsapp' | 'outro'>('instagram');
   const [responsavel, setResponsavel] = useState('Matheus');
@@ -130,6 +133,23 @@ export default function ComercialPage() {
   useEffect(() => {
     setPage(1);
   }, [statusFilter, responsavelFilter, origemFilter, search]);
+
+  useEffect(() => {
+    const loadTimeline = async () => {
+      if (!selectedLead) {
+        setTimeline([]);
+        return;
+      }
+      try {
+        const events = await getCommercialLeadTimeline(selectedLead.leadId, 20);
+        setTimeline(events);
+      } catch {
+        setTimeline([]);
+      }
+    };
+
+    loadTimeline();
+  }, [selectedLead]);
 
   const onCreateLead = async () => {
     try {
@@ -763,6 +783,23 @@ export default function ComercialPage() {
                   >
                     Marcar como Perdido
                   </button>
+                )}
+              </div>
+
+              <div className="pt-2 space-y-1">
+                <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Timeline</p>
+                {timeline.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Sem eventos recentes para este lead.</p>
+                ) : (
+                  <div className="space-y-1 max-h-44 overflow-auto pr-1">
+                    {timeline.map((event) => (
+                      <div key={event.id} className="rounded-md border border-border/50 bg-background/40 px-2 py-1">
+                        <p className="text-[11px] text-foreground">{event.statusOrigem} → {event.statusDestino}</p>
+                        <p className="text-[10px] text-muted-foreground">{new Date(event.createdAt).toLocaleString('pt-BR')} · {event.actor || 'system'}</p>
+                        {event.observacao && <p className="text-[10px] text-muted-foreground">{event.observacao}</p>}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>

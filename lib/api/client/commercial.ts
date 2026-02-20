@@ -71,6 +71,16 @@ export interface CommercialDailySummary {
   fechadosHoje: number;
 }
 
+export interface CommercialLeadTimelineEvent {
+  id: string;
+  leadId: string;
+  statusOrigem: string;
+  statusDestino: string;
+  actor?: string;
+  observacao?: string;
+  createdAt: string;
+}
+
 export interface MoveLeadPayload {
   to: CommercialLeadStatus;
   observacao?: string;
@@ -130,6 +140,13 @@ export async function getCommercialSlaAlerts(params?: { maxAgeHours?: number; li
 
 export async function getCommercialDailySummary(): Promise<CommercialDailySummary> {
   const { data } = await apiClient.get<CommercialDailySummary>('/api/comercial/daily-summary');
+  return data;
+}
+
+export async function getCommercialLeadTimeline(leadId: string, limit = 25): Promise<CommercialLeadTimelineEvent[]> {
+  const { data } = await apiClient.get<CommercialLeadTimelineEvent[]>(`/api/comercial/leads/${leadId}/timeline`, {
+    params: { limit },
+  });
   return data;
 }
 
