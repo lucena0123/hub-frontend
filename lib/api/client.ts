@@ -53,6 +53,7 @@ export {
   type ListActionProposalsParams,
   type ListActionHistoryParams,
 } from './client/action-proposals';
+export type { ActionProposal } from '@/types';
 
 export {
   getAdSetMetrics,
