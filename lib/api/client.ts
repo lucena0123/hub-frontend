@@ -126,6 +126,7 @@ export {
   moveCommercialLead,
   submitCommercialForm,
   updateCommercialLeadProofs,
+  updateCommercialLeadOnboarding,
   type CommercialLead,
   type CommercialLeadStatus,
   type CommercialDashboard,

@@ -17,6 +17,7 @@ import {
   getCommercialSlaAlerts,
   moveCommercialLead,
   submitCommercialForm,
+  updateCommercialLeadOnboarding,
   updateCommercialLeadProofs,
 } from '@/lib/api/client/commercial';
 
@@ -195,6 +196,20 @@ export default function ComercialPage() {
       await fetchLeads();
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Falha ao atualizar provas de fechamento.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onUpdateOnboarding = async (lead: CommercialLead, update: { d0Ok?: boolean; d1Ok?: boolean; d2Ok?: boolean; d3D4Ok?: boolean; d5D7Ok?: boolean; observacao?: string }) => {
+    try {
+      setSaving(true);
+      setError(null);
+      await updateCommercialLeadOnboarding(lead.leadId, update);
+      setStatusMessage('Progresso de onboarding atualizado.');
+      await fetchLeads();
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Falha ao atualizar onboarding.'));
     } finally {
       setSaving(false);
     }
@@ -640,8 +655,54 @@ export default function ComercialPage() {
               <p><span className="text-muted-foreground">Pagamento:</span> {selectedLead.paymentStatus}</p>
               <p><span className="text-muted-foreground">Follow-up D+2:</span> {selectedLead.followupD2At ? new Date(selectedLead.followupD2At).toLocaleString('pt-BR') : '—'}</p>
               <p><span className="text-muted-foreground">Follow-up D+5:</span> {selectedLead.followupD5At ? new Date(selectedLead.followupD5At).toLocaleString('pt-BR') : '—'}</p>
+              <p><span className="text-muted-foreground">Onboarding:</span> D0 {selectedLead.onboardingD0Ok ? '✅' : '❌'} · D1 {selectedLead.onboardingD1Ok ? '✅' : '❌'} · D2 {selectedLead.onboardingD2Ok ? '✅' : '❌'} · D3-4 {selectedLead.onboardingD3D4Ok ? '✅' : '❌'} · D5-7 {selectedLead.onboardingD5D7Ok ? '✅' : '❌'}</p>
 
               <div className="pt-2 grid grid-cols-1 gap-2">
+                {selectedLead.statusAtual === 'fechado' && !selectedLead.onboardingD0Ok && (
+                  <button
+                    className="h-8 rounded-md border border-cyan-500/60 text-cyan-300 text-xs hover:bg-cyan-500/10"
+                    disabled={saving}
+                    onClick={() => onUpdateOnboarding(selectedLead, { d0Ok: true, observacao: 'D0 confirmado' })}
+                  >
+                    Marcar onboarding D0
+                  </button>
+                )}
+                {selectedLead.statusAtual === 'fechado' && selectedLead.onboardingD0Ok && !selectedLead.onboardingD1Ok && (
+                  <button
+                    className="h-8 rounded-md border border-cyan-500/60 text-cyan-300 text-xs hover:bg-cyan-500/10"
+                    disabled={saving}
+                    onClick={() => onUpdateOnboarding(selectedLead, { d1Ok: true, observacao: 'D1 confirmado' })}
+                  >
+                    Marcar onboarding D1
+                  </button>
+                )}
+                {selectedLead.statusAtual === 'fechado' && selectedLead.onboardingD1Ok && !selectedLead.onboardingD2Ok && (
+                  <button
+                    className="h-8 rounded-md border border-cyan-500/60 text-cyan-300 text-xs hover:bg-cyan-500/10"
+                    disabled={saving}
+                    onClick={() => onUpdateOnboarding(selectedLead, { d2Ok: true, observacao: 'D2 confirmado' })}
+                  >
+                    Marcar onboarding D2
+                  </button>
+                )}
+                {selectedLead.statusAtual === 'fechado' && selectedLead.onboardingD2Ok && !selectedLead.onboardingD3D4Ok && (
+                  <button
+                    className="h-8 rounded-md border border-cyan-500/60 text-cyan-300 text-xs hover:bg-cyan-500/10"
+                    disabled={saving}
+                    onClick={() => onUpdateOnboarding(selectedLead, { d3D4Ok: true, observacao: 'D3-D4 confirmado' })}
+                  >
+                    Marcar onboarding D3-D4
+                  </button>
+                )}
+                {selectedLead.statusAtual === 'fechado' && selectedLead.onboardingD3D4Ok && !selectedLead.onboardingD5D7Ok && (
+                  <button
+                    className="h-8 rounded-md border border-cyan-500/60 text-cyan-300 text-xs hover:bg-cyan-500/10"
+                    disabled={saving}
+                    onClick={() => onUpdateOnboarding(selectedLead, { d5D7Ok: true, observacao: 'D5-D7 confirmado' })}
+                  >
+                    Marcar onboarding D5-D7
+                  </button>
+                )}
                 {selectedLead.contractStatus !== 'assinado' && (
                   <button
                     className="h-8 rounded-md border border-emerald-500/60 text-emerald-300 text-xs hover:bg-emerald-500/10"

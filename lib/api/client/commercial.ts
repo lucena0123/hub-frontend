@@ -36,6 +36,11 @@ export interface CommercialLead {
   paymentStatus: PaymentStatus;
   followupD2At?: string;
   followupD5At?: string;
+  onboardingD0Ok: boolean;
+  onboardingD1Ok: boolean;
+  onboardingD2Ok: boolean;
+  onboardingD3D4Ok: boolean;
+  onboardingD5D7Ok: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -90,6 +95,15 @@ export interface UpdateCommercialLeadProofsPayload {
   observacao?: string;
 }
 
+export interface UpdateCommercialLeadOnboardingPayload {
+  d0Ok?: boolean;
+  d1Ok?: boolean;
+  d2Ok?: boolean;
+  d3D4Ok?: boolean;
+  d5D7Ok?: boolean;
+  observacao?: string;
+}
+
 export async function getCommercialLeads(params?: {
   status?: CommercialLeadStatus;
   responsavel?: string;
@@ -140,5 +154,10 @@ export async function submitCommercialForm(leadId: string, payload: SubmitCommer
 
 export async function updateCommercialLeadProofs(leadId: string, payload: UpdateCommercialLeadProofsPayload): Promise<CommercialLead> {
   const { data } = await apiClient.post<CommercialLead>(`/api/comercial/leads/${leadId}/proofs`, payload);
+  return data;
+}
+
+export async function updateCommercialLeadOnboarding(leadId: string, payload: UpdateCommercialLeadOnboardingPayload): Promise<CommercialLead> {
+  const { data } = await apiClient.post<CommercialLead>(`/api/comercial/leads/${leadId}/onboarding`, payload);
   return data;
 }
