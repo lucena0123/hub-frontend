@@ -12,6 +12,7 @@ import {
   CommercialSlaAlert,
   CommercialDailySummary,
   CommercialLeadTimelineEvent,
+  CommercialIntegrationEvent,
   CommercialFollowupDue,
   CommercialRetentionAlert,
   createCommercialLead,
@@ -21,6 +22,7 @@ import {
   getCommercialRetentionDue,
   getCommercialLeadFormLink,
   getCommercialLeadTimeline,
+  getCommercialIntegrationEvents,
   getCommercialLeads,
   getCommercialSlaAlerts,
   moveCommercialLead,
@@ -91,6 +93,7 @@ export default function ComercialPage() {
   const [slaAlerts, setSlaAlerts] = useState<CommercialSlaAlert[]>([]);
   const [dailySummary, setDailySummary] = useState<CommercialDailySummary | null>(null);
   const [timeline, setTimeline] = useState<CommercialLeadTimelineEvent[]>([]);
+  const [integrationEvents, setIntegrationEvents] = useState<CommercialIntegrationEvent[]>([]);
   const [followupsDue, setFollowupsDue] = useState<CommercialFollowupDue[]>([]);
   const [retentionDue, setRetentionDue] = useState<CommercialRetentionAlert[]>([]);
   const [nomeEscritorio, setNomeEscritorio] = useState('');
@@ -155,13 +158,19 @@ export default function ComercialPage() {
     const loadTimeline = async () => {
       if (!selectedLead) {
         setTimeline([]);
+        setIntegrationEvents([]);
         return;
       }
       try {
-        const events = await getCommercialLeadTimeline(selectedLead.leadId, 20);
+        const [events, integrations] = await Promise.all([
+          getCommercialLeadTimeline(selectedLead.leadId, 20),
+          getCommercialIntegrationEvents(selectedLead.leadId, 20),
+        ]);
         setTimeline(events);
+        setIntegrationEvents(integrations);
       } catch {
         setTimeline([]);
+        setIntegrationEvents([]);
       }
     };
 
@@ -957,12 +966,28 @@ export default function ComercialPage() {
                 {timeline.length === 0 ? (
                   <p className="text-xs text-muted-foreground">Sem eventos recentes para este lead.</p>
                 ) : (
-                  <div className="space-y-1 max-h-44 overflow-auto pr-1">
+                  <div className="space-y-1 max-h-40 overflow-auto pr-1">
                     {timeline.map((event) => (
                       <div key={event.id} className="rounded-md border border-border/50 bg-background/40 px-2 py-1">
                         <p className="text-[11px] text-foreground">{event.statusOrigem} → {event.statusDestino}</p>
                         <p className="text-[10px] text-muted-foreground">{new Date(event.createdAt).toLocaleString('pt-BR')} · {event.actor || 'system'}</p>
                         {event.observacao && <p className="text-[10px] text-muted-foreground">{event.observacao}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2 space-y-1">
+                <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Eventos de integração</p>
+                {integrationEvents.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Sem eventos de canais para este lead.</p>
+                ) : (
+                  <div className="space-y-1 max-h-40 overflow-auto pr-1">
+                    {integrationEvents.map((event) => (
+                      <div key={event.id} className="rounded-md border border-border/50 bg-background/40 px-2 py-1">
+                        <p className="text-[11px] text-foreground">{event.channel} · {event.eventType}</p>
+                        <p className="text-[10px] text-muted-foreground">{new Date(event.occurredAt).toLocaleString('pt-BR')}</p>
                       </div>
                     ))}
                   </div>

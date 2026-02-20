@@ -108,6 +108,17 @@ export interface CommercialFormLink {
   url: string;
 }
 
+export interface CommercialIntegrationEvent {
+  id: string;
+  leadId: string;
+  channel: string;
+  eventType: string;
+  externalEventId?: string;
+  payload?: Record<string, unknown>;
+  occurredAt: string;
+  createdAt: string;
+}
+
 export interface MoveLeadPayload {
   to: CommercialLeadStatus;
   observacao?: string;
@@ -178,6 +189,13 @@ export async function getCommercialDailySummary(): Promise<CommercialDailySummar
 
 export async function getCommercialLeadTimeline(leadId: string, limit = 25): Promise<CommercialLeadTimelineEvent[]> {
   const { data } = await apiClient.get<CommercialLeadTimelineEvent[]>(`/api/comercial/leads/${leadId}/timeline`, {
+    params: { limit },
+  });
+  return data;
+}
+
+export async function getCommercialIntegrationEvents(leadId: string, limit = 25): Promise<CommercialIntegrationEvent[]> {
+  const { data } = await apiClient.get<CommercialIntegrationEvent[]>(`/api/comercial/leads/${leadId}/integrations/events`, {
     params: { limit },
   });
   return data;
