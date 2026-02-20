@@ -269,7 +269,7 @@ export interface DispatchCommercialCommunicationInput {
   leadId: string;
   channel: CommercialDispatchChannel;
   stage: CommercialDispatchStage;
-  templateKey: string;
+  templateKey?: string;
   recipient?: string;
   variables?: Record<string, unknown>;
 }
