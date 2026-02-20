@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AxiosError } from 'axios';
 import { X } from 'lucide-react';
 import { PageShell } from '@/components/layout/page-shell';
+import { useAuth } from '@/contexts/auth-context';
 import {
   CommercialDashboard,
   CommercialLead,
@@ -75,6 +76,9 @@ const getApiErrorMessage = (err: unknown, fallback: string): string => {
 };
 
 export default function ComercialPage() {
+  const { user } = useAuth();
+  const canManageSensitive = user?.role === 'admin' || user?.role === 'manager';
+
   const [leads, setLeads] = useState<CommercialLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -303,6 +307,11 @@ export default function ComercialPage() {
     const lead = leads.find((item) => item.leadId === effectiveLeadId);
     if (!lead) return;
     if (lead.statusAtual === targetStatus) return;
+
+    if (targetStatus === 'fechado' && !canManageSensitive) {
+      setError('Apenas admin/manager podem mover para Fechado.');
+      return;
+    }
 
     await onMoveLead(lead, targetStatus);
   };
@@ -664,9 +673,14 @@ export default function ComercialPage() {
                             className="w-full h-7 rounded-md border border-primary/50 text-primary text-xs hover:bg-primary/10 disabled:opacity-50"
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (next === 'fechado' && !canManageSensitive) {
+                                setError('Apenas admin/manager podem mover para Fechado.');
+                                return;
+                              }
                               onMoveLead(lead, next);
                             }}
-                            disabled={saving}
+                            disabled={saving || (next === 'fechado' && !canManageSensitive)}
+                            title={next === 'fechado' && !canManageSensitive ? 'Sem permissão para fechar leads' : undefined}
                           >
                             Avançar para {COLUMNS.find((c) => c.key === next)?.label}
                           </button>
@@ -710,9 +724,10 @@ export default function ComercialPage() {
               <p><span className="text-muted-foreground">Consentimento LGPD:</span> {selectedLead.consentGiven ? '✅ confirmado' : '❌ pendente'}</p>
               <p><span className="text-muted-foreground">Consentimento em:</span> {selectedLead.consentGivenAt ? new Date(selectedLead.consentGivenAt).toLocaleString('pt-BR') : '—'}</p>
               <p><span className="text-muted-foreground">Retenção até:</span> {selectedLead.retentionUntil ? new Date(selectedLead.retentionUntil).toLocaleDateString('pt-BR') : '—'}</p>
+              {!canManageSensitive && <p className="text-xs text-amber-300">Perfil analista: ações sensíveis (fechar, provas, onboarding, LGPD) bloqueadas.</p>}
 
               <div className="pt-2 grid grid-cols-1 gap-2">
-                {!selectedLead.consentGiven && (
+                {canManageSensitive && !selectedLead.consentGiven && (
                   <button
                     className="h-8 rounded-md border border-fuchsia-500/60 text-fuchsia-300 text-xs hover:bg-fuchsia-500/10"
                     disabled={saving}
@@ -725,7 +740,7 @@ export default function ComercialPage() {
                     Confirmar consentimento LGPD
                   </button>
                 )}
-                {selectedLead.statusAtual === 'fechado' && !selectedLead.onboardingD0Ok && (
+                {canManageSensitive && selectedLead.statusAtual === 'fechado' && !selectedLead.onboardingD0Ok && (
                   <button
                     className="h-8 rounded-md border border-cyan-500/60 text-cyan-300 text-xs hover:bg-cyan-500/10"
                     disabled={saving}
@@ -734,7 +749,7 @@ export default function ComercialPage() {
                     Marcar onboarding D0
                   </button>
                 )}
-                {selectedLead.statusAtual === 'fechado' && selectedLead.onboardingD0Ok && !selectedLead.onboardingD1Ok && (
+                {canManageSensitive && selectedLead.statusAtual === 'fechado' && selectedLead.onboardingD0Ok && !selectedLead.onboardingD1Ok && (
                   <button
                     className="h-8 rounded-md border border-cyan-500/60 text-cyan-300 text-xs hover:bg-cyan-500/10"
                     disabled={saving}
@@ -743,7 +758,7 @@ export default function ComercialPage() {
                     Marcar onboarding D1
                   </button>
                 )}
-                {selectedLead.statusAtual === 'fechado' && selectedLead.onboardingD1Ok && !selectedLead.onboardingD2Ok && (
+                {canManageSensitive && selectedLead.statusAtual === 'fechado' && selectedLead.onboardingD1Ok && !selectedLead.onboardingD2Ok && (
                   <button
                     className="h-8 rounded-md border border-cyan-500/60 text-cyan-300 text-xs hover:bg-cyan-500/10"
                     disabled={saving}
@@ -752,7 +767,7 @@ export default function ComercialPage() {
                     Marcar onboarding D2
                   </button>
                 )}
-                {selectedLead.statusAtual === 'fechado' && selectedLead.onboardingD2Ok && !selectedLead.onboardingD3D4Ok && (
+                {canManageSensitive && selectedLead.statusAtual === 'fechado' && selectedLead.onboardingD2Ok && !selectedLead.onboardingD3D4Ok && (
                   <button
                     className="h-8 rounded-md border border-cyan-500/60 text-cyan-300 text-xs hover:bg-cyan-500/10"
                     disabled={saving}
@@ -761,7 +776,7 @@ export default function ComercialPage() {
                     Marcar onboarding D3-D4
                   </button>
                 )}
-                {selectedLead.statusAtual === 'fechado' && selectedLead.onboardingD3D4Ok && !selectedLead.onboardingD5D7Ok && (
+                {canManageSensitive && selectedLead.statusAtual === 'fechado' && selectedLead.onboardingD3D4Ok && !selectedLead.onboardingD5D7Ok && (
                   <button
                     className="h-8 rounded-md border border-cyan-500/60 text-cyan-300 text-xs hover:bg-cyan-500/10"
                     disabled={saving}
@@ -770,7 +785,7 @@ export default function ComercialPage() {
                     Marcar onboarding D5-D7
                   </button>
                 )}
-                {selectedLead.contractStatus !== 'assinado' && (
+                {canManageSensitive && selectedLead.contractStatus !== 'assinado' && (
                   <button
                     className="h-8 rounded-md border border-emerald-500/60 text-emerald-300 text-xs hover:bg-emerald-500/10"
                     disabled={saving}
@@ -779,7 +794,7 @@ export default function ComercialPage() {
                     Marcar contrato assinado
                   </button>
                 )}
-                {selectedLead.paymentStatus !== 'pago' && (
+                {canManageSensitive && selectedLead.paymentStatus !== 'pago' && (
                   <button
                     className="h-8 rounded-md border border-violet-500/60 text-violet-300 text-xs hover:bg-violet-500/10"
                     disabled={saving}
@@ -886,3 +901,4 @@ export default function ComercialPage() {
     </PageShell>
   );
 }
+
