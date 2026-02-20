@@ -8,9 +8,11 @@ import {
   CommercialDashboard,
   CommercialLead,
   CommercialLeadStatus,
+  CommercialSlaAlert,
   createCommercialLead,
   getCommercialDashboard,
   getCommercialLeads,
+  getCommercialSlaAlerts,
   moveCommercialLead,
   submitCommercialForm,
   updateCommercialLeadProofs,
@@ -55,6 +57,7 @@ export default function ComercialPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [kpis, setKpis] = useState<CommercialDashboard>({ total: 0, novos: 0, diagnosticos: 0, propostas: 0, fechados: 0 });
+  const [slaAlerts, setSlaAlerts] = useState<CommercialSlaAlert[]>([]);
   const [nomeEscritorio, setNomeEscritorio] = useState('');
   const [origem, setOrigem] = useState<'instagram' | 'indicacao' | 'site' | 'whatsapp' | 'outro'>('instagram');
   const [responsavel, setResponsavel] = useState('Matheus');
@@ -78,7 +81,7 @@ export default function ComercialPage() {
   const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
-      const [data, dashboard] = await Promise.all([
+      const [data, dashboard, alerts] = await Promise.all([
         getCommercialLeads({
           status: statusFilter === 'all' ? undefined : statusFilter,
           responsavel: responsavelFilter === 'all' ? undefined : responsavelFilter,
@@ -86,9 +89,11 @@ export default function ComercialPage() {
           offset: (page - 1) * pageSize,
         }),
         getCommercialDashboard(kpiRange === 'all' ? undefined : kpiRange),
+        getCommercialSlaAlerts({ maxAgeHours: 24, limit: 5 }),
       ]);
       setLeads(data);
       setKpis(dashboard);
+      setSlaAlerts(alerts);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Falha ao carregar pipeline.'));
     } finally {
@@ -460,6 +465,24 @@ export default function ComercialPage() {
             <p className="text-xl font-semibold text-emerald-300">{kpis.fechados}</p>
           </div>
         </div>
+      </section>
+
+      <section className="rounded-[12px] border border-border/60 bg-card/20 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Alertas de SLA (24h)</p>
+          <p className="text-xs text-muted-foreground">{slaAlerts.length} lead(s) atrasado(s)</p>
+        </div>
+        {slaAlerts.length === 0 ? (
+          <p className="text-xs text-emerald-300">Nenhum lead atrasado no SLA de 24h.</p>
+        ) : (
+          <div className="space-y-1">
+            {slaAlerts.map((alert) => (
+              <div key={alert.leadId} className="text-xs text-muted-foreground rounded-md border border-border/50 bg-background/40 px-2 py-1">
+                <span className="text-foreground font-medium">{alert.nomeEscritorio}</span> · {alert.statusAtual} · {alert.hoursInStatus}h · resp: {alert.responsavel}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <div className="grid grid-cols-1 2xl:grid-cols-[1fr_340px] gap-4 items-start">

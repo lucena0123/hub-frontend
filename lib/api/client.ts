@@ -120,6 +120,7 @@ export {
 export {
   getCommercialLeads,
   getCommercialDashboard,
+  getCommercialSlaAlerts,
   createCommercialLead,
   moveCommercialLead,
   submitCommercialForm,
@@ -127,6 +128,7 @@ export {
   type CommercialLead,
   type CommercialLeadStatus,
   type CommercialDashboard,
+  type CommercialSlaAlert,
   type CommercialFormType,
   type ContractStatus,
   type PaymentStatus,
