@@ -305,6 +305,28 @@ export default function ComercialPage() {
     setTransitionDate('');
   };
 
+  const getAdvanceGuard = (lead: CommercialLead, targetStatus: CommercialLeadStatus): { ok: boolean; reason?: string } => {
+    if (targetStatus === 'proposta_enviada') {
+      if (lead.formType !== 'briefing') {
+        return { ok: false, reason: 'Briefing obrigatório antes de enviar proposta.' };
+      }
+      if (!lead.consentGiven) {
+        return { ok: false, reason: 'Consentimento LGPD obrigatório antes da proposta.' };
+      }
+    }
+
+    if (targetStatus === 'fechado') {
+      if (!canManageSensitive) {
+        return { ok: false, reason: 'Apenas admin/manager podem fechar leads.' };
+      }
+      if (lead.contractStatus !== 'assinado' || lead.paymentStatus !== 'pago') {
+        return { ok: false, reason: 'Fechamento exige contrato assinado e pagamento confirmado.' };
+      }
+    }
+
+    return { ok: true };
+  };
+
   const handleDropToColumn = async (targetStatus: CommercialLeadStatus, leadId?: string) => {
     const effectiveLeadId = leadId || draggingLeadId;
     if (!effectiveLeadId) return;
@@ -313,8 +335,9 @@ export default function ComercialPage() {
     if (!lead) return;
     if (lead.statusAtual === targetStatus) return;
 
-    if (targetStatus === 'fechado' && !canManageSensitive) {
-      setError('Apenas admin/manager podem mover para Fechado.');
+    const guard = getAdvanceGuard(lead, targetStatus);
+    if (!guard.ok) {
+      setError(guard.reason || 'Ação bloqueada por regra de negócio.');
       return;
     }
 
@@ -689,23 +712,26 @@ export default function ComercialPage() {
                         <p className="text-sm font-medium leading-tight">{lead.nomeEscritorio}</p>
                         <p className="text-[11px] text-muted-foreground">Origem: {lead.origem}</p>
                         <p className="text-[11px] text-muted-foreground">Resp: {lead.responsavel}</p>
-                        {next && (
-                          <button
-                            className="w-full h-7 rounded-md border border-primary/50 text-primary text-xs hover:bg-primary/10 disabled:opacity-50"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (next === 'fechado' && !canManageSensitive) {
-                                setError('Apenas admin/manager podem mover para Fechado.');
-                                return;
-                              }
-                              onMoveLead(lead, next);
-                            }}
-                            disabled={saving || (next === 'fechado' && !canManageSensitive)}
-                            title={next === 'fechado' && !canManageSensitive ? 'Sem permissão para fechar leads' : undefined}
-                          >
-                            Avançar para {COLUMNS.find((c) => c.key === next)?.label}
-                          </button>
-                        )}
+                        {next && (() => {
+                          const guard = getAdvanceGuard(lead, next);
+                          return (
+                            <button
+                              className="w-full h-7 rounded-md border border-primary/50 text-primary text-xs hover:bg-primary/10 disabled:opacity-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!guard.ok) {
+                                  setError(guard.reason || 'Ação bloqueada por regra de negócio.');
+                                  return;
+                                }
+                                onMoveLead(lead, next);
+                              }}
+                              disabled={saving || !guard.ok}
+                              title={!guard.ok ? guard.reason : undefined}
+                            >
+                              Avançar para {COLUMNS.find((c) => c.key === next)?.label}
+                            </button>
+                          );
+                        })()}
                       </article>
                     );
                   })}
@@ -746,6 +772,14 @@ export default function ComercialPage() {
               <p><span className="text-muted-foreground">Consentimento em:</span> {selectedLead.consentGivenAt ? new Date(selectedLead.consentGivenAt).toLocaleString('pt-BR') : '—'}</p>
               <p><span className="text-muted-foreground">Retenção até:</span> {selectedLead.retentionUntil ? new Date(selectedLead.retentionUntil).toLocaleDateString('pt-BR') : '—'}</p>
               {!canManageSensitive && <p className="text-xs text-amber-300">Perfil analista: ações sensíveis (fechar, provas, onboarding, LGPD) bloqueadas.</p>}
+
+              <div className="rounded-md border border-border/50 bg-background/40 px-2 py-2 space-y-1">
+                <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Checklist operacional</p>
+                <p className="text-[11px] text-muted-foreground">Briefing: {selectedLead.formType === 'briefing' ? '✅' : '❌'}</p>
+                <p className="text-[11px] text-muted-foreground">LGPD: {selectedLead.consentGiven ? '✅' : '❌'}</p>
+                <p className="text-[11px] text-muted-foreground">Contrato: {selectedLead.contractStatus === 'assinado' ? '✅' : '❌'}</p>
+                <p className="text-[11px] text-muted-foreground">Pagamento: {selectedLead.paymentStatus === 'pago' ? '✅' : '❌'}</p>
+              </div>
 
               <div className="pt-2 grid grid-cols-1 gap-2">
                 {canManageSensitive && !selectedLead.consentGiven && (
