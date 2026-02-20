@@ -93,6 +93,7 @@ export default function ComercialPage() {
   const [origem, setOrigem] = useState<'instagram' | 'indicacao' | 'site' | 'whatsapp' | 'outro'>('instagram');
   const [responsavel, setResponsavel] = useState('Matheus');
   const [search, setSearch] = useState('');
+  const [blockedOnly, setBlockedOnly] = useState(false);
   const [origemFilter, setOrigemFilter] = useState<'all' | 'instagram' | 'indicacao' | 'site' | 'whatsapp' | 'outro'>('all');
   const [responsavelFilter, setResponsavelFilter] = useState<'all' | string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | CommercialLeadStatus>('all');
@@ -142,7 +143,7 @@ export default function ComercialPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, responsavelFilter, origemFilter, search]);
+  }, [statusFilter, responsavelFilter, origemFilter, search, blockedOnly]);
 
   useEffect(() => {
     const loadTimeline = async () => {
@@ -348,6 +349,18 @@ export default function ComercialPage() {
     return Array.from(new Set(leads.map((lead) => lead.responsavel).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [leads]);
 
+  const isLeadBlocked = (lead: CommercialLead): boolean => {
+    if (lead.statusAtual === 'diagnostico_concluido') {
+      return lead.formType !== 'briefing' || !lead.consentGiven;
+    }
+
+    if (lead.statusAtual === 'negociacao') {
+      return lead.contractStatus !== 'assinado' || lead.paymentStatus !== 'pago';
+    }
+
+    return false;
+  };
+
   const filteredLeads = useMemo(() => {
     const base = leads.filter((lead) => {
       if (statusFilter !== 'all' && lead.statusAtual !== statusFilter) return false;
@@ -358,6 +371,7 @@ export default function ComercialPage() {
         const hay = `${lead.nomeEscritorio} ${lead.origem} ${lead.responsavel}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
+      if (blockedOnly && !isLeadBlocked(lead)) return false;
       return true;
     });
 
@@ -366,7 +380,7 @@ export default function ComercialPage() {
     }
 
     return base;
-  }, [leads, statusFilter, origemFilter, responsavelFilter, search, sortBy]);
+  }, [leads, statusFilter, origemFilter, responsavelFilter, search, sortBy, blockedOnly]);
 
   const leadsByStatus = useMemo(() => {
     const grouped: Record<string, CommercialLead[]> = {};
@@ -455,9 +469,17 @@ export default function ComercialPage() {
       </section>
 
       <section className="rounded-[12px] border border-border/60 bg-card/20 p-3 space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-xs text-muted-foreground uppercase tracking-[0.15em]">Filtros</span>
-          <span className="text-[11px] text-muted-foreground">Exibindo {filteredLeads.length} de {leads.length} · Página {page}</span>
+          <div className="flex items-center gap-2">
+            <button
+              className={`h-7 px-2 rounded-md border text-[11px] ${blockedOnly ? 'border-amber-500/70 text-amber-300 bg-amber-500/10' : 'border-border text-muted-foreground'}`}
+              onClick={() => setBlockedOnly((prev) => !prev)}
+            >
+              {blockedOnly ? 'Bloqueados: ON' : 'Bloqueados: OFF'}
+            </button>
+            <span className="text-[11px] text-muted-foreground">Exibindo {filteredLeads.length} de {leads.length} · Página {page}</span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
