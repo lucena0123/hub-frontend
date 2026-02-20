@@ -47,6 +47,22 @@ type PendingTransition = {
   to: 'nutricao' | 'perdido';
 };
 
+const NURTURE_REASONS = [
+  'Sem urgência no momento',
+  'Aguardando decisão interna',
+  'Aguardando retorno do sócio',
+  'Momento financeiro inadequado',
+  'Contato sem resposta temporária',
+] as const;
+
+const LOSS_REASONS = [
+  'Sem orçamento',
+  'Fechou com concorrente',
+  'Sem fit de perfil',
+  'Sem retorno após follow-up',
+  'Projeto adiado/cancelado',
+] as const;
+
 const getApiErrorMessage = (err: unknown, fallback: string): string => {
   if (err instanceof AxiosError) {
     const payload = err.response?.data as { message?: string } | undefined;
@@ -217,7 +233,7 @@ export default function ComercialPage() {
 
   const requestSpecialTransition = (lead: CommercialLead, to: 'nutricao' | 'perdido') => {
     setPendingTransition({ lead, to });
-    setTransitionReason('');
+    setTransitionReason(to === 'nutricao' ? NURTURE_REASONS[0] : LOSS_REASONS[0]);
     setTransitionDate('');
   };
 
@@ -762,12 +778,15 @@ export default function ComercialPage() {
             </h3>
             <p className="text-xs text-muted-foreground">Lead: {pendingTransition.lead.nomeEscritorio}</p>
 
-            <textarea
-              className="w-full min-h-[84px] rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-              placeholder="Motivo da transição"
+            <select
+              className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
               value={transitionReason}
               onChange={(e) => setTransitionReason(e.target.value)}
-            />
+            >
+              {(pendingTransition.to === 'nutricao' ? NURTURE_REASONS : LOSS_REASONS).map((reason) => (
+                <option key={reason} value={reason}>{reason}</option>
+              ))}
+            </select>
 
             {pendingTransition.to === 'nutricao' && (
               <input
