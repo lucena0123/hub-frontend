@@ -84,6 +84,15 @@ export interface CommercialLeadTimelineEvent {
   createdAt: string;
 }
 
+export interface CommercialFollowupDue {
+  leadId: string;
+  nomeEscritorio: string;
+  responsavel: string;
+  statusAtual: CommercialLeadStatus;
+  followupType: 'D+2' | 'D+5';
+  dueAt: string;
+}
+
 export interface MoveLeadPayload {
   to: CommercialLeadStatus;
   observacao?: string;
@@ -154,6 +163,13 @@ export async function getCommercialDailySummary(): Promise<CommercialDailySummar
 
 export async function getCommercialLeadTimeline(leadId: string, limit = 25): Promise<CommercialLeadTimelineEvent[]> {
   const { data } = await apiClient.get<CommercialLeadTimelineEvent[]>(`/api/comercial/leads/${leadId}/timeline`, {
+    params: { limit },
+  });
+  return data;
+}
+
+export async function getCommercialFollowupsDue(limit = 20): Promise<CommercialFollowupDue[]> {
+  const { data } = await apiClient.get<CommercialFollowupDue[]>('/api/comercial/followups/due', {
     params: { limit },
   });
   return data;
