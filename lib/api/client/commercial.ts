@@ -93,6 +93,14 @@ export interface CommercialFollowupDue {
   dueAt: string;
 }
 
+export interface CommercialRetentionAlert {
+  leadId: string;
+  nomeEscritorio: string;
+  responsavel: string;
+  retentionUntil: string;
+  daysOverdue: number;
+}
+
 export interface MoveLeadPayload {
   to: CommercialLeadStatus;
   observacao?: string;
@@ -170,6 +178,13 @@ export async function getCommercialLeadTimeline(leadId: string, limit = 25): Pro
 
 export async function getCommercialFollowupsDue(limit = 20): Promise<CommercialFollowupDue[]> {
   const { data } = await apiClient.get<CommercialFollowupDue[]>('/api/comercial/followups/due', {
+    params: { limit },
+  });
+  return data;
+}
+
+export async function getCommercialRetentionDue(limit = 20): Promise<CommercialRetentionAlert[]> {
+  const { data } = await apiClient.get<CommercialRetentionAlert[]>('/api/comercial/privacy/retention-due', {
     params: { limit },
   });
   return data;

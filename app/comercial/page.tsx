@@ -13,10 +13,12 @@ import {
   CommercialDailySummary,
   CommercialLeadTimelineEvent,
   CommercialFollowupDue,
+  CommercialRetentionAlert,
   createCommercialLead,
   getCommercialDashboard,
   getCommercialDailySummary,
   getCommercialFollowupsDue,
+  getCommercialRetentionDue,
   getCommercialLeadTimeline,
   getCommercialLeads,
   getCommercialSlaAlerts,
@@ -89,6 +91,7 @@ export default function ComercialPage() {
   const [dailySummary, setDailySummary] = useState<CommercialDailySummary | null>(null);
   const [timeline, setTimeline] = useState<CommercialLeadTimelineEvent[]>([]);
   const [followupsDue, setFollowupsDue] = useState<CommercialFollowupDue[]>([]);
+  const [retentionDue, setRetentionDue] = useState<CommercialRetentionAlert[]>([]);
   const [nomeEscritorio, setNomeEscritorio] = useState('');
   const [origem, setOrigem] = useState<'instagram' | 'indicacao' | 'site' | 'whatsapp' | 'outro'>('instagram');
   const [responsavel, setResponsavel] = useState('Matheus');
@@ -113,7 +116,7 @@ export default function ComercialPage() {
   const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
-      const [data, dashboard, alerts, summary, dueFollowups] = await Promise.all([
+      const [data, dashboard, alerts, summary, dueFollowups, dueRetention] = await Promise.all([
         getCommercialLeads({
           status: statusFilter === 'all' ? undefined : statusFilter,
           responsavel: responsavelFilter === 'all' ? undefined : responsavelFilter,
@@ -124,12 +127,14 @@ export default function ComercialPage() {
         getCommercialSlaAlerts({ maxAgeHours: 24, limit: 5 }),
         getCommercialDailySummary(),
         getCommercialFollowupsDue(5),
+        getCommercialRetentionDue(5),
       ]);
       setLeads(data);
       setKpis(dashboard);
       setSlaAlerts(alerts);
       setDailySummary(summary);
       setFollowupsDue(dueFollowups);
+      setRetentionDue(dueRetention);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Falha ao carregar pipeline.'));
     } finally {
@@ -639,6 +644,22 @@ export default function ComercialPage() {
             {followupsDue.map((item) => (
               <div key={`${item.leadId}-${item.followupType}`} className="text-xs text-muted-foreground rounded-md border border-border/50 bg-background/40 px-2 py-1">
                 <span className="text-foreground font-medium">{item.nomeEscritorio}</span> · {item.followupType} · {new Date(item.dueAt).toLocaleString('pt-BR')} · resp: {item.responsavel}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-1">
+          <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Retenção LGPD vencida</p>
+          <p className="text-xs text-muted-foreground">{retentionDue.length} lead(s)</p>
+        </div>
+        {retentionDue.length === 0 ? (
+          <p className="text-xs text-emerald-300">Nenhum lead com retenção vencida.</p>
+        ) : (
+          <div className="space-y-1">
+            {retentionDue.map((item) => (
+              <div key={item.leadId} className="text-xs text-muted-foreground rounded-md border border-border/50 bg-background/40 px-2 py-1">
+                <span className="text-foreground font-medium">{item.nomeEscritorio}</span> · vencido há {item.daysOverdue} dia(s) · resp: {item.responsavel}
               </div>
             ))}
           </div>
