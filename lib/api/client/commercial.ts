@@ -13,6 +13,9 @@ export type CommercialLeadStatus =
 
 export type CommercialFormType = 'briefing' | 'onboarding' | 'custom';
 
+export type ContractStatus = 'pendente' | 'assinado';
+export type PaymentStatus = 'pendente' | 'pago';
+
 export interface CommercialLead {
   leadId: string;
   dataEntrada: string;
@@ -29,6 +32,8 @@ export interface CommercialLead {
   formType?: CommercialFormType;
   formSubmittedAt?: string;
   formPayloadJson?: Record<string, unknown>;
+  contractStatus: ContractStatus;
+  paymentStatus: PaymentStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,6 +62,12 @@ export interface SubmitCommercialFormPayload {
   formType: CommercialFormType;
   payload: Record<string, unknown>;
   submittedAt?: string;
+}
+
+export interface UpdateCommercialLeadProofsPayload {
+  contractStatus?: ContractStatus;
+  paymentStatus?: PaymentStatus;
+  observacao?: string;
 }
 
 export async function getCommercialLeads(params?: {
@@ -94,5 +105,10 @@ export async function moveCommercialLead(leadId: string, payload: MoveLeadPayloa
 
 export async function submitCommercialForm(leadId: string, payload: SubmitCommercialFormPayload): Promise<CommercialLead> {
   const { data } = await apiClient.post<CommercialLead>(`/api/comercial/leads/${leadId}/forms/submit`, payload);
+  return data;
+}
+
+export async function updateCommercialLeadProofs(leadId: string, payload: UpdateCommercialLeadProofsPayload): Promise<CommercialLead> {
+  const { data } = await apiClient.post<CommercialLead>(`/api/comercial/leads/${leadId}/proofs`, payload);
   return data;
 }

@@ -13,6 +13,7 @@ import {
   getCommercialLeads,
   moveCommercialLead,
   submitCommercialForm,
+  updateCommercialLeadProofs,
 } from '@/lib/api/client/commercial';
 
 const COLUMNS: Array<{ key: CommercialLeadStatus; label: string }> = [
@@ -170,6 +171,20 @@ export default function ComercialPage() {
       await fetchLeads();
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Falha ao registrar briefing.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onUpdateProofs = async (lead: CommercialLead, update: { contractStatus?: 'pendente' | 'assinado'; paymentStatus?: 'pendente' | 'pago'; observacao?: string }) => {
+    try {
+      setSaving(true);
+      setError(null);
+      await updateCommercialLeadProofs(lead.leadId, update);
+      setStatusMessage('Status de provas atualizado.');
+      await fetchLeads();
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Falha ao atualizar provas de fechamento.'));
     } finally {
       setSaving(false);
     }
@@ -563,8 +578,28 @@ export default function ComercialPage() {
               <p><span className="text-muted-foreground">Form token:</span> {selectedLead.formToken || '—'}</p>
               <p><span className="text-muted-foreground">Form status:</span> {selectedLead.formType ? `${selectedLead.formType} enviado` : 'não enviado'}</p>
               <p><span className="text-muted-foreground">Última submissão:</span> {selectedLead.formSubmittedAt ? new Date(selectedLead.formSubmittedAt).toLocaleString('pt-BR') : '—'}</p>
+              <p><span className="text-muted-foreground">Contrato:</span> {selectedLead.contractStatus}</p>
+              <p><span className="text-muted-foreground">Pagamento:</span> {selectedLead.paymentStatus}</p>
 
               <div className="pt-2 grid grid-cols-1 gap-2">
+                {selectedLead.contractStatus !== 'assinado' && (
+                  <button
+                    className="h-8 rounded-md border border-emerald-500/60 text-emerald-300 text-xs hover:bg-emerald-500/10"
+                    disabled={saving}
+                    onClick={() => onUpdateProofs(selectedLead, { contractStatus: 'assinado', observacao: 'Contrato assinado confirmado' })}
+                  >
+                    Marcar contrato assinado
+                  </button>
+                )}
+                {selectedLead.paymentStatus !== 'pago' && (
+                  <button
+                    className="h-8 rounded-md border border-violet-500/60 text-violet-300 text-xs hover:bg-violet-500/10"
+                    disabled={saving}
+                    onClick={() => onUpdateProofs(selectedLead, { paymentStatus: 'pago', observacao: 'Pagamento inicial confirmado' })}
+                  >
+                    Marcar pagamento confirmado
+                  </button>
+                )}
                 {!selectedLead.formType && (
                   <button
                     className="h-8 rounded-md border border-sky-500/60 text-sky-300 text-xs hover:bg-sky-500/10"

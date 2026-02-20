@@ -123,10 +123,13 @@ export {
   createCommercialLead,
   moveCommercialLead,
   submitCommercialForm,
+  updateCommercialLeadProofs,
   type CommercialLead,
   type CommercialLeadStatus,
   type CommercialDashboard,
   type CommercialFormType,
+  type ContractStatus,
+  type PaymentStatus,
 } from './client/commercial';
 
 export {
