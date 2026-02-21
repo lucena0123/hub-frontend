@@ -30,6 +30,7 @@ import {
   updateCommercialLeadOnboarding,
   updateCommercialLeadPrivacy,
   updateCommercialLeadProofs,
+  dispatchCommercialCommunication,
 } from '@/lib/api/client/commercial';
 
 const COLUMNS: Array<{ key: CommercialLeadStatus; label: string }> = [
@@ -73,6 +74,15 @@ const LOSS_REASONS = [
   'Sem retorno após follow-up',
   'Projeto adiado/cancelado',
 ] as const;
+
+const getDispatchStageFromLeadStatus = (status: CommercialLeadStatus): 'primeiro_contato' | 'diagnostico_agendado' | 'proposta_enviada' | 'negociacao' | 'fechado' | null => {
+  if (status === 'novo_lead' || status === 'primeiro_contato') return 'primeiro_contato';
+  if (status === 'diagnostico_agendado' || status === 'diagnostico_concluido') return 'diagnostico_agendado';
+  if (status === 'proposta_enviada') return 'proposta_enviada';
+  if (status === 'negociacao') return 'negociacao';
+  if (status === 'fechado') return 'fechado';
+  return null;
+};
 
 const getApiErrorMessage = (err: unknown, fallback: string): string => {
   if (err instanceof AxiosError) {
@@ -309,6 +319,35 @@ export default function ComercialPage() {
     setPendingTransition({ lead, to });
     setTransitionReason(to === 'nutricao' ? NURTURE_REASONS[0] : LOSS_REASONS[0]);
     setTransitionDate('');
+  };
+
+  const onDispatchByStage = async (lead: CommercialLead, channel: 'whatsapp' | 'gmail') => {
+    const stage = getDispatchStageFromLeadStatus(lead.statusAtual);
+    if (!stage) {
+      setError('Status atual não possui template de dispatch configurado.');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+      const result = await dispatchCommercialCommunication({
+        leadId: lead.leadId,
+        channel,
+        stage,
+        variables: {
+          nomeEscritorio: lead.nomeEscritorio,
+          responsavel: lead.responsavel,
+          statusAtual: lead.statusAtual,
+        },
+      });
+      setStatusMessage(`Dispatch ${channel} enviado com sucesso (eventId: ${result.eventId}).`);
+      await fetchLeads();
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, `Falha ao disparar comunicação via ${channel}.`));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const confirmSpecialTransition = async () => {
@@ -941,6 +980,20 @@ export default function ComercialPage() {
                     Registrar briefing
                   </button>
                 )}
+                <button
+                  className="h-8 rounded-md border border-emerald-500/60 text-emerald-300 text-xs hover:bg-emerald-500/10"
+                  disabled={saving}
+                  onClick={() => onDispatchByStage(selectedLead, 'whatsapp')}
+                >
+                  Disparar WhatsApp da etapa
+                </button>
+                <button
+                  className="h-8 rounded-md border border-indigo-500/60 text-indigo-300 text-xs hover:bg-indigo-500/10"
+                  disabled={saving}
+                  onClick={() => onDispatchByStage(selectedLead, 'gmail')}
+                >
+                  Disparar Gmail da etapa
+                </button>
                 {selectedLead.statusAtual !== 'nutricao' && selectedLead.statusAtual !== 'perdido' && selectedLead.statusAtual !== 'fechado' && (
                   <button
                     className="h-8 rounded-md border border-amber-500/50 text-amber-300 text-xs hover:bg-amber-500/10"
