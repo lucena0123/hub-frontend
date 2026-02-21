@@ -604,6 +604,19 @@ export default function ComercialPage() {
       .slice(0, 8);
   }, [slaAlerts, followupsDue, retentionDue]);
 
+  const recommendedActions = useMemo(() => {
+    return criticalPendencies.slice(0, 3).map((item, index) => ({
+      rank: index + 1,
+      leadId: item.leadId,
+      nomeEscritorio: item.nomeEscritorio,
+      action: item.reason.toLowerCase().includes('sla')
+        ? 'Entrar em contato agora e registrar próximo passo.'
+        : item.reason.toLowerCase().includes('follow-up')
+          ? 'Executar follow-up e atualizar status do funil.'
+          : 'Regularizar retenção/LGPD e validar continuidade.',
+    }));
+  }, [criticalPendencies]);
+
   const exportFilteredLeadsCsv = () => {
     const headers = [
       'leadId',
@@ -843,6 +856,32 @@ export default function ComercialPage() {
           <div className="rounded-md border border-border/50 bg-background/40 px-2 py-2">3) Resolver bloqueios (briefing/LGPD/contrato/pagamento) antes de avançar etapa.</div>
           <div className="rounded-md border border-border/50 bg-background/40 px-2 py-2">4) Fechar o dia com export executivo e revisão de conversão.</div>
         </div>
+      </section>
+
+      <section className="rounded-[12px] border border-border/60 bg-card/20 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Top 3 ações recomendadas</p>
+          <p className="text-xs text-muted-foreground">Execução prioritária</p>
+        </div>
+        {recommendedActions.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Sem ações críticas no momento.</p>
+        ) : (
+          <div className="space-y-1">
+            {recommendedActions.map((item) => (
+              <button
+                key={`action-${item.leadId}`}
+                className="w-full text-left rounded-md border border-border/50 bg-background/40 px-2 py-2 hover:bg-background/60"
+                onClick={() => {
+                  const found = leads.find((lead) => lead.leadId === item.leadId);
+                  if (found) setSelectedLead(found);
+                }}
+              >
+                <p className="text-xs"><span className="text-muted-foreground">#{item.rank}</span> <span className="font-medium text-foreground">{item.nomeEscritorio}</span></p>
+                <p className="text-[11px] text-muted-foreground">{item.action}</p>
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="space-y-2">
