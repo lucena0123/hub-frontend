@@ -832,6 +832,19 @@ export default function ComercialPage() {
         </div>
       </section>
 
+      <section className="rounded-[12px] border border-border/60 bg-card/20 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Modo operação diária</p>
+          <p className="text-xs text-muted-foreground">Checklist rápido</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs">
+          <div className="rounded-md border border-border/50 bg-background/40 px-2 py-2">1) Abrir pendências críticas e priorizar os 3 primeiros leads.</div>
+          <div className="rounded-md border border-border/50 bg-background/40 px-2 py-2">2) Disparar contato da etapa (WhatsApp/Gmail) e confirmar retorno no timeline.</div>
+          <div className="rounded-md border border-border/50 bg-background/40 px-2 py-2">3) Resolver bloqueios (briefing/LGPD/contrato/pagamento) antes de avançar etapa.</div>
+          <div className="rounded-md border border-border/50 bg-background/40 px-2 py-2">4) Fechar o dia com export executivo e revisão de conversão.</div>
+        </div>
+      </section>
+
       <section className="space-y-2">
         <div className="flex items-center justify-end">
           <select
