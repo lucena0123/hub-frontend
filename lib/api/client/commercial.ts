@@ -195,10 +195,16 @@ export async function getCommercialLeadTimeline(leadId: string, limit = 25): Pro
 }
 
 export async function getCommercialIntegrationEvents(leadId: string, limit = 25): Promise<CommercialIntegrationEvent[]> {
-  const { data } = await apiClient.get<CommercialIntegrationEvent[]>(`/api/comercial/leads/${leadId}/integrations/events`, {
+  const { data } = await apiClient.get<CommercialIntegrationEvent[] | { events?: CommercialIntegrationEvent[] }>(
+    `/api/comercial/leads/${leadId}/integrations/events`,
+    {
     params: { limit },
-  });
-  return data;
+    },
+  );
+
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.events)) return data.events;
+  return [];
 }
 
 export async function getCommercialFollowupsDue(limit = 20): Promise<CommercialFollowupDue[]> {
