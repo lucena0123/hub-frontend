@@ -250,6 +250,15 @@ export async function getCommercialFollowupsDue(limit = 20): Promise<CommercialF
   return data;
 }
 
+export async function triggerCommercialFollowupDispatch(payload: {
+  leadId: string;
+  followupType: 'D+2' | 'D+5';
+  channel?: 'whatsapp' | 'gmail';
+}): Promise<{ ok: true; leadId: string; eventId: string }> {
+  const { data } = await apiClient.post<{ ok: true; leadId: string; eventId: string }>('/api/comercial/followups/dispatch', payload);
+  return data;
+}
+
 export async function getCommercialRetentionDue(limit = 20): Promise<CommercialRetentionAlert[]> {
   const { data } = await apiClient.get<CommercialRetentionAlert[]>('/api/comercial/privacy/retention-due', {
     params: { limit },

@@ -127,6 +127,7 @@ export {
   getCommercialIntegrationEvents,
   getCommercialDispatchHealth,
   getCommercialFollowupsDue,
+  triggerCommercialFollowupDispatch,
   getCommercialRetentionDue,
   createCommercialLead,
   moveCommercialLead,

@@ -20,6 +20,7 @@ import {
   getCommercialDashboard,
   getCommercialDailySummary,
   getCommercialFollowupsDue,
+  triggerCommercialFollowupDispatch,
   getCommercialRetentionDue,
   getCommercialLeadFormLink,
   getCommercialLeadTimeline,
@@ -355,6 +356,20 @@ export default function ComercialPage() {
       await fetchLeads();
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, `Falha ao disparar comunicação via ${channel}.`));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onTriggerFollowup = async (leadId: string, followupType: 'D+2' | 'D+5') => {
+    try {
+      setSaving(true);
+      setError(null);
+      const result = await triggerCommercialFollowupDispatch({ leadId, followupType, channel: 'whatsapp' });
+      setStatusMessage(`Follow-up ${followupType} disparado com sucesso (eventId: ${result.eventId}).`);
+      await fetchLeads();
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, `Falha ao disparar follow-up ${followupType}.`));
     } finally {
       setSaving(false);
     }
@@ -1045,8 +1060,17 @@ export default function ComercialPage() {
         ) : (
           <div className="space-y-1">
             {followupsDue.map((item) => (
-              <div key={`${item.leadId}-${item.followupType}`} className="text-xs text-muted-foreground rounded-md border border-border/50 bg-background/40 px-2 py-1">
-                <span className="text-foreground font-medium">{item.nomeEscritorio}</span> · {item.followupType} · {new Date(item.dueAt).toLocaleString('pt-BR')} · resp: {item.responsavel}
+              <div key={`${item.leadId}-${item.followupType}`} className="text-xs text-muted-foreground rounded-md border border-border/50 bg-background/40 px-2 py-1 flex items-center justify-between gap-2">
+                <span>
+                  <span className="text-foreground font-medium">{item.nomeEscritorio}</span> · {item.followupType} · {new Date(item.dueAt).toLocaleString('pt-BR')} · resp: {item.responsavel}
+                </span>
+                <button
+                  className="h-7 px-2 rounded-md border border-emerald-500/60 text-emerald-300 text-[11px] hover:bg-emerald-500/10"
+                  disabled={saving}
+                  onClick={() => onTriggerFollowup(item.leadId, item.followupType)}
+                >
+                  Disparar agora
+                </button>
               </div>
             ))}
           </div>
