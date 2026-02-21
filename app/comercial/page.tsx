@@ -114,6 +114,7 @@ export default function ComercialPage() {
   const [responsavel, setResponsavel] = useState('Matheus');
   const [search, setSearch] = useState('');
   const [blockedOnly, setBlockedOnly] = useState(false);
+  const [inconsistentOnly, setInconsistentOnly] = useState(false);
   const [origemFilter, setOrigemFilter] = useState<'all' | 'instagram' | 'indicacao' | 'site' | 'whatsapp' | 'outro'>('all');
   const [responsavelFilter, setResponsavelFilter] = useState<'all' | string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | CommercialLeadStatus>('all');
@@ -167,7 +168,7 @@ export default function ComercialPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, responsavelFilter, origemFilter, search, blockedOnly]);
+  }, [statusFilter, responsavelFilter, origemFilter, search, blockedOnly, inconsistentOnly]);
 
   useEffect(() => {
     const loadTimeline = async () => {
@@ -434,6 +435,18 @@ export default function ComercialPage() {
     return false;
   };
 
+  const hasOperationalInconsistency = (lead: CommercialLead): boolean => {
+    if ((lead.statusAtual === 'proposta_enviada' || lead.statusAtual === 'negociacao' || lead.statusAtual === 'fechado') && !lead.consentGiven) {
+      return true;
+    }
+
+    if (lead.statusAtual === 'fechado' && (lead.contractStatus !== 'assinado' || lead.paymentStatus !== 'pago')) {
+      return true;
+    }
+
+    return false;
+  };
+
   const unifiedTimeline = useMemo(() => {
     if (!selectedLead) return [] as Array<{ id: string; type: 'transition' | 'integration'; at: string; title: string; subtitle?: string }>;
 
@@ -467,6 +480,7 @@ export default function ComercialPage() {
         if (!hay.includes(q)) return false;
       }
       if (blockedOnly && !isLeadBlocked(lead)) return false;
+      if (inconsistentOnly && !hasOperationalInconsistency(lead)) return false;
       return true;
     });
 
@@ -475,7 +489,7 @@ export default function ComercialPage() {
     }
 
     return base;
-  }, [leads, statusFilter, origemFilter, responsavelFilter, search, sortBy, blockedOnly]);
+  }, [leads, statusFilter, origemFilter, responsavelFilter, search, sortBy, blockedOnly, inconsistentOnly]);
 
   const leadsByStatus = useMemo(() => {
     const grouped: Record<string, CommercialLead[]> = {};
@@ -572,6 +586,12 @@ export default function ComercialPage() {
               onClick={() => setBlockedOnly((prev) => !prev)}
             >
               {blockedOnly ? 'Bloqueados: ON' : 'Bloqueados: OFF'}
+            </button>
+            <button
+              className={`h-7 px-2 rounded-md border text-[11px] ${inconsistentOnly ? 'border-rose-500/70 text-rose-300 bg-rose-500/10' : 'border-border text-muted-foreground'}`}
+              onClick={() => setInconsistentOnly((prev) => !prev)}
+            >
+              {inconsistentOnly ? 'Inconsistentes: ON' : 'Inconsistentes: OFF'}
             </button>
             <span className="text-[11px] text-muted-foreground">Exibindo {filteredLeads.length} de {leads.length} · Página {page}</span>
           </div>
