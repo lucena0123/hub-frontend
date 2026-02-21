@@ -119,6 +119,23 @@ export interface CommercialIntegrationEvent {
   createdAt: string;
 }
 
+export interface CommercialDispatchHealthByChannel {
+  channel: string;
+  total: number;
+  success: number;
+  failed: number;
+  successRate: number;
+}
+
+export interface CommercialDispatchHealthSummary {
+  windowDays: number;
+  total: number;
+  success: number;
+  failed: number;
+  successRate: number;
+  byChannel: CommercialDispatchHealthByChannel[];
+}
+
 export interface MoveLeadPayload {
   to: CommercialLeadStatus;
   observacao?: string;
@@ -205,6 +222,13 @@ export async function getCommercialIntegrationEvents(leadId: string, limit = 25)
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.events)) return data.events;
   return [];
+}
+
+export async function getCommercialDispatchHealth(days = 7): Promise<CommercialDispatchHealthSummary> {
+  const { data } = await apiClient.get<CommercialDispatchHealthSummary>('/api/comercial/dispatch/health', {
+    params: { days },
+  });
+  return data;
 }
 
 export async function getCommercialFollowupsDue(limit = 20): Promise<CommercialFollowupDue[]> {

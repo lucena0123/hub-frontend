@@ -13,6 +13,7 @@ import {
   CommercialDailySummary,
   CommercialLeadTimelineEvent,
   CommercialIntegrationEvent,
+  CommercialDispatchHealthSummary,
   CommercialFollowupDue,
   CommercialRetentionAlert,
   createCommercialLead,
@@ -23,6 +24,7 @@ import {
   getCommercialLeadFormLink,
   getCommercialLeadTimeline,
   getCommercialIntegrationEvents,
+  getCommercialDispatchHealth,
   getCommercialLeads,
   getCommercialSlaAlerts,
   moveCommercialLead,
@@ -102,6 +104,7 @@ export default function ComercialPage() {
   const [kpis, setKpis] = useState<CommercialDashboard>({ total: 0, novos: 0, diagnosticos: 0, propostas: 0, fechados: 0 });
   const [slaAlerts, setSlaAlerts] = useState<CommercialSlaAlert[]>([]);
   const [dailySummary, setDailySummary] = useState<CommercialDailySummary | null>(null);
+  const [dispatchHealth, setDispatchHealth] = useState<CommercialDispatchHealthSummary | null>(null);
   const [timeline, setTimeline] = useState<CommercialLeadTimelineEvent[]>([]);
   const [integrationEvents, setIntegrationEvents] = useState<CommercialIntegrationEvent[]>([]);
   const [followupsDue, setFollowupsDue] = useState<CommercialFollowupDue[]>([]);
@@ -130,7 +133,7 @@ export default function ComercialPage() {
   const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
-      const [data, dashboard, alerts, summary, dueFollowups, dueRetention] = await Promise.all([
+      const [data, dashboard, alerts, summary, dispatch, dueFollowups, dueRetention] = await Promise.all([
         getCommercialLeads({
           status: statusFilter === 'all' ? undefined : statusFilter,
           responsavel: responsavelFilter === 'all' ? undefined : responsavelFilter,
@@ -140,6 +143,7 @@ export default function ComercialPage() {
         getCommercialDashboard(kpiRange === 'all' ? undefined : kpiRange),
         getCommercialSlaAlerts({ maxAgeHours: 24, limit: 5 }),
         getCommercialDailySummary(),
+        getCommercialDispatchHealth(7),
         getCommercialFollowupsDue(5),
         getCommercialRetentionDue(5),
       ]);
@@ -147,6 +151,7 @@ export default function ComercialPage() {
       setKpis(dashboard);
       setSlaAlerts(alerts);
       setDailySummary(summary);
+      setDispatchHealth(dispatch);
       setFollowupsDue(dueFollowups);
       setRetentionDue(dueRetention);
     } catch (err: unknown) {
@@ -663,6 +668,47 @@ export default function ComercialPage() {
             <p className="text-xl font-semibold text-emerald-300">{kpis.fechados}</p>
           </div>
         </div>
+      </section>
+
+      <section className="rounded-[12px] border border-border/60 bg-card/20 p-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Saúde do dispatch (7 dias)</p>
+          <p className={`text-xs font-medium ${dispatchHealth && dispatchHealth.successRate >= 95 ? 'text-emerald-300' : 'text-amber-300'}`}>
+            {dispatchHealth ? `${dispatchHealth.successRate.toFixed(1)}% sucesso` : '-'}
+          </p>
+        </div>
+        {!dispatchHealth ? (
+          <p className="text-xs text-muted-foreground">Sem dados de dispatch no período.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="rounded-[10px] border border-border/60 bg-card/30 p-3">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Total</p>
+                <p className="text-lg font-semibold">{dispatchHealth.total}</p>
+              </div>
+              <div className="rounded-[10px] border border-emerald-500/40 bg-emerald-500/10 p-3">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-emerald-300">Sucesso</p>
+                <p className="text-lg font-semibold text-emerald-200">{dispatchHealth.success}</p>
+              </div>
+              <div className="rounded-[10px] border border-rose-500/40 bg-rose-500/10 p-3">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-rose-300">Falhas</p>
+                <p className="text-lg font-semibold text-rose-200">{dispatchHealth.failed}</p>
+              </div>
+              <div className="rounded-[10px] border border-border/60 bg-card/30 p-3">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Janela</p>
+                <p className="text-lg font-semibold">{dispatchHealth.windowDays}d</p>
+              </div>
+            </div>
+            <div className="space-y-1">
+              {dispatchHealth.byChannel.map((item) => (
+                <div key={item.channel} className="flex items-center justify-between rounded-md border border-border/50 bg-background/40 px-2 py-1 text-xs">
+                  <span className="uppercase tracking-[0.12em] text-muted-foreground">{item.channel}</span>
+                  <span className="text-foreground">{item.success}/{item.total} ({item.successRate.toFixed(1)}%)</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       <section className="rounded-[12px] border border-border/60 bg-card/20 p-3 space-y-3">
