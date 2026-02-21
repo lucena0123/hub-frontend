@@ -610,6 +610,53 @@ export default function ComercialPage() {
     setStatusMessage('Exportação CSV concluída.');
   };
 
+  const exportExecutiveSummaryCsv = () => {
+    const headers = ['metric', 'value'];
+    const rows: Array<[string, string | number]> = [
+      ['window_days_dispatch', dispatchHealth?.windowDays ?? 7],
+      ['dispatch_total', dispatchHealth?.total ?? 0],
+      ['dispatch_success', dispatchHealth?.success ?? 0],
+      ['dispatch_failed', dispatchHealth?.failed ?? 0],
+      ['dispatch_success_rate', dispatchHealth?.successRate ?? 0],
+      ['funnel_primeiro_contato', executiveFunnel.primeiroContato],
+      ['funnel_diagnostico', executiveFunnel.diagnostico],
+      ['funnel_proposta', executiveFunnel.proposta],
+      ['funnel_negociacao', executiveFunnel.negociacao],
+      ['funnel_fechado', executiveFunnel.fechado],
+      ['taxa_fechamento', executiveFunnel.taxaFechamento],
+      ['taxa_diag_para_proposta', executiveFunnel.taxaDiagToProposta],
+      ['taxa_proposta_para_fechado', executiveFunnel.taxaPropostaToFechado],
+      ['gargalo_bloqueados', operationalBottlenecks.blocked],
+      ['gargalo_inconsistentes', operationalBottlenecks.inconsistent],
+      ['sla_critical', operationalBottlenecks.slaCritical],
+      ['sla_warning', operationalBottlenecks.slaWarning],
+    ];
+
+    (dispatchHealth?.byChannel || []).forEach((item) => {
+      rows.push([`channel_${item.channel}_total`, item.total]);
+      rows.push([`channel_${item.channel}_success`, item.success]);
+      rows.push([`channel_${item.channel}_failed`, item.failed]);
+      rows.push([`channel_${item.channel}_success_rate`, item.successRate]);
+    });
+
+    const escapeCsv = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
+    const content = [headers, ...rows]
+      .map((cols) => cols.map((col) => escapeCsv(String(col ?? ''))).join(','))
+      .join('\n');
+
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `comercial-executivo-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setStatusMessage('Exportação executiva concluída.');
+  };
+
   // KPIs são carregados do backend em /api/comercial/dashboard
 
   return (
@@ -722,6 +769,12 @@ export default function ComercialPage() {
             onClick={exportFilteredLeadsCsv}
           >
             Exportar CSV
+          </button>
+          <button
+            className="h-8 px-3 rounded-md border border-cyan-500/50 text-cyan-300 text-xs hover:bg-cyan-500/10"
+            onClick={exportExecutiveSummaryCsv}
+          >
+            Exportar executivo
           </button>
           <button
             className="h-8 px-3 rounded-md border border-border text-xs disabled:opacity-50"
