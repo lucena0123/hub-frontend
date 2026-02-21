@@ -434,6 +434,28 @@ export default function ComercialPage() {
     return false;
   };
 
+  const unifiedTimeline = useMemo(() => {
+    if (!selectedLead) return [] as Array<{ id: string; type: 'transition' | 'integration'; at: string; title: string; subtitle?: string }>;
+
+    const transitions = timeline.map((event) => ({
+      id: `t-${event.id}`,
+      type: 'transition' as const,
+      at: event.createdAt,
+      title: `${event.statusOrigem} → ${event.statusDestino}`,
+      subtitle: event.observacao || event.actor || undefined,
+    }));
+
+    const integrations = integrationEvents.map((event) => ({
+      id: `i-${event.id}`,
+      type: 'integration' as const,
+      at: event.occurredAt,
+      title: `${event.channel} · ${event.eventType}`,
+      subtitle: event.externalEventId ? `external: ${event.externalEventId}` : undefined,
+    }));
+
+    return [...transitions, ...integrations].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+  }, [selectedLead, timeline, integrationEvents]);
+
   const filteredLeads = useMemo(() => {
     const base = leads.filter((lead) => {
       if (statusFilter !== 'all' && lead.statusAtual !== statusFilter) return false;
@@ -1055,38 +1077,24 @@ export default function ComercialPage() {
                     disabled={saving}
                     onClick={() => requestSpecialTransition(selectedLead, 'perdido')}
                   >
-                    Marcar como Perdido
+                    Arquivar lead
                   </button>
                 )}
               </div>
 
               <div className="pt-2 space-y-1">
-                <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Timeline</p>
-                {timeline.length === 0 ? (
+                <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Linha do tempo operacional</p>
+                {unifiedTimeline.length === 0 ? (
                   <p className="text-xs text-muted-foreground">Sem eventos recentes para este lead.</p>
                 ) : (
-                  <div className="space-y-1 max-h-40 overflow-auto pr-1">
-                    {timeline.map((event) => (
-                      <div key={event.id} className="rounded-md border border-border/50 bg-background/40 px-2 py-1">
-                        <p className="text-[11px] text-foreground">{event.statusOrigem} → {event.statusDestino}</p>
-                        <p className="text-[10px] text-muted-foreground">{new Date(event.createdAt).toLocaleString('pt-BR')} · {event.actor || 'system'}</p>
-                        {event.observacao && <p className="text-[10px] text-muted-foreground">{event.observacao}</p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-2 space-y-1">
-                <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Eventos de integração</p>
-                {integrationEvents.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Sem eventos de canais para este lead.</p>
-                ) : (
-                  <div className="space-y-1 max-h-40 overflow-auto pr-1">
-                    {integrationEvents.map((event) => (
-                      <div key={event.id} className="rounded-md border border-border/50 bg-background/40 px-2 py-1">
-                        <p className="text-[11px] text-foreground">{event.channel} · {event.eventType}</p>
-                        <p className="text-[10px] text-muted-foreground">{new Date(event.occurredAt).toLocaleString('pt-BR')}</p>
+                  <div className="space-y-1 max-h-56 overflow-auto pr-1">
+                    {unifiedTimeline.map((item) => (
+                      <div key={item.id} className="rounded-md border border-border/50 bg-background/40 px-2 py-1">
+                        <p className="text-[11px] text-foreground">
+                          {item.type === 'integration' ? 'Integração' : 'Transição'} · {item.title}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">{new Date(item.at).toLocaleString('pt-BR')}</p>
+                        {item.subtitle && <p className="text-[10px] text-muted-foreground">{item.subtitle}</p>}
                       </div>
                     ))}
                   </div>
