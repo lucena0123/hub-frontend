@@ -565,6 +565,45 @@ export default function ComercialPage() {
     return { blocked, inconsistent, slaCritical, slaWarning };
   }, [filteredLeads, slaAlerts]);
 
+  const criticalPendencies = useMemo(() => {
+    const byLead = new Map<string, { leadId: string; nomeEscritorio: string; reason: string; severity: number }>();
+
+    slaAlerts.forEach((a) => {
+      byLead.set(a.leadId, {
+        leadId: a.leadId,
+        nomeEscritorio: a.nomeEscritorio,
+        reason: `SLA ${a.hoursInStatus}h em ${a.statusAtual}`,
+        severity: a.hoursInStatus >= 48 ? 3 : 2,
+      });
+    });
+
+    followupsDue.forEach((f) => {
+      const prev = byLead.get(f.leadId);
+      const next = {
+        leadId: f.leadId,
+        nomeEscritorio: f.nomeEscritorio,
+        reason: `Follow-up vencido (${f.followupType})`,
+        severity: 2,
+      };
+      if (!prev || next.severity >= prev.severity) byLead.set(f.leadId, next);
+    });
+
+    retentionDue.forEach((r) => {
+      const prev = byLead.get(r.leadId);
+      const next = {
+        leadId: r.leadId,
+        nomeEscritorio: r.nomeEscritorio,
+        reason: `Retenção vencida há ${r.daysOverdue} dia(s)`,
+        severity: 2,
+      };
+      if (!prev || next.severity >= prev.severity) byLead.set(r.leadId, next);
+    });
+
+    return Array.from(byLead.values())
+      .sort((a, b) => b.severity - a.severity || a.nomeEscritorio.localeCompare(b.nomeEscritorio, 'pt-BR'))
+      .slice(0, 8);
+  }, [slaAlerts, followupsDue, retentionDue]);
+
   const exportFilteredLeadsCsv = () => {
     const headers = [
       'leadId',
@@ -919,6 +958,29 @@ export default function ComercialPage() {
               <p className="text-[10px] uppercase text-muted-foreground">Fechados hoje</p>
               <p className="text-sm font-semibold text-emerald-300">{dailySummary.fechadosHoje}</p>
             </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-1">
+          <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Pendências críticas do dia</p>
+          <p className="text-xs text-muted-foreground">{criticalPendencies.length} prioridade(s)</p>
+        </div>
+        {criticalPendencies.length === 0 ? (
+          <p className="text-xs text-emerald-300">Nenhuma pendência crítica no momento.</p>
+        ) : (
+          <div className="space-y-1">
+            {criticalPendencies.map((item) => (
+              <button
+                key={`critical-${item.leadId}`}
+                className="w-full text-left text-xs text-muted-foreground rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-1 hover:bg-rose-500/15"
+                onClick={() => {
+                  const found = leads.find((lead) => lead.leadId === item.leadId);
+                  if (found) setSelectedLead(found);
+                }}
+              >
+                <span className="text-foreground font-medium">{item.nomeEscritorio}</span> · {item.reason}
+              </button>
+            ))}
           </div>
         )}
 
