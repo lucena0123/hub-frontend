@@ -534,6 +534,37 @@ export default function ComercialPage() {
     return grouped;
   }, [filteredLeads]);
 
+  const executiveFunnel = useMemo(() => {
+    const total = Math.max(filteredLeads.length, 1);
+    const stageCount = (status: CommercialLeadStatus) => (leadsByStatus[status] || []).length;
+
+    const primeiroContato = stageCount('primeiro_contato');
+    const diagnostico = stageCount('diagnostico_agendado') + stageCount('diagnostico_concluido');
+    const proposta = stageCount('proposta_enviada');
+    const negociacao = stageCount('negociacao');
+    const fechado = stageCount('fechado');
+
+    return {
+      primeiroContato,
+      diagnostico,
+      proposta,
+      negociacao,
+      fechado,
+      taxaFechamento: Number(((fechado / total) * 100).toFixed(1)),
+      taxaDiagToProposta: diagnostico > 0 ? Number(((proposta / diagnostico) * 100).toFixed(1)) : 0,
+      taxaPropostaToFechado: proposta > 0 ? Number(((fechado / proposta) * 100).toFixed(1)) : 0,
+    };
+  }, [filteredLeads, leadsByStatus]);
+
+  const operationalBottlenecks = useMemo(() => {
+    const blocked = filteredLeads.filter((lead) => isLeadBlocked(lead)).length;
+    const inconsistent = filteredLeads.filter((lead) => hasOperationalInconsistency(lead)).length;
+    const slaCritical = slaAlerts.filter((a) => a.hoursInStatus >= 48).length;
+    const slaWarning = slaAlerts.filter((a) => a.hoursInStatus >= 24 && a.hoursInStatus < 48).length;
+
+    return { blocked, inconsistent, slaCritical, slaWarning };
+  }, [filteredLeads, slaAlerts]);
+
   const exportFilteredLeadsCsv = () => {
     const headers = [
       'leadId',
@@ -743,6 +774,26 @@ export default function ComercialPage() {
             <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Fechados</p>
             <p className="text-xl font-semibold text-emerald-300">{kpis.fechados}</p>
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-[12px] border border-border/60 bg-card/20 p-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Resumo executivo comercial</p>
+          <p className="text-xs text-muted-foreground">Taxa fechamento: {executiveFunnel.taxaFechamento.toFixed(1)}%</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          <div className="rounded-[10px] border border-border/60 bg-card/30 p-3"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">1º Contato</p><p className="text-lg font-semibold">{executiveFunnel.primeiroContato}</p></div>
+          <div className="rounded-[10px] border border-border/60 bg-card/30 p-3"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Diagnóstico</p><p className="text-lg font-semibold">{executiveFunnel.diagnostico}</p></div>
+          <div className="rounded-[10px] border border-border/60 bg-card/30 p-3"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Proposta</p><p className="text-lg font-semibold">{executiveFunnel.proposta}</p></div>
+          <div className="rounded-[10px] border border-border/60 bg-card/30 p-3"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Negociação</p><p className="text-lg font-semibold">{executiveFunnel.negociacao}</p></div>
+          <div className="rounded-[10px] border border-emerald-500/40 bg-emerald-500/10 p-3"><p className="text-[10px] uppercase tracking-[0.14em] text-emerald-300">Fechados</p><p className="text-lg font-semibold text-emerald-200">{executiveFunnel.fechado}</p></div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+          <div className="rounded-md border border-border/50 bg-background/30 px-2 py-1">Diag → Proposta: <strong>{executiveFunnel.taxaDiagToProposta.toFixed(1)}%</strong></div>
+          <div className="rounded-md border border-border/50 bg-background/30 px-2 py-1">Proposta → Fechado: <strong>{executiveFunnel.taxaPropostaToFechado.toFixed(1)}%</strong></div>
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1">Bloqueados: <strong>{operationalBottlenecks.blocked}</strong></div>
+          <div className="rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1">Inconsistentes: <strong>{operationalBottlenecks.inconsistent}</strong></div>
         </div>
       </section>
 
