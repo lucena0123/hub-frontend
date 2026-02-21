@@ -175,6 +175,12 @@ export interface UpdateCommercialLeadPrivacyPayload {
   observacao?: string;
 }
 
+export interface DeleteCommercialLeadPayload {
+  confirmText: string;
+  reason?: string;
+  actor?: string;
+}
+
 export async function getCommercialLeads(params?: {
   status?: CommercialLeadStatus;
   responsavel?: string;
@@ -276,6 +282,11 @@ export async function updateCommercialLeadOnboarding(leadId: string, payload: Up
 
 export async function updateCommercialLeadPrivacy(leadId: string, payload: UpdateCommercialLeadPrivacyPayload): Promise<CommercialLead> {
   const { data } = await apiClient.post<CommercialLead>(`/api/comercial/leads/${leadId}/privacy`, payload);
+  return data;
+}
+
+export async function deleteCommercialLead(leadId: string, payload: DeleteCommercialLeadPayload): Promise<{ ok: true; leadId: string }> {
+  const { data } = await apiClient.post<{ ok: true; leadId: string }>(`/api/comercial/leads/${leadId}/delete`, payload);
   return data;
 }
 

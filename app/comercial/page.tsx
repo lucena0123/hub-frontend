@@ -33,6 +33,7 @@ import {
   updateCommercialLeadPrivacy,
   updateCommercialLeadProofs,
   dispatchCommercialCommunication,
+  deleteCommercialLead,
 } from '@/lib/api/client/commercial';
 
 const COLUMNS: Array<{ key: CommercialLeadStatus; label: string }> = [
@@ -126,6 +127,9 @@ export default function ComercialPage() {
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
   const [hoverColumn, setHoverColumn] = useState<CommercialLeadStatus | null>(null);
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
+  const [pendingDeleteLead, setPendingDeleteLead] = useState<CommercialLead | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteReason, setDeleteReason] = useState('');
   const [transitionReason, setTransitionReason] = useState('');
   const [transitionDate, setTransitionDate] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -351,6 +355,36 @@ export default function ComercialPage() {
       await fetchLeads();
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, `Falha ao disparar comunicação via ${channel}.`));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onDeleteLeadPermanently = async () => {
+    if (!pendingDeleteLead) return;
+
+    if (deleteConfirmText.trim() !== 'EXCLUIR') {
+      setError('Digite EXCLUIR para confirmar a exclusão permanente.');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+      await deleteCommercialLead(pendingDeleteLead.leadId, {
+        confirmText: 'EXCLUIR',
+        reason: deleteReason.trim() || 'Exclusão administrativa manual',
+      });
+      setStatusMessage('Lead excluído permanentemente com sucesso.');
+      setPendingDeleteLead(null);
+      setDeleteConfirmText('');
+      setDeleteReason('');
+      if (selectedLead?.leadId === pendingDeleteLead.leadId) {
+        setSelectedLead(null);
+      }
+      await fetchLeads();
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Falha ao excluir lead permanentemente.'));
     } finally {
       setSaving(false);
     }
@@ -1100,6 +1134,19 @@ export default function ComercialPage() {
                     Arquivar lead
                   </button>
                 )}
+                {canManageSensitive && (
+                  <button
+                    className="h-8 rounded-md border border-rose-700/70 text-rose-300 text-xs hover:bg-rose-700/15"
+                    disabled={saving}
+                    onClick={() => {
+                      setPendingDeleteLead(selectedLead);
+                      setDeleteConfirmText('');
+                      setDeleteReason('');
+                    }}
+                  >
+                    Excluir permanente
+                  </button>
+                )}
               </div>
 
               <div className="pt-2 space-y-1">
@@ -1124,6 +1171,48 @@ export default function ComercialPage() {
           )}
         </aside>
       </div>
+
+      {pendingDeleteLead && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-[12px] border border-rose-800/60 bg-card p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-rose-300">Excluir lead permanentemente</h3>
+            <p className="text-xs text-muted-foreground">
+              Esta ação remove o lead e eventos associados. Digite <strong>EXCLUIR</strong> para confirmar.
+            </p>
+            <p className="text-xs text-muted-foreground">Lead: {pendingDeleteLead.nomeEscritorio}</p>
+
+            <input
+              className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+              placeholder="Digite EXCLUIR"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+            />
+
+            <input
+              className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+              placeholder="Motivo da exclusão (opcional)"
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+            />
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                className="h-8 px-3 rounded-md border border-border text-xs"
+                onClick={() => setPendingDeleteLead(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="h-8 px-3 rounded-md bg-rose-700 text-white text-xs disabled:opacity-50"
+                onClick={onDeleteLeadPermanently}
+                disabled={saving || deleteConfirmText.trim() !== 'EXCLUIR'}
+              >
+                Excluir permanente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {pendingTransition && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[1px] flex items-center justify-center p-4">
