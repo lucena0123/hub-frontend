@@ -181,6 +181,12 @@ export interface DeleteCommercialLeadPayload {
   actor?: string;
 }
 
+export interface CommercialScheduleSlot {
+  start: string;
+  end: string;
+  label?: string;
+}
+
 export async function getCommercialLeads(params?: {
   status?: CommercialLeadStatus;
   responsavel?: string;
@@ -287,6 +293,34 @@ export async function updateCommercialLeadPrivacy(leadId: string, payload: Updat
 
 export async function deleteCommercialLead(leadId: string, payload: DeleteCommercialLeadPayload): Promise<{ ok: true; leadId: string }> {
   const { data } = await apiClient.post<{ ok: true; leadId: string }>(`/api/comercial/leads/${leadId}/delete`, payload);
+  return data;
+}
+
+export async function getCommercialSchedulingSlots(payload: {
+  leadId: string;
+  date?: string;
+  durationMin?: number;
+  timezone?: string;
+}): Promise<{ leadId: string; slots: CommercialScheduleSlot[] }> {
+  const { data } = await apiClient.post<{ leadId: string; slots: CommercialScheduleSlot[] }>(
+    '/api/comercial/scheduling/slots',
+    payload,
+  );
+  return data;
+}
+
+export async function confirmCommercialScheduling(payload: {
+  leadId: string;
+  slotStart: string;
+  slotEnd: string;
+  attendeeName?: string;
+  attendeeEmail?: string;
+  timezone?: string;
+}): Promise<{ ok: true; leadId: string; eventId?: string }> {
+  const { data } = await apiClient.post<{ ok: true; leadId: string; eventId?: string }>(
+    '/api/comercial/scheduling/confirm',
+    payload,
+  );
   return data;
 }
 
