@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-
 import { cn } from "@/lib/utils";
+import { Breadcrumb, type BreadcrumbItem } from "@/components/layout/breadcrumb";
 
 interface PageShellProps {
   eyebrow?: string;
+  breadcrumb?: BreadcrumbItem[];
   title: string;
   description?: string;
   meta?: ReactNode;
@@ -14,6 +15,7 @@ interface PageShellProps {
 
 export function PageShell({
   eyebrow,
+  breadcrumb,
   title,
   description,
   meta,
@@ -25,7 +27,10 @@ export function PageShell({
     <div className={cn("page-shell", className)}>
       <header className="page-header">
         <div className="space-y-3">
-          {eyebrow && <p className="page-eyebrow">{eyebrow}</p>}
+          {breadcrumb && breadcrumb.length > 0 && (
+            <Breadcrumb items={breadcrumb} />
+          )}
+          {eyebrow && !breadcrumb && <p className="page-eyebrow">{eyebrow}</p>}
           <h1 className="page-title">{title}</h1>
           {description && <p className="page-description">{description}</p>}
         </div>

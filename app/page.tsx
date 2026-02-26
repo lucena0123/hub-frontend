@@ -18,9 +18,10 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  AreaChart,
-  Area,
+  ComposedChart,
+  Bar,
 } from 'recharts';
+import { Skeleton, SkeletonMetric, SkeletonRow } from '@/components/ui/skeleton';
 
 // --- Type Guards & Utils ---
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -92,6 +93,10 @@ const PlatformBar = ({ name, value, total, color }: { name: string; value: numbe
   );
 };
 
+const ProgressFill = ({ pct, className }: { pct: number; className?: string }) => (
+  <div className={cn('h-full transition-all duration-500', className)} style={{ width: `${pct}%` }} />
+);
+
 export default function DashboardPage() {
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [alerts, setAlerts] = useState<AlertsResponse | null>(null);
@@ -124,22 +129,37 @@ export default function DashboardPage() {
   }, []);
 
   if (loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="relative">
-          <div className="h-16 w-16 border-4 border-primary/30 rounded-full animate-spin border-t-primary" />
-          <div className="absolute inset-0 flex items-center justify-center text-xs text-primary animate-pulse">SYNC</div>
+    <PageShell
+      eyebrow="Agência / Visão geral"
+      title="Radar Operacional"
+      description="Resumo executivo do portfolio de campanhas com sinais rápidos para priorizar ação."
+    >
+      <div className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <SkeletonMetric key={i} />)}
         </div>
-        <div className="text-primary tracking-[0.2em] text-sm animate-pulse">CARREGANDO PAINEL...</div>
+        <Skeleton className="h-24 w-full rounded-sm" />
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.55fr)] gap-8">
+          <div className="space-y-6">
+            <Skeleton className="h-[400px] w-full rounded-sm" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Skeleton className="h-48 rounded-sm" />
+              <Skeleton className="h-48 rounded-sm" />
+            </div>
+          </div>
+          <div className="space-y-0 mt-10">
+            {Array.from({ length: 10 }).map((_, i) => <SkeletonRow key={i} />)}
+          </div>
+        </div>
       </div>
-    </div>
+    </PageShell>
   );
 
   if (error || !overview) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="border border-destructive/50 bg-destructive/10 p-8 rounded-[2px] text-center space-y-4 max-w-md relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-destructive/80" />
-        <AlertTriangle className="h-10 w-10 text-destructive mx-auto mb-2" />
+        <AlertTriangle className="h-10 w-10 text-destructive mx-auto mb-2" aria-hidden="true" />
         <h2 className="text-xl font-semibold text-destructive tracking-widest">FALHA NO SISTEMA</h2>
         <p className="text-destructive/80 text-sm">{error}</p>
         <Button variant="outline" className="border-destructive/50 text-destructive hover:bg-destructive/20 w-full mt-4" onClick={() => window.location.reload()}>
@@ -154,10 +174,10 @@ export default function DashboardPage() {
   const recentLogs = overview.recentActivity || [];
 
   const performanceVector = [
-    { name: 'Investimento', val: overview.performance.totalSpend },
-    { name: 'Receita', val: overview.performance.totalRevenue },
-    { name: 'Leads', val: overview.performance.totalLeads * 100 },
-    { name: 'Conversões', val: overview.performance.totalConversions * 100 },
+    { name: 'Investimento', brl: overview.performance.totalSpend },
+    { name: 'Receita',      brl: overview.performance.totalRevenue },
+    { name: 'Leads',        count: overview.performance.totalLeads },
+    { name: 'Conversões',   count: overview.performance.totalConversions },
   ];
 
   const executionRatio = overview.clients.total > 0
@@ -285,39 +305,47 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.55fr)] gap-8">
             <div className="space-y-6">
               <Card className="relative overflow-hidden h-[400px]">
-                <div className="absolute top-0 right-0 p-2 opacity-60"><Wifi className="h-4 w-4 text-primary" /></div>
+                <div className="absolute top-0 right-0 p-2 opacity-60"><Wifi className="h-4 w-4 text-primary" aria-hidden="true" /></div>
                 <div className="absolute bottom-2 left-2 text-[10px] text-muted-foreground tracking-[0.3em] uppercase">Analytics Stream</div>
 
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg tracking-[0.2em] uppercase">
-                    <Activity className="h-4 w-4 text-primary" />
+                    <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
                     Vetor de performance
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={performanceVector}>
-                      <defs>
-                        <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--signal)" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="var(--signal)" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
+                    <ComposedChart data={performanceVector} barGap={4} barSize={36}>
                       <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={10} tickLine={false} axisLine={false} />
-                      <YAxis stroke="var(--muted-foreground)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `R$${val / 1000}k`} />
+                      <YAxis
+                        yAxisId="left"
+                        stroke="var(--muted-foreground)"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v: number) => v >= 1000 ? `R$${(v / 1000).toFixed(0)}k` : `R$${v}`}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        stroke="var(--muted-foreground)"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                      />
                       <Tooltip
                         contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--primary)', borderRadius: '2px' }}
                         itemStyle={{ color: 'var(--foreground)' }}
+                        formatter={(value: number, name: string) =>
+                          name === 'brl'
+                            ? [formatCurrency(value), 'Financeiro']
+                            : [value, 'Volume']
+                        }
                       />
-                      <Area
-                        type="monotone"
-                        dataKey="val"
-                        stroke="var(--signal)"
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill="url(#colorVal)"
-                      />
-                    </AreaChart>
+                      <Bar yAxisId="left"  dataKey="brl"   fill="var(--signal)"   radius={[2, 2, 0, 0]} name="brl" />
+                      <Bar yAxisId="right" dataKey="count" fill="var(--chart-2)"   radius={[2, 2, 0, 0]} name="count" />
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
@@ -327,7 +355,7 @@ export default function DashboardPage() {
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-center">
                       <CardTitle className="text-xs uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                        <Cpu className="h-4 w-4" /> Pipeline de execução
+                        <Cpu className="h-4 w-4" aria-hidden="true" /> Pipeline de execução
                       </CardTitle>
                       <Badge variant="outline" className="signal-chip">
                         {overview.bpmn.avgProgress}%
@@ -341,7 +369,7 @@ export default function DashboardPage() {
                         <span className="text-primary">{overview.bpmn.clientsInExecution}</span>
                       </div>
                       <div className="h-1 bg-secondary w-full">
-                        <div className="h-full bg-primary" style={{ width: `${executionRatio}%` }} />
+                        <ProgressFill pct={executionRatio} className="bg-primary" />
                       </div>
 
                       <div className="flex justify-between">
@@ -349,7 +377,7 @@ export default function DashboardPage() {
                         <span className="text-emerald-500">{overview.bpmn.clientsInMonitoring}</span>
                       </div>
                       <div className="h-1 bg-secondary w-full">
-                        <div className="h-full bg-emerald-500" style={{ width: `${monitoringRatio}%` }} />
+                        <ProgressFill pct={monitoringRatio} className="bg-emerald-500" />
                       </div>
                     </div>
                   </CardContent>
@@ -358,7 +386,7 @@ export default function DashboardPage() {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-xs uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                      <Zap className="h-4 w-4" /> Distribuição por plataforma
+                      <Zap className="h-4 w-4" aria-hidden="true" /> Distribuição por plataforma
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 pt-2">
@@ -380,7 +408,7 @@ export default function DashboardPage() {
               <Card className="h-full">
                 <CardHeader className="border-b border-border/40 pb-3">
                   <CardTitle className="text-xs uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                    <Server className="h-3 w-3" /> Log de eventos
+                    <Server className="h-3 w-3" aria-hidden="true" /> Log de eventos
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4 px-0">

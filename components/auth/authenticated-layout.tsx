@@ -1,8 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-
-import { Navigation } from '@/components/navigation';
+import { AppSidebar } from '@/components/navigation/app-sidebar';
 
 const NO_NAV_PATHS = ['/login', '/register'];
 const NO_NAV_PREFIXES = ['/forms/'];
@@ -13,10 +12,16 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
     !NO_NAV_PATHS.includes(pathname) &&
     !NO_NAV_PREFIXES.some((p) => pathname.startsWith(p));
 
+  if (!showNav) {
+    return <>{children}</>;
+  }
+
   return (
-    <>
-      {showNav && <Navigation />}
-      {children}
-    </>
+    <div className="app-layout">
+      <AppSidebar />
+      <main className="app-main" id="main-content">
+        {children}
+      </main>
+    </div>
   );
 }

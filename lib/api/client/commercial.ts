@@ -16,12 +16,29 @@ export type CommercialFormType = 'briefing' | 'onboarding' | 'custom';
 export type ContractStatus = 'pendente' | 'assinado';
 export type PaymentStatus = 'pendente' | 'pago';
 
+export type CommercialAreaPrincipal = 'trabalhista' | 'aereo' | 'salario_maternidade' | 'previdenciario' | 'outro';
+
 export interface CommercialLead {
   leadId: string;
   dataEntrada: string;
   nomeEscritorio: string;
+  nomeContato?: string;
   origem: string;
   responsavel: string;
+  instagram?: string;
+  whatsapp?: string;
+  email?: string;
+  cidade?: string;
+  areaPrincipal?: CommercialAreaPrincipal;
+  qtdAdvogados?: number;
+  faturamentoEstimado?: number;
+  orcamentoMarketing?: number;
+  timezone?: string;
+  valProposta?: number;
+  calEventId?: string;
+  dataDiagnostico?: string;
+  urlProposta?: string;
+  scoreQualificacao?: number;
   statusAtual: CommercialLeadStatus;
   proximaAcao?: string;
   dataProximaAcao?: string;
@@ -270,8 +287,44 @@ export async function createCommercialLead(input: {
   origem: 'instagram' | 'indicacao' | 'site' | 'whatsapp' | 'outro';
   nomeEscritorio: string;
   responsavel: string;
+  nomeContato?: string;
+  whatsapp?: string;
+  email?: string;
+  instagram?: string;
+  cidade?: string;
+  areaPrincipal?: CommercialAreaPrincipal;
+  qtdAdvogados?: number;
+  faturamentoEstimado?: number;
+  orcamentoMarketing?: number;
+  timezone?: string;
+  proximaAcao?: string;
+  dataProximaAcao?: string;
 }): Promise<CommercialLead> {
   const { data } = await apiClient.post<CommercialLead>('/api/comercial/leads', input);
+  return data;
+}
+
+export async function updateCommercialLead(
+  leadId: string,
+  input: Partial<{
+    nomeContato: string;
+    email: string;
+    whatsapp: string;
+    instagram: string;
+    cidade: string;
+    areaPrincipal: CommercialAreaPrincipal;
+    timezone: string;
+    qtdAdvogados: number;
+    valProposta: number;
+    urlProposta: string;
+    faturamentoEstimado: number;
+    orcamentoMarketing: number;
+    scoreQualificacao: number;
+    proximaAcao: string;
+    dataProximaAcao: string;
+  }>,
+): Promise<CommercialLead> {
+  const { data } = await apiClient.patch<CommercialLead>(`/api/comercial/leads/${leadId}`, input);
   return data;
 }
 
