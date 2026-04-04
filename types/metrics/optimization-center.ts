@@ -49,6 +49,8 @@ export interface OptimizationCenterRuleConfig {
   title: string;
   description: string;
   condition: string;
+  appliesToObjectives?: Array<'messages' | 'lead' | 'conversion' | 'traffic' | 'awareness'>;
+  appliesToChannels?: string[];
 }
 
 export interface OptimizationCenterPlaybook {
@@ -138,6 +140,29 @@ export interface OptimizationCenterResponse {
   scope: { clientId?: string; campaignId?: string };
   generatedAt: string;
   playbookVersion: string;
+  resolvedProfile?: {
+    source: 'campaign' | 'client_override' | 'template' | 'fallback' | 'none';
+    profile: {
+      id: string;
+      name: string;
+      nicheKey: string;
+      objectiveKey: string;
+      channelKey: string;
+      version: number;
+      isActive: boolean;
+      targets: Record<string, unknown> | null;
+      copyPolicy: Record<string, unknown> | null;
+    } | null;
+    classification: {
+      objectiveKey: string | null;
+      channelKey: string | null;
+      nicheKey: string | null;
+      source: 'manual' | 'inferred' | 'backfill';
+      confidence: number | null;
+    };
+    warnings: string[];
+  } | null;
+  classificationWarnings?: string[];
   theme?: {
     themeKey: string;
     themeName: string;

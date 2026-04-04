@@ -17,6 +17,7 @@ import { NovoLeadDialog } from '@/components/comercial/novo-lead-dialog';
 import { EditarLeadDialog } from '@/components/comercial/editar-lead-dialog';
 import { SkeletonRow } from '@/components/ui/skeleton';
 import { AlertTriangle, Plus, CheckCircle, Download, ChevronLeft, ChevronRight, Filter, X, UserPlus } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useComercial, COLUMNS, NURTURE_REASONS, LOSS_REASONS } from './hooks/use-comercial';
 import { KanbanBoard } from './components/kanban-board';
@@ -58,7 +59,7 @@ export default function ComercialPage() {
   const state = useComercial();
 
   const {
-    leads, kpis, slaAlerts, dailySummary, dispatchHealth, followupsDue, retentionDue,
+    leads, kpis, slaAlerts, dailySummary, dispatchHealth, followupsDue, retentionDue, leadRequirements, leadAssets,
     loading, saving, novoLeadOpen, setNovoLeadOpen, editarLeadOpen, setEditarLeadOpen,
     selectedLead, setSelectedLead, draggingLeadId, setDraggingLeadId, hoverColumn, setHoverColumn,
     pendingTransition, setPendingTransition,
@@ -66,7 +67,7 @@ export default function ComercialPage() {
     pendingDeleteLead, setPendingDeleteLead,
     deleteConfirmText, setDeleteConfirmText, deleteReason, setDeleteReason,
     transitionReason, setTransitionReason, transitionDate, setTransitionDate,
-    statusMessage, setStatusMessage, error, setError,
+    statusMessage, setStatusMessage, error, setError, errorAction, setErrorAction, leadMetaLoading,
     search, setSearch, blockedOnly, setBlockedOnly, inconsistentOnly, setInconsistentOnly,
     origemFilter, setOrigemFilter, responsavelFilter, setResponsavelFilter,
     statusFilter, setStatusFilter, kpiRange, setKpiRange, sortBy, setSortBy, page, setPage,
@@ -76,11 +77,15 @@ export default function ComercialPage() {
     onMoveLead, handleDropToColumn, requestSpecialTransition, confirmSpecialTransition,
     requestConcluirDiag, confirmConcluirDiag,
     onDeleteLeadPermanently, onDispatchByStage, onTriggerFollowup, onSubmitBriefing,
-    onGenerateBriefingLink, onUpdateProofs, onUpdateOnboarding, onUpdatePrivacy,
+    onGenerateBriefingLink, onSendSchedulingInvite, onUpdateProofs, onUpdateOnboarding, onUpdatePrivacy,
+    onUpdateRequirementStatus, onAddLeadAsset, onRunCalendarSync,
     exportFilteredLeadsCsv, fetchLeads, pageSize,
   } = state;
 
   const hasActiveFilters = search || blockedOnly || inconsistentOnly || origemFilter !== 'all' || responsavelFilter !== 'all' || statusFilter !== 'all';
+  const actionLead = errorAction
+    ? leads.find((lead) => lead.leadId === errorAction.leadId) || null
+    : null;
 
   return (
     <>
@@ -91,10 +96,17 @@ export default function ComercialPage() {
           title="Pipeline Comercial"
           description="Captação → Diagnóstico → Proposta → Fechamento"
           actions={
-            <Button onClick={() => setNovoLeadOpen(true)} className="gap-2 cursor-pointer">
-              <Plus className="h-4 w-4" />
-              Novo Lead
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" className="cursor-pointer">
+                <Link href="/comercial/configuracoes">
+                  Configurações
+                </Link>
+              </Button>
+              <Button onClick={() => setNovoLeadOpen(true)} className="gap-2 cursor-pointer">
+                <Plus className="h-4 w-4" />
+                Novo Lead
+              </Button>
+            </div>
           }
         >
           {/* ── Status messages ─────────────────────────────────────────── */}
@@ -111,7 +123,44 @@ export default function ComercialPage() {
             <div className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3">
               <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
               <p className="text-sm text-destructive flex-1">{error}</p>
-              <button type="button" onClick={() => setError(null)} aria-label="Fechar erro" className="text-muted-foreground hover:text-foreground cursor-pointer">
+              {errorAction?.type === 'send_scheduling_invite' && actionLead && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[11px] border-primary/50 text-primary hover:bg-primary/10 cursor-pointer"
+                  disabled={saving}
+                  onClick={() => onSendSchedulingInvite(actionLead)}
+                >
+                  Enviar convite de agendamento
+                </Button>
+              )}
+              {errorAction?.type === 'run_calendar_sync' && actionLead && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[11px] border-primary/50 text-primary hover:bg-primary/10 cursor-pointer"
+                  disabled={saving}
+                  onClick={() => onRunCalendarSync(actionLead.leadId)}
+                >
+                  Sincronizar calendário
+                </Button>
+              )}
+              {errorAction?.type === 'configure_calendar' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[11px] border-primary/50 text-primary hover:bg-primary/10 cursor-pointer"
+                  onClick={() => { window.location.href = '/comercial/configuracoes'; }}
+                >
+                  Configurar calendários
+                </Button>
+              )}
+              <button
+                type="button"
+                onClick={() => { setError(null); setErrorAction(null); }}
+                aria-label="Fechar erro"
+                className="text-muted-foreground hover:text-foreground cursor-pointer"
+              >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
@@ -173,6 +222,63 @@ export default function ComercialPage() {
           </section>
 
           {/* ── Daily summary ─────────────────────────────────────────────── */}
+          {dailySummary && (
+            <section className="rounded-2xl border border-border/50 bg-card/20 p-4 space-y-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Resumo Diário</p>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                <div className="rounded-lg border border-border/40 bg-background/20 px-2 py-1.5">
+                  Novos <strong>{dailySummary.novosLeads}</strong>
+                </div>
+                <div className="rounded-lg border border-border/40 bg-background/20 px-2 py-1.5">
+                  SLA &gt;24h <strong>{dailySummary.leadsAtrasadosSla24h}</strong>
+                </div>
+                <div className="rounded-lg border border-border/40 bg-background/20 px-2 py-1.5">
+                  Proposta sem follow-up <strong>{dailySummary.propostasSemFollowup}</strong>
+                </div>
+                <div className="rounded-lg border border-border/40 bg-background/20 px-2 py-1.5">
+                  Negociações abertas <strong>{dailySummary.negociacoesAbertas}</strong>
+                </div>
+                <div className="rounded-lg border border-border/40 bg-background/20 px-2 py-1.5">
+                  Fechados hoje <strong>{dailySummary.fechadosHoje}</strong>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {dispatchHealth && (
+            <section className="rounded-2xl border border-border/50 bg-card/20 p-4 space-y-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Saúde de Dispatch (7d)</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                <div className="rounded-lg border border-border/40 bg-background/20 px-2 py-1.5">
+                  Total <strong>{dispatchHealth.total}</strong>
+                </div>
+                <div className="rounded-lg border border-border/40 bg-background/20 px-2 py-1.5">
+                  Sucesso <strong>{dispatchHealth.success}</strong>
+                </div>
+                <div className="rounded-lg border border-border/40 bg-background/20 px-2 py-1.5">
+                  Falhas <strong>{dispatchHealth.failed}</strong>
+                </div>
+                <div className="rounded-lg border border-border/40 bg-background/20 px-2 py-1.5">
+                  Taxa <strong>{dispatchHealth.successRate.toFixed(1)}%</strong>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {retentionDue.length > 0 && (
+            <section className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-amber-400/80">Retenção LGPD Vencida</p>
+              <div className="space-y-1.5">
+                {retentionDue.map((item) => (
+                  <div key={item.leadId} className="rounded-xl border border-border/40 bg-background/30 px-3 py-2">
+                    <p className="text-xs font-medium">{item.nomeEscritorio}</p>
+                    <p className="text-[11px] text-muted-foreground">Atraso: {item.daysOverdue} dia(s)</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {criticalPendencies.length > 0 && (
             <section className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -330,7 +436,7 @@ export default function ComercialPage() {
                 if (to === 'diagnostico_concluido') { requestConcluirDiag(lead); return; }
                 onMoveLead(lead, to);
               }}
-              onSetError={setError}
+              onSetError={(msg) => { setError(msg); setErrorAction(null); }}
               onDragStart={setDraggingLeadId}
               onDragEnd={() => { setDraggingLeadId(null); setHoverColumn(null); }}
               onDrop={handleDropToColumn}
@@ -344,16 +450,24 @@ export default function ComercialPage() {
       <LeadDetailPanel
         lead={selectedLead}
         saving={saving}
+        leadMetaLoading={leadMetaLoading}
+        requirements={leadRequirements}
+        assets={leadAssets}
         unifiedTimeline={unifiedTimeline}
         canManageSensitive={canManageSensitive}
         onClose={() => setSelectedLead(null)}
         onEdit={() => setEditarLeadOpen(true)}
         onDelete={(lead) => { setPendingDeleteLead(lead); setDeleteConfirmText(''); setDeleteReason(''); }}
         onDispatch={onDispatchByStage}
+        onSendSchedulingInvite={onSendSchedulingInvite}
         onGenerateBriefingLink={onGenerateBriefingLink}
         onSubmitBriefing={onSubmitBriefing}
         onUpdatePrivacy={(lead, update) => onUpdatePrivacy(lead, update)}
         onUpdateProofs={(lead, update) => onUpdateProofs(lead, update)}
+        onUpdateOnboarding={(lead, update) => onUpdateOnboarding(lead, update)}
+        onUpdateRequirementStatus={onUpdateRequirementStatus}
+        onAddAsset={onAddLeadAsset}
+        onRunCalendarSync={onRunCalendarSync}
       />
 
       {/* ── Dialogs ──────────────────────────────────────────────────────── */}

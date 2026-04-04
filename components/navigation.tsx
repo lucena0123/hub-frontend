@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Users, PlayCircle, Bell, LogOut, Sparkles, BarChart3, Kanban, ClipboardCheck } from 'lucide-react';
+import { LayoutDashboard, Users, PlayCircle, Bell, LogOut, Sparkles, BarChart3, Kanban, ClipboardCheck, Wallet, FolderKanban, HeartPulse } from 'lucide-react';
 import { AlertBadge } from '@/components/alerts/alert-badge';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { useAuth } from '@/contexts/auth-context';
@@ -59,6 +59,21 @@ const navItems = [
     href: '/comercial',
     label: 'Comercial',
     icon: Users,
+  },
+  {
+    href: '/finance/contracts',
+    label: 'Financeiro',
+    icon: Wallet,
+  },
+  {
+    href: '/projects',
+    label: 'Projetos',
+    icon: FolderKanban,
+  },
+  {
+    href: '/cs/portfolio',
+    label: 'CS',
+    icon: HeartPulse,
   },
   {
     href: '/alerts',

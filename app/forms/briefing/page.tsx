@@ -318,7 +318,7 @@ export default function BriefingFormPage() {
           <h1 className="text-xl font-semibold text-zinc-800">Briefing enviado!</h1>
           <p className="mt-3 text-sm text-zinc-500">
             Obrigado, <strong>{meta?.nomeEscritorio}</strong>. Recebemos suas informações e
-            entraremos em contato em breve para discutir a estratégia.
+            agora vamos enviar por WhatsApp e e-mail o link para você escolher o melhor dia e horário da reunião de diagnóstico.
           </p>
           {meta?.submittedAt && (
             <p className="mt-4 text-xs text-zinc-400">

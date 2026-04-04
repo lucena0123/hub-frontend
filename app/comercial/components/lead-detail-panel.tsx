@@ -1,6 +1,14 @@
 'use client';
 
-import { CommercialLead, ContractStatus, PaymentStatus } from '@/lib/api/client/commercial';
+import { useState } from 'react';
+import {
+  CommercialLead,
+  ContractStatus,
+  PaymentStatus,
+  CommercialRequirementStatus,
+  CommercialAsset,
+  CommercialLeadStatus,
+} from '@/lib/api/client/commercial';
 import { cn } from '@/lib/utils';
 import { X, MessageCircle, Mail, Link2, Pencil, Trash2, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,16 +17,24 @@ import { COLUMNS } from '../hooks/use-comercial';
 interface LeadDetailPanelProps {
   lead: CommercialLead | null;
   saving: boolean;
+  leadMetaLoading: boolean;
+  requirements: CommercialRequirementStatus[];
+  assets: CommercialAsset[];
   unifiedTimeline: Array<{ id: string; type: 'transition' | 'integration'; at: string; title: string; subtitle?: string }>;
   canManageSensitive: boolean;
   onClose: () => void;
   onEdit: () => void;
   onDelete: (lead: CommercialLead) => void;
   onDispatch: (lead: CommercialLead, channel: 'whatsapp' | 'gmail') => void;
+  onSendSchedulingInvite: (lead: CommercialLead) => void;
   onGenerateBriefingLink: (lead: CommercialLead) => void;
   onSubmitBriefing: (lead: CommercialLead) => void;
   onUpdatePrivacy: (lead: CommercialLead, update: { consentGiven: boolean }) => void;
   onUpdateProofs: (lead: CommercialLead, update: { contractStatus?: ContractStatus; paymentStatus?: PaymentStatus }) => void;
+  onUpdateOnboarding: (lead: CommercialLead, update: { d0Ok?: boolean; d1Ok?: boolean; d2Ok?: boolean; d3D4Ok?: boolean; d5D7Ok?: boolean }) => void;
+  onUpdateRequirementStatus: (lead: CommercialLead, requirementKey: string, status: 'pending' | 'done' | 'waived') => void;
+  onAddAsset: (lead: CommercialLead, payload: { stage: CommercialLeadStatus; assetType: string; url: string }) => void;
+  onRunCalendarSync: (leadId?: string) => void;
 }
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -43,17 +59,39 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export function LeadDetailPanel({
   lead,
   saving,
+  leadMetaLoading,
+  requirements,
+  assets,
   unifiedTimeline,
   canManageSensitive,
   onClose,
   onEdit,
   onDelete,
   onDispatch,
+  onSendSchedulingInvite,
   onGenerateBriefingLink,
   onSubmitBriefing,
   onUpdatePrivacy,
   onUpdateProofs,
+  onUpdateOnboarding,
+  onUpdateRequirementStatus,
+  onAddAsset,
+  onRunCalendarSync,
 }: LeadDetailPanelProps) {
+  const [assetType, setAssetType] = useState('proposal');
+  const [assetUrl, setAssetUrl] = useState('');
+  const [assetStage, setAssetStage] = useState<CommercialLeadStatus>('proposta_enviada');
+  const latestSchedulingOutcome = unifiedTimeline.find(
+    (item) =>
+      item.type === 'integration'
+      && (
+        item.title.includes('Convite interativo enviado')
+        || item.title.includes('Confirmado por botão')
+        || item.title.includes('Calendário aberto')
+        || item.title.includes('Conflito de horário')
+      ),
+  );
+
   return (
     <aside
       className={cn(
@@ -165,18 +203,81 @@ export function LeadDetailPanel({
           )}
 
           {/* Meeting */}
-          {lead.dataDiagnostico && (
-            <Section title="Diagnóstico Agendado">
-              <p className="text-xs text-blue-300">
-                {new Date(lead.dataDiagnostico).toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'short' })}
+          <Section title="Agendamento de Diagnóstico">
+            {latestSchedulingOutcome && (
+              <p className="text-[11px] text-muted-foreground">
+                {latestSchedulingOutcome.title}
               </p>
-              {lead.calEventId && (
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  ID: {lead.calEventId.slice(0, 20)}…
+            )}
+            {lead.dataDiagnostico ? (
+              <>
+                <p className="text-xs text-blue-300">
+                  {new Date(lead.dataDiagnostico).toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'short' })}
                 </p>
+                {lead.calEventId && (
+                  <p className="text-[10px] text-muted-foreground font-mono">
+                    ID: {lead.calEventId.slice(0, 20)}…
+                  </p>
+                )}
+                <p className={cn('text-[10px]', lead.calMeetUrl ? 'text-emerald-400' : 'text-amber-300')}>
+                  {lead.calMeetUrl ? 'Meet detectado' : 'Meet ausente (bloqueia avanço)'}
+                </p>
+                {lead.calSyncedAt && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Último sync: {new Date(lead.calSyncedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-amber-300">
+                Reunião ainda não confirmada no calendário.
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-[11px] cursor-pointer"
+                onClick={() => onRunCalendarSync(lead.leadId)}
+                disabled={saving}
+              >
+                Sincronizar
+              </Button>
+              {lead.calMeetUrl ? (
+                <a
+                  href={lead.calMeetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-7 inline-flex items-center justify-center rounded-md border border-emerald-500/40 text-[11px] text-emerald-300 hover:bg-emerald-500/10"
+                >
+                  Entrar no Meet
+                </a>
+              ) : (
+                <span className="h-7 inline-flex items-center justify-center rounded-md border border-border/50 text-[11px] text-muted-foreground">
+                  Meet pendente
+                </span>
               )}
-            </Section>
-          )}
+              {lead.calEventUrl && (
+                <a
+                  href={lead.calEventUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="col-span-2 h-7 inline-flex items-center justify-center rounded-md border border-sky-500/40 text-[11px] text-sky-300 hover:bg-sky-500/10"
+                >
+                  Abrir evento no Google Calendar
+                </a>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-[11px] w-full cursor-pointer"
+              onClick={() => onSendSchedulingInvite(lead)}
+              disabled={saving}
+            >
+              Enviar convite de agendamento
+            </Button>
+          </Section>
 
           {/* Proposal */}
           {(lead.valProposta || lead.urlProposta) && (
@@ -248,6 +349,148 @@ export function LeadDetailPanel({
                   Marcar consentido
                 </Button>
               )}
+            </div>
+          </Section>
+
+          <Section title="Checklist de Requisitos">
+            {leadMetaLoading ? (
+              <p className="text-xs text-muted-foreground">Carregando requisitos...</p>
+            ) : requirements.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nenhum requisito encontrado para o estágio atual.</p>
+            ) : (
+              <div className="space-y-2">
+                {requirements.map((req) => (
+                  <div key={req.requirementId} className="rounded-lg border border-border/40 bg-background/20 p-2 space-y-1">
+                    <p className="text-[11px] text-foreground/90">{req.requirementKey}</p>
+                    {req.reason && <p className="text-[10px] text-muted-foreground">{req.reason}</p>}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={cn(
+                        'text-[10px] uppercase tracking-wide',
+                        req.satisfied ? 'text-emerald-400' : 'text-amber-300',
+                      )}>
+                        {req.status}
+                      </span>
+                      {canManageSensitive && (
+                        <select
+                          className="h-6 rounded border border-input bg-transparent px-2 text-[10px] cursor-pointer"
+                          value={req.status}
+                          onChange={(e) => onUpdateRequirementStatus(lead, req.requirementKey, e.target.value as 'pending' | 'done' | 'waived')}
+                          disabled={saving}
+                        >
+                          <option value="pending">pending</option>
+                          <option value="done">done</option>
+                          <option value="waived">waived</option>
+                        </select>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+
+          <Section title="Assets / Documentos">
+            {leadMetaLoading ? (
+              <p className="text-xs text-muted-foreground">Carregando assets...</p>
+            ) : assets.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Sem assets registrados.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {assets.slice(0, 5).map((asset) => (
+                  <a
+                    key={asset.id}
+                    href={asset.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-lg border border-border/40 bg-background/20 px-2 py-1.5 text-[11px] hover:border-border/70"
+                  >
+                    <p className="text-foreground/90">{asset.assetType} · {asset.stage}</p>
+                    <p className="text-muted-foreground">v{asset.version}</p>
+                  </a>
+                ))}
+              </div>
+            )}
+            <div className="space-y-2 pt-1">
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  className="h-7 rounded border border-input bg-transparent px-2 text-[11px] cursor-pointer"
+                  value={assetStage}
+                  onChange={(e) => setAssetStage(e.target.value as CommercialLeadStatus)}
+                >
+                  {COLUMNS.map((col) => (
+                    <option key={col.key} value={col.key}>{col.label}</option>
+                  ))}
+                </select>
+                <input
+                  className="h-7 rounded border border-input bg-transparent px-2 text-[11px]"
+                  value={assetType}
+                  onChange={(e) => setAssetType(e.target.value)}
+                  placeholder="asset type"
+                />
+              </div>
+              <input
+                className="h-7 w-full rounded border border-input bg-transparent px-2 text-[11px]"
+                value={assetUrl}
+                onChange={(e) => setAssetUrl(e.target.value)}
+                placeholder="https://..."
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-[11px] w-full cursor-pointer"
+                disabled={saving || !assetType.trim() || !assetUrl.trim()}
+                onClick={() => {
+                  onAddAsset(lead, { stage: assetStage, assetType: assetType.trim(), url: assetUrl.trim() });
+                  setAssetUrl('');
+                }}
+              >
+                Registrar asset
+              </Button>
+            </div>
+          </Section>
+
+          <Section title="Onboarding Operacional">
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <button
+                type="button"
+                className={cn('h-7 rounded border cursor-pointer', lead.onboardingD0Ok ? 'border-emerald-500/40 text-emerald-300' : 'border-input text-muted-foreground')}
+                onClick={() => onUpdateOnboarding(lead, { d0Ok: !lead.onboardingD0Ok })}
+                disabled={saving}
+              >
+                D0 {lead.onboardingD0Ok ? '✓' : '○'}
+              </button>
+              <button
+                type="button"
+                className={cn('h-7 rounded border cursor-pointer', lead.onboardingD1Ok ? 'border-emerald-500/40 text-emerald-300' : 'border-input text-muted-foreground')}
+                onClick={() => onUpdateOnboarding(lead, { d1Ok: !lead.onboardingD1Ok })}
+                disabled={saving}
+              >
+                D1 {lead.onboardingD1Ok ? '✓' : '○'}
+              </button>
+              <button
+                type="button"
+                className={cn('h-7 rounded border cursor-pointer', lead.onboardingD2Ok ? 'border-emerald-500/40 text-emerald-300' : 'border-input text-muted-foreground')}
+                onClick={() => onUpdateOnboarding(lead, { d2Ok: !lead.onboardingD2Ok })}
+                disabled={saving}
+              >
+                D2 {lead.onboardingD2Ok ? '✓' : '○'}
+              </button>
+              <button
+                type="button"
+                className={cn('h-7 rounded border cursor-pointer', lead.onboardingD3D4Ok ? 'border-emerald-500/40 text-emerald-300' : 'border-input text-muted-foreground')}
+                onClick={() => onUpdateOnboarding(lead, { d3D4Ok: !lead.onboardingD3D4Ok })}
+                disabled={saving}
+              >
+                D3-D4 {lead.onboardingD3D4Ok ? '✓' : '○'}
+              </button>
+              <button
+                type="button"
+                className={cn('h-7 rounded border cursor-pointer col-span-2', lead.onboardingD5D7Ok ? 'border-emerald-500/40 text-emerald-300' : 'border-input text-muted-foreground')}
+                onClick={() => onUpdateOnboarding(lead, { d5D7Ok: !lead.onboardingD5D7Ok })}
+                disabled={saving}
+              >
+                D5-D7 {lead.onboardingD5D7Ok ? '✓' : '○'}
+              </button>
             </div>
           </Section>
 

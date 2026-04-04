@@ -1034,15 +1034,20 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
               const subthemeDirty = normalizedDraftSubtheme !== normalizedSavedSubtheme;
               const themeSelectValue = themeKey ?? AUTO_THEME_VALUE;
               const themeDisabled = themeLoading || themeOptions.length === 0 || isSaving;
+              const objectiveKey = resolveObjectiveKey(campaign);
+              const isMessagingObjective = objectiveKey === 'messages';
               const conversionRate =
                 campaign.totalClicks > 0 ? (campaign.totalConversions / campaign.totalClicks) * 100 : 0;
               const contacts =
-                campaign.totalLeads > 0
+                objectiveKey === 'lead'
                   ? campaign.totalLeads
-                  : campaign.totalMessagingConversations > 0
+                  : objectiveKey === 'messages'
                     ? campaign.totalMessagingConversations
                     : campaign.totalConversions;
-              const showZeroConversations = (campaign.totalSpend ?? 0) > 0 && contacts === 0;
+              const showZeroConversations =
+                isMessagingObjective &&
+                (campaign.totalSpend ?? 0) > 0 &&
+                (campaign.totalMessagingConversations ?? 0) === 0;
               const benchmark = benchmarkMap[campaign.campaignId];
               const benchmarkMessage = benchmark?.insights?.[0]?.message ?? null;
               const compliance = complianceMap[campaign.campaignId];
@@ -1059,7 +1064,6 @@ export function CampaignTable({ campaigns, clientId }: CampaignTableProps) {
               const priorityMeta = getPriorityMeta(priorityScore);
 
               const pyramidLayers = buildPyramidLayers(campaign);
-              const objectiveKey = resolveObjectiveKey(campaign);
               const kpiCards = buildKpiCards(campaign, objectiveKey);
               const advancedKpis = buildAdvancedKpis(campaign, objectiveKey);
               const lpRate = getStepRate(campaign.totalLandingPageViews || 0, campaign.totalClicks);

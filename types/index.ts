@@ -8,6 +8,8 @@ export interface Client {
   email: string;
   cpfCnpj?: string;
   metaAdAccountId?: string | null;
+  businessNicheKey?: string | null;
+  defaultChannelKey?: string | null;
   tier: 'basic' | 'premium' | 'enterprise' | 'standard';
   status: 'active' | 'inactive' | 'pending' | 'suspended' | 'churned';
   budget: number;
@@ -28,6 +30,9 @@ export interface Campaign {
   platform?: 'meta' | 'google' | 'linkedin' | 'tiktok' | 'other';
   externalId?: string;
   objective?: string;
+  objectiveClassKey?: 'messages' | 'lead' | 'conversion' | 'traffic' | 'awareness' | null;
+  channelClassKey?: string | null;
+  ruleProfileId?: string | null;
   optimizationThemeKey?: string | null;
   optimizationSubthemeKey?: string | null;
   targetAudience?: string;

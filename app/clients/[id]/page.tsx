@@ -64,6 +64,8 @@ export default function ClientDetailsPage() {
       await updateClient(String(clientId), {
         name: values.name,
         email: values.email,
+        businessNicheKey: values.businessNicheKey,
+        defaultChannelKey: values.defaultChannelKey,
         tier: values.tier,
         budget: values.budget,
         metaAdAccountId: values.metaAdAccountId?.trim() ? values.metaAdAccountId.trim() : undefined,

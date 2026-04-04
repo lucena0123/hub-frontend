@@ -7,6 +7,8 @@ export type ClientPayload = {
   email: string;
   cpfCnpj?: string;
   metaAdAccountId?: string;
+  businessNicheKey: string;
+  defaultChannelKey: string;
   tier: string;
   budget: number;
   contractStart: string;
@@ -24,12 +26,14 @@ export const getClientById = async (id: string): Promise<Client> => {
 };
 
 export const createClient = async (payload: ClientPayload): Promise<Client> => {
-  const { name, email, cpfCnpj, metaAdAccountId, tier, budget, contractStart, contractEnd } = payload;
+  const { name, email, cpfCnpj, metaAdAccountId, businessNicheKey, defaultChannelKey, tier, budget, contractStart, contractEnd } = payload;
   const response = await apiClient.post<Client>('/api/clients', {
     name,
     email,
     cpfCnpj,
     metaAdAccountId,
+    businessNicheKey,
+    defaultChannelKey,
     tier,
     budget,
     contractStart,
@@ -39,12 +43,14 @@ export const createClient = async (payload: ClientPayload): Promise<Client> => {
 };
 
 export const updateClient = async (id: string, payload: ClientPayload): Promise<Client> => {
-  const { name, email, cpfCnpj, metaAdAccountId, tier, budget, contractStart, contractEnd } = payload;
+  const { name, email, cpfCnpj, metaAdAccountId, businessNicheKey, defaultChannelKey, tier, budget, contractStart, contractEnd } = payload;
   const response = await apiClient.put<Client>(`/api/clients/${id}`, {
     name,
     email,
     cpfCnpj,
     metaAdAccountId,
+    businessNicheKey,
+    defaultChannelKey,
     tier,
     budget,
     contractStart,
@@ -56,4 +62,3 @@ export const updateClient = async (id: string, payload: ClientPayload): Promise<
 export const deleteClient = async (id: string): Promise<void> => {
   await apiClient.delete(`/api/clients/${id}`);
 };
-

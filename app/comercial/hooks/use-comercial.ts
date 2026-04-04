@@ -13,6 +13,8 @@ import {
   CommercialDispatchHealthSummary,
   CommercialFollowupDue,
   CommercialRetentionAlert,
+  CommercialRequirementStatus,
+  CommercialAsset,
   getCommercialDashboard,
   getCommercialDailySummary,
   getCommercialFollowupsDue,
@@ -22,9 +24,15 @@ import {
   getCommercialLeadTimeline,
   getCommercialIntegrationEvents,
   getCommercialDispatchHealth,
+  getCommercialLeadRequirements,
+  updateCommercialLeadRequirements,
+  getCommercialLeadAssets,
+  createCommercialLeadAsset,
+  runCommercialCalendarSync,
   getCommercialLeads,
   getCommercialSlaAlerts,
   moveCommercialLead,
+  sendCommercialSchedulingInvite,
   submitCommercialForm,
   updateCommercialLeadOnboarding,
   updateCommercialLeadPrivacy,
@@ -73,6 +81,11 @@ export const LOSS_REASONS = [
 
 export type PendingTransition = { lead: CommercialLead; to: 'nutricao' | 'perdido' };
 export type ConcluirDiagLead = CommercialLead;
+export type ComercialErrorAction =
+  | { type: 'send_scheduling_invite'; leadId: string }
+  | { type: 'run_calendar_sync'; leadId: string }
+  | { type: 'configure_calendar'; leadId: string }
+  | null;
 
 const getDispatchStage = (
   status: CommercialLeadStatus,
@@ -93,7 +106,52 @@ const toApiError = (err: unknown, fallback: string): string => {
   return fallback;
 };
 
+const toApiErrorWithReason = (
+  err: unknown,
+  fallback: string,
+): { message: string; reasonCode?: string; details?: Record<string, unknown> } => {
+  if (err instanceof AxiosError) {
+    const payload = err.response?.data as { message?: string; details?: Record<string, unknown> & { reasonCode?: string } } | undefined;
+    return {
+      message: payload?.message || fallback,
+      reasonCode: payload?.details?.reasonCode,
+      details: payload?.details,
+    };
+  }
+
+  return { message: fallback };
+};
+
 const PAGE_SIZE = 50;
+
+const mapIntegrationEventLabel = (event: CommercialIntegrationEvent): { title: string; subtitle?: string } => {
+  const eventType = event.eventType;
+  if (eventType === 'scheduling:invite_sent') {
+    const channels = Array.isArray(event.payload?.channels) ? event.payload.channels : [];
+    const hasWhatsApp = channels.includes('whatsapp');
+    const whatsappMode = event.payload?.whatsappMode;
+    const interactive = whatsappMode === 'buttons_3' || event.payload?.interactiveMode === 'buttons_3';
+    return {
+      title: !hasWhatsApp
+        ? 'Agendamento · Convite enviado'
+        : interactive
+          ? 'WhatsApp · Convite interativo enviado'
+          : 'WhatsApp · Convite enviado (resposta por número)',
+      subtitle: event.externalEventId ? `external: ${event.externalEventId}` : undefined,
+    };
+  }
+  if (eventType === 'whatsapp:reply_confirmed') return { title: 'WhatsApp · Confirmado por resposta' };
+  if (eventType === 'whatsapp:reply_open_calendar') return { title: 'WhatsApp · Calendário aberto' };
+  if (eventType === 'whatsapp:reply_conflict') return { title: 'WhatsApp · Conflito de horário' };
+  if (eventType === 'whatsapp:reply_invalid') return { title: 'WhatsApp · Opção inválida' };
+  if (eventType === 'whatsapp:reply_received') return { title: 'WhatsApp · Resposta recebida' };
+  if (eventType === 'whatsapp:reply_duplicate') return { title: 'WhatsApp · Resposta duplicada (ignorada)' };
+
+  return {
+    title: `${event.channel} · ${eventType}`,
+    subtitle: event.externalEventId ? `external: ${event.externalEventId}` : undefined,
+  };
+};
 
 export function useComercial() {
   const { user } = useAuth();
@@ -109,6 +167,9 @@ export function useComercial() {
   const [integrationEvents, setIntegrationEvents] = useState<CommercialIntegrationEvent[]>([]);
   const [followupsDue, setFollowupsDue] = useState<CommercialFollowupDue[]>([]);
   const [retentionDue, setRetentionDue] = useState<CommercialRetentionAlert[]>([]);
+  const [leadRequirements, setLeadRequirements] = useState<CommercialRequirementStatus[]>([]);
+  const [leadAssets, setLeadAssets] = useState<CommercialAsset[]>([]);
+  const [leadMetaLoading, setLeadMetaLoading] = useState(false);
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
@@ -128,6 +189,7 @@ export function useComercial() {
   const [transitionDate, setTransitionDate] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorAction, setErrorAction] = useState<ComercialErrorAction>(null);
 
   // ── Filters ───────────────────────────────────────────────────────────────
   const [search, setSearch] = useState('');
@@ -171,14 +233,31 @@ export function useComercial() {
   useEffect(() => { setPage(1); }, [statusFilter, responsavelFilter, origemFilter, search, blockedOnly, inconsistentOnly]);
 
   useEffect(() => {
-    if (!selectedLead) { setTimeline([]); setIntegrationEvents([]); return; }
+    if (!selectedLead) {
+      setTimeline([]);
+      setIntegrationEvents([]);
+      setLeadRequirements([]);
+      setLeadAssets([]);
+      return;
+    }
+
+    setLeadMetaLoading(true);
     Promise.all([
       getCommercialLeadTimeline(selectedLead.leadId, 20),
       getCommercialIntegrationEvents(selectedLead.leadId, 20),
-    ]).then(([events, integrations]) => {
+      getCommercialLeadRequirements(selectedLead.leadId).then((res) => res.requirements),
+      getCommercialLeadAssets(selectedLead.leadId),
+    ]).then(([events, integrations, requirements, assets]) => {
       setTimeline(events);
       setIntegrationEvents(integrations);
-    }).catch(() => { setTimeline([]); setIntegrationEvents([]); });
+      setLeadRequirements(requirements);
+      setLeadAssets(assets);
+    }).catch(() => {
+      setTimeline([]);
+      setIntegrationEvents([]);
+      setLeadRequirements([]);
+      setLeadAssets([]);
+    }).finally(() => setLeadMetaLoading(false));
   }, [selectedLead]);
 
   // ── Business logic helpers ────────────────────────────────────────────────
@@ -206,6 +285,24 @@ export function useComercial() {
     return { ok: true };
   };
 
+  const refreshSelectedLeadMeta = useCallback(async (leadId: string) => {
+    try {
+      setLeadMetaLoading(true);
+      const [requirements, assets, events, integrations] = await Promise.all([
+        getCommercialLeadRequirements(leadId).then((res) => res.requirements),
+        getCommercialLeadAssets(leadId),
+        getCommercialLeadTimeline(leadId, 20),
+        getCommercialIntegrationEvents(leadId, 20),
+      ]);
+      setLeadRequirements(requirements);
+      setLeadAssets(assets);
+      setTimeline(events);
+      setIntegrationEvents(integrations);
+    } finally {
+      setLeadMetaLoading(false);
+    }
+  }, []);
+
   // ── Actions ───────────────────────────────────────────────────────────────
   const onMoveLead = async (
     lead: CommercialLead,
@@ -213,7 +310,7 @@ export function useComercial() {
     options?: { motivoNutricao?: string; motivoPerda?: string; dataProximaAcao?: string; observacao?: string },
   ) => {
     try {
-      setSaving(true); setError(null);
+      setSaving(true); setError(null); setErrorAction(null);
       const payload: Record<string, unknown> = { to };
       if (to === 'diagnostico_agendado') payload.dor01Ok = true;
       if (to === 'proposta_enviada') payload.dor02Ok = true;
@@ -227,7 +324,18 @@ export function useComercial() {
       await moveCommercialLead(lead.leadId, payload as unknown as Parameters<typeof moveCommercialLead>[1]);
       setStatusMessage(`Lead movido para ${COLUMNS.find((c) => c.key === to)?.label}.`);
       await fetchLeads();
-    } catch (err) { setError(toApiError(err, 'Falha ao mover lead.')); }
+    } catch (err) {
+      const apiError = toApiErrorWithReason(err, 'Falha ao mover lead.');
+      setError(apiError.message);
+
+      if (to === 'diagnostico_agendado' && apiError.reasonCode === 'MISSING_CALENDAR_EVENT') {
+        setErrorAction({ type: 'send_scheduling_invite', leadId: lead.leadId });
+      } else if (to === 'diagnostico_agendado' && apiError.reasonCode === 'MISSING_MEET_LINK') {
+        setErrorAction({ type: 'run_calendar_sync', leadId: lead.leadId });
+      } else {
+        setErrorAction(null);
+      }
+    }
     finally { setSaving(false); }
   };
 
@@ -326,6 +434,76 @@ export function useComercial() {
     finally { setSaving(false); }
   };
 
+  const onSendSchedulingInvite = async (lead: CommercialLead) => {
+    try {
+      setSaving(true);
+      setError(null);
+      setErrorAction(null);
+
+      const invite = await sendCommercialSchedulingInvite(lead.leadId, {
+        timezone: lead.timezone,
+      });
+
+      const channelLabel: Record<'whatsapp' | 'gmail', string> = {
+        whatsapp: 'WhatsApp',
+        gmail: 'email',
+      };
+      const sentChannels = invite.channelsSent.map((channel) => channelLabel[channel]).join(' + ');
+      const failures = invite.channelErrors || [];
+      const providerLabel = invite.provider === 'google_booking' ? 'Google Calendar' : 'calendário do Hub';
+      const suggestionLabel = invite.suggestedSlots.length >= 2
+        ? ` com ${invite.suggestedSlots.length} sugestões`
+        : '';
+      const hasWhatsAppDelivery = invite.channelsSent.includes('whatsapp');
+      const interactiveLabel = !hasWhatsAppDelivery
+        ? ''
+        : invite.whatsappMode === 'buttons_3'
+          ? ' (WhatsApp com 3 botões)'
+          : ' (WhatsApp por resposta 1/2/3)';
+
+      if (failures.length > 0) {
+        const failuresText = failures
+          .map((item) => `${channelLabel[item.channel]}: ${item.message}`)
+          .join(' | ');
+        setStatusMessage(`Convite de agendamento (${providerLabel}) enviado por ${sentChannels}${suggestionLabel}${interactiveLabel}. Falhas: ${failuresText}`);
+      } else {
+        setStatusMessage(`Convite de agendamento (${providerLabel}) enviado por ${sentChannels}${suggestionLabel}${interactiveLabel}.`);
+      }
+
+      await fetchLeads();
+    } catch (err) {
+      const apiError = toApiErrorWithReason(err, 'Falha ao enviar convite de agendamento.');
+
+      if (apiError.reasonCode === 'BRIEFING_REQUIRED') {
+        try {
+          const form = await getCommercialLeadFormLink(lead.leadId, 'briefing');
+          await navigator.clipboard.writeText(form.url);
+          setStatusMessage('Briefing obrigatório antes do convite. Link do briefing copiado para envio ao cliente.');
+        } catch {
+          setStatusMessage('Briefing obrigatório antes do convite. Gere/copie o link do briefing e envie ao cliente.');
+        }
+        setError('Convite bloqueado: briefing obrigatório antes do agendamento.');
+        return;
+      }
+
+      if (apiError.reasonCode === 'LEAD_EMAIL_REQUIRED') {
+        setErrorAction(null);
+        setError('Convite bloqueado: o lead precisa ter e-mail para agendar via Google Calendar.');
+        return;
+      }
+
+      if (apiError.reasonCode === 'CALENDAR_LINK_NOT_CONFIGURED') {
+        setErrorAction({ type: 'configure_calendar', leadId: lead.leadId });
+        setError('Convite bloqueado: responsável sem booking link configurado.');
+        return;
+      }
+
+      setError(apiError.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const onUpdateProofs = async (lead: CommercialLead, update: Parameters<typeof updateCommercialLeadProofs>[1]) => {
     try { setSaving(true); setError(null); await updateCommercialLeadProofs(lead.leadId, update); setStatusMessage('Provas atualizadas.'); await fetchLeads(); }
     catch (err) { setError(toApiError(err, 'Falha ao atualizar provas.')); }
@@ -342,6 +520,63 @@ export function useComercial() {
     try { setSaving(true); setError(null); await updateCommercialLeadPrivacy(lead.leadId, update); setStatusMessage('LGPD atualizado.'); await fetchLeads(); }
     catch (err) { setError(toApiError(err, 'Falha ao atualizar LGPD.')); }
     finally { setSaving(false); }
+  };
+
+  const onUpdateRequirementStatus = async (
+    lead: CommercialLead,
+    requirementKey: string,
+    status: 'pending' | 'done' | 'waived',
+  ) => {
+    try {
+      setSaving(true);
+      setError(null);
+      await updateCommercialLeadRequirements(lead.leadId, {
+        updates: [{ requirementKey, status }],
+      });
+      setStatusMessage(`Requisito ${requirementKey} atualizado para ${status}.`);
+      await refreshSelectedLeadMeta(lead.leadId);
+    } catch (err) {
+      setError(toApiError(err, 'Falha ao atualizar requisito.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onAddLeadAsset = async (
+    lead: CommercialLead,
+    payload: { stage: CommercialLeadStatus; assetType: string; url: string },
+  ) => {
+    try {
+      setSaving(true);
+      setError(null);
+      await createCommercialLeadAsset(lead.leadId, payload);
+      setStatusMessage(`Asset ${payload.assetType} registrado.`);
+      await refreshSelectedLeadMeta(lead.leadId);
+    } catch (err) {
+      setError(toApiError(err, 'Falha ao registrar asset.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onRunCalendarSync = async (leadId?: string) => {
+    try {
+      setSaving(true);
+      setError(null);
+      setErrorAction(null);
+      const result = await runCommercialCalendarSync();
+      setStatusMessage(
+        `Sync concluído: calendários ${result.checkedCalendars}, eventos ${result.processedEvents}, vínculos ${result.linkedLeads}, fila ${result.queued}.`,
+      );
+      await fetchLeads();
+      if (leadId) {
+        await refreshSelectedLeadMeta(leadId);
+      }
+    } catch (err) {
+      setError(toApiError(err, 'Falha ao executar sync do Google Calendar.'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const exportFilteredLeadsCsv = () => {
@@ -416,13 +651,23 @@ export function useComercial() {
   const unifiedTimeline = useMemo(() => {
     if (!selectedLead) return [] as Array<{ id: string; type: 'transition' | 'integration'; at: string; title: string; subtitle?: string }>;
     const transitions = timeline.map((e) => ({ id: `t-${e.id}`, type: 'transition' as const, at: e.createdAt, title: `${e.statusOrigem} → ${e.statusDestino}`, subtitle: e.observacao || e.actor || undefined }));
-    const integrations = integrationEvents.map((e) => ({ id: `i-${e.id}`, type: 'integration' as const, at: e.occurredAt, title: `${e.channel} · ${e.eventType}`, subtitle: e.externalEventId ? `external: ${e.externalEventId}` : undefined }));
+    const integrations = integrationEvents.map((e) => {
+      const mapped = mapIntegrationEventLabel(e);
+      return {
+        id: `i-${e.id}`,
+        type: 'integration' as const,
+        at: e.occurredAt,
+        title: mapped.title,
+        subtitle: mapped.subtitle,
+      };
+    });
     return [...transitions, ...integrations].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
   }, [selectedLead, timeline, integrationEvents]);
 
   return {
     // data
     leads, kpis, slaAlerts, dailySummary, dispatchHealth, followupsDue, retentionDue,
+    leadRequirements, leadAssets,
     // ui state
     loading, saving, novoLeadOpen, setNovoLeadOpen, editarLeadOpen, setEditarLeadOpen,
     selectedLead, setSelectedLead, draggingLeadId, setDraggingLeadId, hoverColumn, setHoverColumn,
@@ -431,7 +676,7 @@ export function useComercial() {
     pendingDeleteLead, setPendingDeleteLead,
     deleteConfirmText, setDeleteConfirmText, deleteReason, setDeleteReason,
     transitionReason, setTransitionReason, transitionDate, setTransitionDate,
-    statusMessage, setStatusMessage, error, setError,
+    statusMessage, setStatusMessage, error, setError, errorAction, setErrorAction, leadMetaLoading,
     // filters
     search, setSearch, blockedOnly, setBlockedOnly, inconsistentOnly, setInconsistentOnly,
     origemFilter, setOrigemFilter, responsavelFilter, setResponsavelFilter,
@@ -444,7 +689,8 @@ export function useComercial() {
     onMoveLead, handleDropToColumn, requestSpecialTransition, confirmSpecialTransition,
     requestConcluirDiag, confirmConcluirDiag,
     onDeleteLeadPermanently, onDispatchByStage, onTriggerFollowup, onSubmitBriefing,
-    onGenerateBriefingLink, onUpdateProofs, onUpdateOnboarding, onUpdatePrivacy,
+    onGenerateBriefingLink, onSendSchedulingInvite, onUpdateProofs, onUpdateOnboarding, onUpdatePrivacy,
+    onUpdateRequirementStatus, onAddLeadAsset, onRunCalendarSync, refreshSelectedLeadMeta,
     exportFilteredLeadsCsv,
     fetchLeads,
     pageSize: PAGE_SIZE,

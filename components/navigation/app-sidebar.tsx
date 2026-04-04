@@ -19,6 +19,9 @@ import {
   Wrench,
   BarChart2,
   FileText,
+  Wallet,
+  FolderKanban,
+  HeartPulse,
   LogOut,
   Menu,
   X,
@@ -69,6 +72,14 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Comercial',
     items: [
       { href: '/comercial', label: 'Pipeline de Leads', icon: UserPlus },
+    ],
+  },
+  {
+    label: 'Gestão',
+    items: [
+      { href: '/finance/contracts', label: 'Financeiro', icon: Wallet },
+      { href: '/projects', label: 'Projetos', icon: FolderKanban },
+      { href: '/cs/portfolio', label: 'Customer Success', icon: HeartPulse },
     ],
   },
   {

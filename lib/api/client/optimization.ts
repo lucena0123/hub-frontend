@@ -151,3 +151,133 @@ export const getOptimizationAuditSummary = async (params?: { clientId?: string; 
     const { data } = await apiClient.get<OptimizationAuditSummary>('/api/optimization/audit/summary', { params });
     return data;
 };
+
+export type RuleProfileTemplate = {
+    id: string;
+    name: string;
+    nicheKey: string;
+    objectiveKey: 'messages' | 'lead' | 'conversion' | 'traffic' | 'awareness';
+    channelKey: string;
+    isActive: boolean;
+    targets: Record<string, unknown> | null;
+    copyPolicy: Record<string, unknown> | null;
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type ClientRuleBinding = {
+    id: string;
+    clientId: string;
+    ruleProfileId: string;
+    isDefault: boolean;
+    priority: number;
+    overrideTargets: Record<string, unknown> | null;
+    overrideCopyPolicy: Record<string, unknown> | null;
+    ruleProfile: RuleProfileTemplate;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type RuleClassificationReview = {
+    id: string;
+    entityType: 'client' | 'campaign';
+    entityId: string;
+    reasonCode: string;
+    suggestedProfileId: string | null;
+    status: 'pending' | 'approved' | 'rejected';
+    createdAt: string;
+    resolvedAt: string | null;
+    resolvedBy: string | null;
+    suggestedProfile?: RuleProfileTemplate | null;
+};
+
+export const listRuleProfiles = async (params?: {
+    nicheKey?: string;
+    objectiveKey?: string;
+    channelKey?: string;
+    isActive?: boolean;
+}): Promise<RuleProfileTemplate[]> => {
+    const { data } = await apiClient.get<RuleProfileTemplate[]>('/api/rule-profiles', { params });
+    return data;
+};
+
+export const createRuleProfile = async (payload: {
+    name: string;
+    nicheKey: string;
+    objectiveKey: string;
+    channelKey: string;
+    isActive?: boolean;
+    targets?: Record<string, unknown> | null;
+    copyPolicy?: Record<string, unknown> | null;
+    version?: number;
+}): Promise<RuleProfileTemplate> => {
+    const { data } = await apiClient.post<RuleProfileTemplate>('/api/rule-profiles', payload);
+    return data;
+};
+
+export const updateRuleProfile = async (
+    id: string,
+    payload: Partial<{
+        name: string;
+        nicheKey: string;
+        objectiveKey: string;
+        channelKey: string;
+        isActive: boolean;
+        targets: Record<string, unknown> | null;
+        copyPolicy: Record<string, unknown> | null;
+        version: number;
+    }>
+): Promise<RuleProfileTemplate> => {
+    const { data } = await apiClient.patch<RuleProfileTemplate>(`/api/rule-profiles/${id}`, payload);
+    return data;
+};
+
+export const getClientRuleBindings = async (clientId: string): Promise<ClientRuleBinding[]> => {
+    const { data } = await apiClient.get<ClientRuleBinding[]>(`/api/clients/${clientId}/rule-bindings`);
+    return data;
+};
+
+export const updateClientRuleBindings = async (
+    clientId: string,
+    payload: {
+        bindings: Array<{
+            ruleProfileId: string;
+            isDefault?: boolean;
+            priority?: number;
+            overrideTargets?: Record<string, unknown> | null;
+            overrideCopyPolicy?: Record<string, unknown> | null;
+        }>;
+    }
+): Promise<ClientRuleBinding[]> => {
+    const { data } = await apiClient.put<ClientRuleBinding[]>(`/api/clients/${clientId}/rule-bindings`, payload);
+    return data;
+};
+
+export const runRuleBackfill = async (): Promise<{ clientsUpdated: number; campaignsUpdated: number; reviewItems: number }> => {
+    const { data } = await apiClient.post<{ clientsUpdated: number; campaignsUpdated: number; reviewItems: number }>(
+        '/api/rules/backfill'
+    );
+    return data;
+};
+
+export const listRuleReviewQueue = async (params?: {
+    status?: 'pending' | 'approved' | 'rejected';
+    entityType?: 'client' | 'campaign';
+    limit?: number;
+}): Promise<RuleClassificationReview[]> => {
+    const { data } = await apiClient.get<RuleClassificationReview[]>('/api/rules/review-queue', { params });
+    return data;
+};
+
+export const resolveRuleReviewItem = async (
+    id: string,
+    payload: {
+        status: 'approved' | 'rejected';
+        selectedProfileId?: string | null;
+        applyToEntity?: boolean;
+    }
+): Promise<RuleClassificationReview> => {
+    const { data } = await apiClient.post<RuleClassificationReview>(`/api/rules/review-queue/${id}/resolve`, payload);
+    return data;
+};

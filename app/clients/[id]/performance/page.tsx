@@ -41,6 +41,87 @@ import { PerformanceSidebar } from './components/performance-sidebar';
 type DashboardTab = 'executive' | 'operation' | 'analysis';
 type AnalysisTab = 'campaigns' | 'adsets' | 'creatives' | 'breakdowns' | 'business' | 'funnel' | 'progress';
 
+type ObjectiveAwareCampaign = {
+  objective?: string | null;
+  objectiveMeta?: {
+    optimizationGoal?: string | null;
+    destinationType?: string | null;
+  } | null;
+};
+
+type ObjectiveFocus = 'messages' | 'lead' | 'traffic' | 'conversion' | 'awareness';
+
+const normalizeObjectiveValue = (value?: string | null) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+const resolveObjectiveFocus = (campaign?: ObjectiveAwareCampaign | null): ObjectiveFocus => {
+  if (!campaign) return 'conversion';
+
+  const objective = normalizeObjectiveValue(campaign.objective);
+  const destination = normalizeObjectiveValue(campaign.objectiveMeta?.destinationType);
+  const optimization = normalizeObjectiveValue(campaign.objectiveMeta?.optimizationGoal);
+
+  if (
+    destination.includes('message') ||
+    destination.includes('messaging') ||
+    destination.includes('whatsapp') ||
+    optimization.includes('message') ||
+    optimization.includes('messaging') ||
+    optimization.includes('conversation') ||
+    objective.includes('message') ||
+    objective.includes('messaging')
+  ) {
+    return 'messages';
+  }
+
+  if (
+    optimization.includes('lead') ||
+    objective.includes('lead')
+  ) {
+    return 'lead';
+  }
+
+  if (
+    optimization.includes('landing_page') ||
+    optimization.includes('lpv') ||
+    objective.includes('traffic')
+  ) {
+    return 'traffic';
+  }
+
+  if (
+    optimization.includes('purchase') ||
+    optimization.includes('offsite_conversion') ||
+    optimization.includes('value') ||
+    optimization.includes('conversion') ||
+    objective.includes('conversion') ||
+    objective.includes('sales') ||
+    objective.includes('purchase')
+  ) {
+    return 'conversion';
+  }
+
+  if (
+    objective.includes('video') ||
+    objective.includes('engagement') ||
+    objective.includes('awareness') ||
+    objective.includes('reach') ||
+    objective.includes('brand')
+  ) {
+    return 'awareness';
+  }
+
+  return 'conversion';
+};
+
+const resolvePrimaryMetricLabel = (focus: ObjectiveFocus) => {
+  if (focus === 'messages') return 'Conversas';
+  if (focus === 'lead') return 'Leads';
+  if (focus === 'traffic') return 'LP Views';
+  if (focus === 'awareness') return 'Resultados';
+  return 'Conversões';
+};
+
 export default function ClientPerformancePage() {
   const params = useParams();
   const clientId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -137,6 +218,25 @@ export default function ClientPerformancePage() {
   const filteredCampaigns = selectedCampaignId
     ? summary?.campaigns.filter((campaign) => campaign.campaignId === selectedCampaignId) ?? []
     : summary?.campaigns ?? [];
+  const scopeCampaigns = selectedCampaign ? [selectedCampaign] : filteredCampaigns;
+  const referenceCampaign = scopeCampaigns[0] ?? null;
+  const objectiveFocus = resolveObjectiveFocus(referenceCampaign);
+  const primaryMetricLabel = resolvePrimaryMetricLabel(objectiveFocus);
+  const isMessagingFocus = objectiveFocus === 'messages';
+  const conversationDiagnosticsEnabled = scopeCampaigns.some(
+    (campaign) => resolveObjectiveFocus(campaign) === 'messages'
+  );
+  const primaryMetricTotal = selectedCampaign
+    ? selectedCampaign.totalConversions
+    : summary?.totalConversions || 0;
+  const kpiSectionSubtitle = `Resumo executivo de investimento e ${primaryMetricLabel.toLowerCase()}.`;
+  const performanceSectionTitle =
+    objectiveFocus === 'traffic'
+      ? 'Performance de Tráfego'
+      : objectiveFocus === 'lead' || objectiveFocus === 'messages'
+        ? 'Performance de Leads'
+        : 'Performance de Conversão';
+  const performanceSectionSubtitle = `Correlação entre investimento, ${primaryMetricLabel.toLowerCase()} e CPM.`;
 
   const handleToggleTrackingForm = () => {
     setShowTrackingForm((prev) => {
@@ -255,16 +355,19 @@ export default function ClientPerformancePage() {
                 <div className="space-y-4">
                   <SectionHeader
                     title="KPIs do Período"
-                    subtitle="Resumo executivo de investimento e conversas."
+                    subtitle={kpiSectionSubtitle}
                     icon={TrendingUp}
                   />
                   <Reveal delayMs={80}>
                     <KpiOverviewStrip
                       totalSpend={messagingMetrics.totalSpend}
-                      totalConversations={messagingMetrics.totalMessagingConversations}
-                      totalFirstReply={messagingMetrics.totalMessagingFirstReply}
+                      totalConversations={primaryMetricTotal}
+                      totalFirstReply={isMessagingFocus ? messagingMetrics.totalMessagingFirstReply : 0}
                       avgFrequency={healthMetrics.avgFrequency}
                       roi={roi}
+                      primaryLabel={primaryMetricLabel}
+                      costLabel={isMessagingFocus ? 'Custo/Lead' : 'Custo/Resultado'}
+                      showResponseRate={isMessagingFocus}
                       loading={businessLoading || metricsLoading}
                     />
                   </Reveal>
@@ -272,8 +375,8 @@ export default function ClientPerformancePage() {
 
                 <div className="space-y-4">
                   <SectionHeader
-                    title="Performance de Leads"
-                    subtitle="Correlação entre investimento, conversas e CPM."
+                    title={performanceSectionTitle}
+                    subtitle={performanceSectionSubtitle}
                     icon={BarChart3}
                   />
                   <Reveal delayMs={120}>
@@ -302,18 +405,34 @@ export default function ClientPerformancePage() {
                 <div className="space-y-4">
                   <SectionHeader
                     title="Diagnóstico & Ações"
-                    subtitle="Winners, alertas e decisões prioritárias."
+                    subtitle={
+                      conversationDiagnosticsEnabled
+                        ? 'Winners, alertas e decisões prioritárias.'
+                        : 'Cliente em foco de conversão: regras de conversa ocultas.'
+                    }
                     icon={Sparkles}
                   />
                   <Reveal delayMs={80}>
                     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-                      <DiagnosticsPanel
-                        clientId={clientId}
-                        optimizationData={optimizationData}
-                        optimizationLoading={optimizationLoading}
-                        metricsQuery={metricsQuery}
-                        selectedCampaignId={selectedCampaignId}
-                      />
+                      {conversationDiagnosticsEnabled ? (
+                        <DiagnosticsPanel
+                          clientId={clientId}
+                          optimizationData={optimizationData}
+                          optimizationLoading={optimizationLoading}
+                          metricsQuery={metricsQuery}
+                          selectedCampaignId={selectedCampaignId}
+                        />
+                      ) : (
+                        <Card className="edge-card">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-base">Diagnóstico de conversa desativado</CardTitle>
+                          </CardHeader>
+                          <CardContent className="text-sm text-muted-foreground">
+                            Esta campanha está orientada para conversão/vídeo. O bloco de regras de conversa foi ocultado
+                            para evitar diagnósticos que não representam o objetivo atual.
+                          </CardContent>
+                        </Card>
+                      )}
                       <AiInsightsPanel
                         campaignId={selectedCampaignId}
                         campaignName={selectedCampaign?.campaignName ?? null}

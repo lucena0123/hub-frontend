@@ -37,6 +37,11 @@ export interface CommercialLead {
   valProposta?: number;
   calEventId?: string;
   dataDiagnostico?: string;
+  calEventUrl?: string;
+  calMeetUrl?: string;
+  calOrganizerEmail?: string;
+  calSyncedAt?: string;
+  scheduledFrom?: 'quick_suggestion_1' | 'quick_suggestion_2' | 'calendar' | 'google_booking';
   urlProposta?: string;
   scoreQualificacao?: number;
   statusAtual: CommercialLeadStatus;
@@ -153,6 +158,106 @@ export interface CommercialDispatchHealthSummary {
   byChannel: CommercialDispatchHealthByChannel[];
 }
 
+export interface CommercialRequirementStatus {
+  requirementId: string;
+  requirementKey: string;
+  stage: CommercialLeadStatus;
+  required: boolean;
+  status: 'pending' | 'done' | 'waived';
+  source: 'system' | 'manual';
+  satisfied: boolean;
+  type: 'field' | 'file' | 'event' | 'boolean';
+  reason?: string;
+  evidence?: Record<string, unknown>;
+}
+
+export interface CommercialLeadRequirementsResponse {
+  leadId: string;
+  stage: CommercialLeadStatus;
+  requirements: CommercialRequirementStatus[];
+}
+
+export interface CommercialAsset {
+  id: string;
+  leadId: string;
+  stage: CommercialLeadStatus;
+  assetType: string;
+  storageProvider: string;
+  storageRef?: string;
+  url: string;
+  version: number;
+  checksum?: string;
+  createdBy?: string;
+  createdAt: string;
+}
+
+export interface CommercialTemplateSummary {
+  id: string;
+  channel: 'whatsapp' | 'gmail';
+  stage: 'primeiro_contato' | 'diagnostico_agendado' | 'proposta_enviada' | 'negociacao' | 'fechado';
+  slug: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  latestVersionId?: string | null;
+  latestVersion?: number | null;
+  latestStatus?: 'draft' | 'published' | 'archived' | null;
+}
+
+export interface CommercialTemplateVersion {
+  id: string;
+  templateId: string;
+  version: number;
+  content: Record<string, unknown>;
+  status: 'draft' | 'published' | 'archived';
+  createdBy?: string;
+  createdAt: string;
+}
+
+export interface CommercialTemplateWithVersions {
+  template: {
+    id: string;
+    channel: 'whatsapp' | 'gmail';
+    stage: 'primeiro_contato' | 'diagnostico_agendado' | 'proposta_enviada' | 'negociacao' | 'fechado';
+    slug: string;
+    name: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+  versions: CommercialTemplateVersion[];
+}
+
+export interface CommercialCalendarConfig {
+  id: string;
+  responsavelKey: string;
+  calendarId: string;
+  bookingUrl: string;
+  ownerEmail: string;
+  timezone: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommercialCalendarReconciliationItem {
+  id: string;
+  calendarConfigId: string;
+  googleEventId: string;
+  attendeeEmail?: string;
+  eventStart?: string;
+  eventEnd?: string;
+  payload?: Record<string, unknown>;
+  reasonCode: string;
+  status: 'pending' | 'resolved' | 'ignored';
+  leadId?: string;
+  resolvedBy?: string;
+  resolvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MoveLeadPayload {
   to: CommercialLeadStatus;
   observacao?: string;
@@ -163,6 +268,8 @@ export interface MoveLeadPayload {
   motivoNutricao?: string;
   motivoPerda?: string;
   dataProximaAcao?: string;
+  waiveRequirements?: string[];
+  waiveReason?: string;
 }
 
 export interface SubmitCommercialFormPayload {
@@ -202,6 +309,35 @@ export interface CommercialScheduleSlot {
   start: string;
   end: string;
   label?: string;
+}
+
+export interface CommercialSchedulingSuggestedSlot {
+  slotStart: string;
+  slotEnd: string;
+  label: string;
+  quickToken?: string;
+  quickLink?: string;
+}
+
+export interface CommercialSchedulingChannelError {
+  channel: 'whatsapp' | 'gmail';
+  message: string;
+}
+
+export interface CommercialSchedulingInviteResponse {
+  inviteId: string;
+  leadId: string;
+  calendarUrl: string;
+  bookingUrl?: string;
+  provider?: 'google_booking' | 'hub_public';
+  interactiveMode?: 'buttons_3';
+  whatsappMode?: 'buttons_3' | 'text_reply';
+  interactiveAttempted?: boolean;
+  suggestedSlots: CommercialSchedulingSuggestedSlot[];
+  channelsSent: Array<'whatsapp' | 'gmail'>;
+  channelErrors?: CommercialSchedulingChannelError[];
+  sentAt: string;
+  expiresAt: string;
 }
 
 export async function getCommercialLeads(params?: {
@@ -253,10 +389,192 @@ export async function getCommercialIntegrationEvents(leadId: string, limit = 25)
   return [];
 }
 
+export async function getCommercialLeadRequirements(
+  leadId: string,
+  stage?: CommercialLeadStatus,
+): Promise<CommercialLeadRequirementsResponse> {
+  const { data } = await apiClient.get<CommercialLeadRequirementsResponse>(`/api/comercial/leads/${leadId}/requirements`, {
+    params: stage ? { stage } : undefined,
+  });
+  return data;
+}
+
+export async function updateCommercialLeadRequirements(
+  leadId: string,
+  payload: {
+    updates: Array<{
+      stage?: CommercialLeadStatus;
+      requirementKey: string;
+      status: 'pending' | 'done' | 'waived';
+      evidence?: Record<string, unknown>;
+    }>;
+  },
+): Promise<CommercialLeadRequirementsResponse> {
+  const { data } = await apiClient.put<CommercialLeadRequirementsResponse>(`/api/comercial/leads/${leadId}/requirements`, payload);
+  return data;
+}
+
+export async function getCommercialLeadAssets(
+  leadId: string,
+  params?: { stage?: CommercialLeadStatus; assetType?: string },
+): Promise<CommercialAsset[]> {
+  const { data } = await apiClient.get<{ assets?: CommercialAsset[] } | CommercialAsset[]>(
+    `/api/comercial/leads/${leadId}/assets`,
+    { params },
+  );
+
+  if (Array.isArray(data)) return data;
+  return data.assets || [];
+}
+
+export async function createCommercialLeadAsset(
+  leadId: string,
+  payload: {
+    stage: CommercialLeadStatus;
+    assetType: string;
+    url: string;
+    storageProvider?: string;
+    storageRef?: string;
+    version?: number;
+    checksum?: string;
+    createdBy?: string;
+  },
+): Promise<CommercialAsset> {
+  const { data } = await apiClient.post<CommercialAsset>(`/api/comercial/leads/${leadId}/assets`, payload);
+  return data;
+}
+
 export async function getCommercialDispatchHealth(days = 7): Promise<CommercialDispatchHealthSummary> {
   const { data } = await apiClient.get<CommercialDispatchHealthSummary>('/api/comercial/dispatch/health', {
     params: { days },
   });
+  return data;
+}
+
+export async function listCommercialTemplates(params?: {
+  channel?: 'whatsapp' | 'gmail';
+  stage?: 'primeiro_contato' | 'diagnostico_agendado' | 'proposta_enviada' | 'negociacao' | 'fechado';
+  isActive?: boolean;
+}): Promise<CommercialTemplateSummary[]> {
+  const { data } = await apiClient.get<CommercialTemplateSummary[]>('/api/comercial/templates', {
+    params: params
+      ? {
+          ...params,
+          isActive: params.isActive === undefined ? undefined : String(params.isActive),
+        }
+      : undefined,
+  });
+  return data;
+}
+
+export async function createCommercialTemplate(payload: {
+  channel: 'whatsapp' | 'gmail';
+  stage: 'primeiro_contato' | 'diagnostico_agendado' | 'proposta_enviada' | 'negociacao' | 'fechado';
+  slug: string;
+  name: string;
+  content: Record<string, unknown>;
+  status?: 'draft' | 'published' | 'archived';
+  profileKey?: string;
+  bindAsDefault?: boolean;
+}): Promise<CommercialTemplateWithVersions> {
+  const { data } = await apiClient.post<CommercialTemplateWithVersions>('/api/comercial/templates', payload);
+  return data;
+}
+
+export async function updateCommercialTemplate(
+  templateId: string,
+  payload: {
+    name?: string;
+    isActive?: boolean;
+    content?: Record<string, unknown>;
+    status?: 'draft' | 'published' | 'archived';
+  },
+): Promise<CommercialTemplateWithVersions> {
+  const { data } = await apiClient.patch<CommercialTemplateWithVersions>(`/api/comercial/templates/${templateId}`, payload);
+  return data;
+}
+
+export async function publishCommercialTemplate(
+  templateId: string,
+  payload?: {
+    versionId?: string;
+    profileKey?: string;
+    channel?: 'whatsapp' | 'gmail';
+    stage?: 'primeiro_contato' | 'diagnostico_agendado' | 'proposta_enviada' | 'negociacao' | 'fechado';
+  },
+): Promise<CommercialTemplateWithVersions> {
+  const { data } = await apiClient.post<CommercialTemplateWithVersions>(`/api/comercial/templates/${templateId}/publish`, payload || {});
+  return data;
+}
+
+export async function listCommercialCalendarConfigs(): Promise<CommercialCalendarConfig[]> {
+  const { data } = await apiClient.get<CommercialCalendarConfig[]>('/api/comercial/calendar/configs');
+  return data;
+}
+
+export async function createCommercialCalendarConfig(payload: {
+  responsavelKey: string;
+  calendarId: string;
+  bookingUrl: string;
+  ownerEmail: string;
+  timezone?: string;
+  isActive?: boolean;
+}): Promise<CommercialCalendarConfig> {
+  const { data } = await apiClient.post<CommercialCalendarConfig>('/api/comercial/calendar/configs', payload);
+  return data;
+}
+
+export async function updateCommercialCalendarConfig(
+  id: string,
+  payload: Partial<{
+    responsavelKey: string;
+    calendarId: string;
+    bookingUrl: string;
+    ownerEmail: string;
+    timezone: string;
+    isActive: boolean;
+  }>,
+): Promise<CommercialCalendarConfig> {
+  const { data } = await apiClient.patch<CommercialCalendarConfig>(`/api/comercial/calendar/configs/${id}`, payload);
+  return data;
+}
+
+export async function runCommercialCalendarSync(): Promise<{
+  checkedCalendars: number;
+  processedEvents: number;
+  linkedLeads: number;
+  queued: number;
+}> {
+  const { data } = await apiClient.post<{
+    checkedCalendars: number;
+    processedEvents: number;
+    linkedLeads: number;
+    queued: number;
+  }>('/api/comercial/calendar/sync');
+  return data;
+}
+
+export async function listCommercialCalendarReconciliation(params?: {
+  status?: 'pending' | 'resolved' | 'ignored';
+  limit?: number;
+}): Promise<CommercialCalendarReconciliationItem[]> {
+  const { data } = await apiClient.get<CommercialCalendarReconciliationItem[]>('/api/comercial/calendar/reconciliation', {
+    params,
+  });
+  return data;
+}
+
+export async function resolveCommercialCalendarReconciliation(
+  id: string,
+  payload: {
+    status: 'resolved' | 'ignored';
+    leadId?: string;
+  },
+): Promise<CommercialCalendarReconciliationItem> {
+  const { data } = await apiClient.post<CommercialCalendarReconciliationItem>(
+    `/api/comercial/calendar/reconciliation/${id}/resolve`,
+    payload,
+  );
   return data;
 }
 
@@ -382,6 +700,21 @@ export async function confirmCommercialScheduling(payload: {
   const { data } = await apiClient.post<{ ok: true; leadId: string; eventId?: string }>(
     '/api/comercial/scheduling/confirm',
     payload,
+  );
+  return data;
+}
+
+export async function sendCommercialSchedulingInvite(
+  leadId: string,
+  payload?: {
+    daysWindow?: number;
+    durationMin?: number;
+    timezone?: string;
+  },
+): Promise<CommercialSchedulingInviteResponse> {
+  const { data } = await apiClient.post<CommercialSchedulingInviteResponse>(
+    `/api/comercial/leads/${leadId}/scheduling/invite`,
+    payload || {},
   );
   return data;
 }

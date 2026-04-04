@@ -36,6 +36,8 @@ export const ClientEditForm = (props: {
             email: client.email,
             cpfCnpj: client.cpfCnpj ?? '',
             metaAdAccountId: client.metaAdAccountId ?? '',
+            businessNicheKey: client.businessNicheKey ?? 'general',
+            defaultChannelKey: client.defaultChannelKey ?? 'meta',
             tier: client.tier ?? 'basic',
             budget: client.budget,
             contractStart: toDateInput(client.contractStart),
@@ -46,4 +48,3 @@ export const ClientEditForm = (props: {
     </Card>
   );
 };
-

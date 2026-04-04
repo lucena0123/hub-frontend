@@ -22,10 +22,13 @@ export {
   updateClientBpmnProgress,
   initializeBpmnProgress,
   getBpmnSubprocessClients,
+  getCampaignRuleContext,
   getPerformanceSummary,
   getClientPerformance,
   getBPMNProgress,
   updateBPMNProgress,
+  updateCampaignRuleContext,
+  type CampaignRuleContext,
 } from './client/campaigns';
 
 export { generateReport, generateWeeklyReport, getReportsHistory, getReportDownloadUrl } from './client/reports';
@@ -161,6 +164,14 @@ export {
   updateAutoApprovalConfig,
   getOptimizationAudit,
   getOptimizationAuditSummary,
+  listRuleProfiles,
+  createRuleProfile,
+  updateRuleProfile,
+  getClientRuleBindings,
+  updateClientRuleBindings,
+  runRuleBackfill,
+  listRuleReviewQueue,
+  resolveRuleReviewItem,
   type AnomalyDetection,
   type AnomalyType,
   type CampaignHealthResult,
@@ -170,6 +181,9 @@ export {
   type OptimizationAuditEvent,
   type OptimizationAuditResponse,
   type OptimizationAuditSummary,
+  type RuleProfileTemplate,
+  type ClientRuleBinding,
+  type RuleClassificationReview,
 } from './client/optimization';
 
 export {
@@ -179,4 +193,48 @@ export {
   type DispatchCommercialCommunicationInput,
   type DispatchCommercialCommunicationResponse,
 } from './client/commercial';
+
+export {
+  listContracts,
+  createContract,
+  activateContract,
+  backfillContracts,
+  listReceivables,
+  recordPayment,
+  listRenewals,
+  type Contract,
+  type Receivable,
+  type PaymentRecord,
+  type RenewalOpportunity,
+  type CreateContractInput,
+} from './client/finance';
+
+export {
+  listProjects,
+  getProject,
+  createProject,
+  createMilestone,
+  listDeliverables,
+  createDeliverable,
+  updateDeliverable,
+  type Project,
+  type Milestone,
+  type Deliverable,
+  type WorkItem,
+  type CreateProjectInput,
+} from './client/projects';
+
+export {
+  listOnboarding,
+  updateOnboardingTask,
+  listHealthPortfolio,
+  listAccountRenewals,
+  listExpansionOpportunities,
+  createExpansionOpportunity,
+  type OnboardingPlan,
+  type OnboardingTask,
+  type HealthSnapshot,
+  type HealthSignal,
+  type ExpansionOpportunity,
+} from './client/cs';
 

@@ -20,10 +20,42 @@ export const getCampaigns = async (filters?: CampaignFilters): Promise<Campaign[
 export type CampaignUpdatePayload = {
   optimizationThemeKey?: string | null;
   optimizationSubthemeKey?: string | null;
+  objectiveClassKey?: 'messages' | 'lead' | 'conversion' | 'traffic' | 'awareness' | null;
+  channelClassKey?: string | null;
+  ruleProfileId?: string | null;
+  status?: 'active' | 'paused' | 'completed' | 'draft';
 };
 
 export const updateCampaign = async (campaignId: string, payload: CampaignUpdatePayload): Promise<Campaign> => {
   const { data } = await apiClient.put<Campaign>(`/api/campaigns/${campaignId}`, payload);
+  return data;
+};
+
+export type CampaignRuleContext = {
+  campaignId: string;
+  objectiveClassKey: 'messages' | 'lead' | 'conversion' | 'traffic' | 'awareness' | null;
+  channelClassKey: string | null;
+  ruleProfileId: string | null;
+  classificationSource: 'manual' | 'inferred' | 'backfill';
+  classificationConfidence: number | null;
+  needsReview: boolean;
+  resolvedProfile?: {
+    source: 'campaign' | 'client_override' | 'template' | 'fallback' | 'none';
+    profile: { id: string; name: string } | null;
+    warnings: string[];
+  };
+};
+
+export const getCampaignRuleContext = async (campaignId: string): Promise<CampaignRuleContext> => {
+  const { data } = await apiClient.get<CampaignRuleContext>(`/api/campaigns/${campaignId}/rule-context`);
+  return data;
+};
+
+export const updateCampaignRuleContext = async (
+  campaignId: string,
+  payload: Partial<Pick<CampaignRuleContext, 'objectiveClassKey' | 'channelClassKey' | 'ruleProfileId' | 'classificationSource' | 'classificationConfidence' | 'needsReview'>>
+): Promise<CampaignRuleContext> => {
+  const { data } = await apiClient.put<CampaignRuleContext>(`/api/campaigns/${campaignId}/rule-context`, payload);
   return data;
 };
 

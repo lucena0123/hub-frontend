@@ -25,6 +25,8 @@ export default function NewClientPage() {
       const payload = {
         name: values.name,
         email: values.email,
+        businessNicheKey: values.businessNicheKey,
+        defaultChannelKey: values.defaultChannelKey,
         tier: values.tier,
         budget: values.budget,
         metaAdAccountId: values.metaAdAccountId?.trim() ? values.metaAdAccountId.trim() : undefined,

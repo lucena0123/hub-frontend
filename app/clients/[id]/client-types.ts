@@ -8,6 +8,9 @@ export type ClientCampaign = {
   budget?: number;
   spent?: number;
   externalId?: string;
+  objectiveClassKey?: 'messages' | 'lead' | 'conversion' | 'traffic' | 'awareness' | null;
+  channelClassKey?: string | null;
+  ruleProfileId?: string | null;
   optimizationThemeKey?: string | null;
   optimizationSubthemeKey?: string | null;
 };

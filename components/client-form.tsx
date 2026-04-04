@@ -26,6 +26,27 @@ const tierOptions = [
   { value: 'enterprise', label: 'Enterprise', helper: 'Acima de R$ 15.000' },
 ] as const;
 
+const nicheOptions = [
+  { value: 'legal', label: 'Jurídico' },
+  { value: 'infoproduct', label: 'Produto digital' },
+  { value: 'ecommerce', label: 'E-commerce' },
+  { value: 'health', label: 'Saúde' },
+  { value: 'education', label: 'Educação' },
+  { value: 'general', label: 'Geral' },
+] as const;
+
+const channelOptions = [
+  { value: 'meta', label: 'Meta Ads' },
+  { value: 'google', label: 'Google Ads' },
+  { value: 'tiktok', label: 'TikTok Ads' },
+  { value: 'linkedin', label: 'LinkedIn Ads' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'messenger', label: 'Messenger' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'other', label: 'Outro' },
+] as const;
+
 const normalizeCpfCnpj = (value: string) => value.replace(/\D/g, '');
 const normalizeMetaAdAccountId = (value: string) => value.trim().replace(/^act_/i, '');
 
@@ -52,6 +73,8 @@ export const clientFormSchema = z
         if (!normalized) return true;
         return /^\d+$/.test(normalized);
       }, 'Meta Ad Account ID invalido'),
+    businessNicheKey: z.string().min(1, 'Selecione o nicho principal'),
+    defaultChannelKey: z.string().min(1, 'Selecione o canal padrão'),
     tier: z.enum(['basic', 'standard', 'premium', 'enterprise']),
     budget: z.number().min(1, 'Informe um budget valido'),
     contractStart: z.string().min(1, 'Informe a data de inicio'),
@@ -105,6 +128,8 @@ export function ClientForm({
       email: '',
       cpfCnpj: '',
       metaAdAccountId: '',
+      businessNicheKey: 'general',
+      defaultChannelKey: 'meta',
       tier: 'basic',
       budget: 0,
       contractStart: '',
@@ -248,6 +273,56 @@ export function ClientForm({
                 A lista usa o token global do backend (<code className="text-xs">META_ACCESS_TOKEN</code>).
               </p>
             </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Nicho principal</Label>
+          <Controller
+            name="businessNicheKey"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o nicho" />
+                </SelectTrigger>
+                <SelectContent>
+                  {nicheOptions.map((niche) => (
+                    <SelectItem key={niche.value} value={niche.value}>
+                      {niche.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.businessNicheKey && (
+            <p className="text-xs text-destructive">{errors.businessNicheKey.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Canal padrão</Label>
+          <Controller
+            name="defaultChannelKey"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o canal padrão" />
+                </SelectTrigger>
+                <SelectContent>
+                  {channelOptions.map((channel) => (
+                    <SelectItem key={channel.value} value={channel.value}>
+                      {channel.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.defaultChannelKey && (
+            <p className="text-xs text-destructive">{errors.defaultChannelKey.message}</p>
           )}
         </div>
 

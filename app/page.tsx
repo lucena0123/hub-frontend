@@ -337,11 +337,12 @@ export default function DashboardPage() {
                       <Tooltip
                         contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--primary)', borderRadius: '2px' }}
                         itemStyle={{ color: 'var(--foreground)' }}
-                        formatter={(value: number, name: string) =>
-                          name === 'brl'
-                            ? [formatCurrency(value), 'Financeiro']
-                            : [value, 'Volume']
-                        }
+                        formatter={(value, name) => {
+                          const numeric = typeof value === 'number' ? value : Number(value ?? 0);
+                          return name === 'brl'
+                            ? [formatCurrency(numeric), 'Financeiro']
+                            : [numeric, 'Volume'];
+                        }}
                       />
                       <Bar yAxisId="left"  dataKey="brl"   fill="var(--signal)"   radius={[2, 2, 0, 0]} name="brl" />
                       <Bar yAxisId="right" dataKey="count" fill="var(--chart-2)"   radius={[2, 2, 0, 0]} name="count" />
