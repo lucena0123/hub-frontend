@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   getClientById,
   getMetaSyncDetails,
   getMetaSyncHistory,
+  listMetaGovernanceIssues,
   syncMetaAds,
+  type MetaGovernanceIssue,
+  type MetaGovernanceSummary,
   type MetaSyncDetails,
 } from '@/lib/api/client';
 import type { MetricsPeriod, MetricsQuery } from '@/types';
@@ -49,6 +52,10 @@ export const useMetaSync = (params: {
   const [metaLastSuccessfulSync, setMetaLastSuccessfulSync] = useState<string | null>(null);
   const [metaSyncHistoryLoading, setMetaSyncHistoryLoading] = useState(false);
   const [metaAdAccountId, setMetaAdAccountId] = useState('');
+  const [metaGovernanceIssuesLoading, setMetaGovernanceIssuesLoading] = useState(false);
+  const [metaGovernanceNeedsReview, setMetaGovernanceNeedsReview] = useState<MetaGovernanceIssue[]>([]);
+  const [metaGovernanceFailures, setMetaGovernanceFailures] = useState<MetaGovernanceIssue[]>([]);
+  const [metaGovernanceAutoFixed, setMetaGovernanceAutoFixed] = useState<MetaGovernanceIssue[]>([]);
 
   const mountedRef = useRef(true);
 
@@ -72,6 +79,38 @@ export const useMetaSync = (params: {
     };
 
     void loadClientMetaAccount();
+  }, [clientId]);
+
+  const loadGovernanceIssues = useCallback(async () => {
+    if (!clientId) {
+      if (mountedRef.current) {
+        setMetaGovernanceNeedsReview([]);
+        setMetaGovernanceFailures([]);
+        setMetaGovernanceAutoFixed([]);
+      }
+      return;
+    }
+
+    try {
+      setMetaGovernanceIssuesLoading(true);
+      const [needsReview, failed, autoFixed] = await Promise.all([
+        listMetaGovernanceIssues({ clientId, status: 'needs_review', limit: 5 }),
+        listMetaGovernanceIssues({ clientId, status: 'failed', limit: 5 }),
+        listMetaGovernanceIssues({ clientId, status: 'auto_fixed', limit: 5 }),
+      ]);
+
+      if (!mountedRef.current) return;
+      setMetaGovernanceNeedsReview(needsReview.items ?? []);
+      setMetaGovernanceFailures(failed.items ?? []);
+      setMetaGovernanceAutoFixed(autoFixed.items ?? []);
+    } catch {
+      if (!mountedRef.current) return;
+      setMetaGovernanceNeedsReview([]);
+      setMetaGovernanceFailures([]);
+      setMetaGovernanceAutoFixed([]);
+    } finally {
+      if (mountedRef.current) setMetaGovernanceIssuesLoading(false);
+    }
   }, [clientId]);
 
   useEffect(() => {
@@ -102,11 +141,12 @@ export const useMetaSync = (params: {
     };
 
     void loadHistory();
+    void loadGovernanceIssues();
 
     return () => {
       cancelled = true;
     };
-  }, [metaAdAccountId]);
+  }, [clientId, loadGovernanceIssues, metaAdAccountId]);
 
   const handleMetaSync = async () => {
     const accountId = metaAdAccountId.trim();
@@ -156,7 +196,7 @@ export const useMetaSync = (params: {
       }
 
       const pollIntervalMs = 1500;
-      const pollTimeoutMs = 30 * 60 * 1000; // 30 min
+      const pollTimeoutMs = 30 * 60 * 1000;
       const pollStart = Date.now();
       let finishedState: 'success' | 'partial' | null = null;
 
@@ -192,11 +232,14 @@ export const useMetaSync = (params: {
         if (mountedRef.current) {
           const history = response.history ?? [];
           setMetaSyncHistory(history);
+          setMetaSyncDetails(history[0] ?? null);
           setMetaLastSuccessfulSync(response.lastSuccessfulSync ?? null);
         }
       } catch {
         // ignore
       }
+
+      await loadGovernanceIssues();
     } catch (err) {
       console.error('Meta sync failed:', err);
       const message = getApiErrorMessage(err, 'Falha ao sincronizar com Meta Ads. Tente novamente.');
@@ -222,6 +265,7 @@ export const useMetaSync = (params: {
   const metaSyncRange =
     metaSyncProgress?.currentSince && metaSyncProgress?.currentUntil ? `${metaSyncProgress.currentSince} → ${metaSyncProgress.currentUntil}` : null;
   const metaSyncMessage = metaSyncProgress?.message ?? 'Sincronizando com Meta Ads...';
+  const metaGovernanceSummary = (metaSyncDetails?.metadata?.governance?.summary ?? null) as MetaGovernanceSummary | null;
 
   const metaCoverage = useMemo<MetaCoverage | null>(() => {
     if (!resolvedRange) return null;
@@ -332,5 +376,10 @@ export const useMetaSync = (params: {
     metaCoverage,
     creativeCoverage,
     creativeCoverageDetails,
+    metaGovernanceSummary,
+    metaGovernanceIssuesLoading,
+    metaGovernanceNeedsReview,
+    metaGovernanceFailures,
+    metaGovernanceAutoFixed,
   };
 };

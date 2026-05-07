@@ -8,10 +8,10 @@ import { BarChart3, Gauge, Layers, Loader2, Sparkles, TrendingUp } from 'lucide-
 import { AdSetTable } from '@/components/performance/adset-table';
 import { BudgetPacingCard } from '@/components/performance/budget-pacing-card';
 import { BpmnProgressTracker } from '@/components/performance/bpmn-progress-tracker';
-import { CampaignTable } from '@/components/performance/campaign-table';
+import { CampaignTable } from '@/features/performance/components/campaign-table';
 import { CampaignTrendCard } from '@/components/performance/campaign-trend-card';
 import { CreativeLibrary } from '@/components/performance/creative-library';
-import { CreativePerformanceTable } from '@/components/performance/creative-performance-table';
+import { CreativePerformanceTable } from '@/features/performance/components/creative-performance-table';
 import { DemographicsChart } from '@/components/performance/demographics-chart';
 import { DiagnosticsPanel } from '@/components/performance/diagnostics-panel';
 import { BusinessMetricsCard } from '@/components/performance/business-metrics-card';
@@ -192,6 +192,11 @@ export default function ClientPerformancePage() {
     metaCoverage,
     creativeCoverage,
     creativeCoverageDetails,
+    metaGovernanceSummary,
+    metaGovernanceIssuesLoading,
+    metaGovernanceNeedsReview,
+    metaGovernanceFailures,
+    metaGovernanceAutoFixed,
     messagingMetrics,
     healthMetrics,
   } = useClientPerformanceDashboard(clientId);
@@ -321,6 +326,11 @@ export default function ClientPerformancePage() {
             metaSyncMessage={metaSyncMessage}
             metaSyncPercent={metaSyncPercent}
             metaSyncRange={metaSyncRange}
+            metaGovernanceSummary={metaGovernanceSummary}
+            metaGovernanceIssuesLoading={metaGovernanceIssuesLoading}
+            metaGovernanceNeedsReview={metaGovernanceNeedsReview}
+            metaGovernanceFailures={metaGovernanceFailures}
+            metaGovernanceAutoFixed={metaGovernanceAutoFixed}
             campaigns={summary.campaigns.map((c) => ({
               campaignId: c.campaignId,
               campaignName: c.campaignName,

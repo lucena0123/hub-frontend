@@ -1,4 +1,5 @@
 import { apiClient } from './http';
+import type { MetaGovernanceSummary } from './meta-governance';
 
 export const syncMetaAds = async (options: {
   accountId?: string;
@@ -21,7 +22,7 @@ export const syncMetaAds = async (options: {
   error?: string;
 }> => {
   const { data } = await apiClient.post('/api/metrics/sync/meta', options, {
-    timeout: 0, // no timeout
+    timeout: 0,
   });
   return data;
 };
@@ -63,6 +64,10 @@ export type MetaSyncDetails = {
     chunkDays?: number;
     chunksTotal?: number;
     progress?: MetaSyncProgress;
+    governance?: {
+      summary?: MetaGovernanceSummary;
+      error?: string;
+    };
     error?: string;
     [key: string]: unknown;
   } | null;
@@ -96,4 +101,3 @@ export const getMetaSyncHistory = async (options?: {
   });
   return data;
 };
-

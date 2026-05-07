@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ChevronDown, ChevronUp, FileText, PlusCircle, RefreshCw } from 'lucide-react';
 
-import type { MetaSyncDetails } from '@/lib/api/client';
+import type { MetaGovernanceIssue, MetaGovernanceSummary, MetaSyncDetails } from '@/lib/api/client';
 import type { MetricsPeriod, MetricsQuery } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,8 @@ interface CampaignOption {
   campaignId: string;
   campaignName: string;
 }
+
+const governanceIssueLabel = (issue: MetaGovernanceIssue) => issue.expectedName ?? issue.currentName ?? issue.entityExternalId;
 
 export const PerformanceDashboardHeader = (props: {
   clientId: string;
@@ -53,6 +55,11 @@ export const PerformanceDashboardHeader = (props: {
   metaSyncMessage: string;
   metaSyncPercent: number | null;
   metaSyncRange: string | null;
+  metaGovernanceSummary: MetaGovernanceSummary | null;
+  metaGovernanceIssuesLoading: boolean;
+  metaGovernanceNeedsReview: MetaGovernanceIssue[];
+  metaGovernanceFailures: MetaGovernanceIssue[];
+  metaGovernanceAutoFixed: MetaGovernanceIssue[];
   campaigns: CampaignOption[];
   selectedCampaignId: string | null;
   setSelectedCampaignId: (value: string) => void;
@@ -74,9 +81,16 @@ export const PerformanceDashboardHeader = (props: {
           ? 'border-rose-200 bg-rose-50 text-rose-800'
           : 'text-muted-foreground';
 
+  const governanceSummary = props.metaGovernanceSummary;
+  const hasGovernancePanel =
+    Boolean(governanceSummary) ||
+    props.metaGovernanceNeedsReview.length > 0 ||
+    props.metaGovernanceFailures.length > 0 ||
+    props.metaGovernanceAutoFixed.length > 0 ||
+    props.metaGovernanceIssuesLoading;
+
   return (
     <>
-      {/* Linha 1: Navegação + Título + Período */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="icon-sm">
@@ -95,20 +109,13 @@ export const PerformanceDashboardHeader = (props: {
 
         <div className="flex flex-wrap items-center gap-2">
           {props.campaigns.length > 0 && (
-            <Select
-              value={props.selectedCampaignId ?? undefined}
-              onValueChange={(value) => props.setSelectedCampaignId(value)}
-            >
+            <Select value={props.selectedCampaignId ?? undefined} onValueChange={(value) => props.setSelectedCampaignId(value)}>
               <SelectTrigger className="flex-1 min-w-[240px] max-w-[520px] lg:min-w-[280px] xl:min-w-[420px]">
                 <SelectValue placeholder="Campanha" />
               </SelectTrigger>
               <SelectContent className="w-[min(92vw,680px)] min-w-[260px] max-w-[680px]">
                 {props.campaigns.map((c) => (
-                  <SelectItem
-                    key={c.campaignId}
-                    value={c.campaignId}
-                    className="whitespace-normal break-words leading-snug items-start py-2"
-                  >
+                  <SelectItem key={c.campaignId} value={c.campaignId} className="whitespace-normal break-words leading-snug items-start py-2">
                     {c.campaignName}
                   </SelectItem>
                 ))}
@@ -147,12 +154,7 @@ export const PerformanceDashboardHeader = (props: {
 
           {props.period === 'custom' && (
             <>
-              <Input
-                type="date"
-                value={props.customStartDate}
-                onChange={(e) => props.setCustomStartDate(e.target.value)}
-                className="w-[140px]"
-              />
+              <Input type="date" value={props.customStartDate} onChange={(e) => props.setCustomStartDate(e.target.value)} className="w-[140px]" />
               <span className="text-sm text-muted-foreground">até</span>
               <Input type="date" value={props.customEndDate} onChange={(e) => props.setCustomEndDate(e.target.value)} className="w-[140px]" />
               <Button
@@ -184,7 +186,6 @@ export const PerformanceDashboardHeader = (props: {
         </div>
       </div>
 
-      {/* Linha 2: Ações */}
       <div className="flex flex-wrap items-center gap-2">
         {props.metaCoverage && (
           <Badge variant="outline" className={metaCoverageClass}>
@@ -192,23 +193,34 @@ export const PerformanceDashboardHeader = (props: {
           </Badge>
         )}
 
+        {governanceSummary && (
+          <>
+            <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+              Gov: {governanceSummary.autoFixed} auto-fix
+            </Badge>
+            {governanceSummary.needsReview > 0 && (
+              <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-900">
+                Revisão: {governanceSummary.needsReview}
+              </Badge>
+            )}
+            {governanceSummary.failed > 0 && (
+              <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-800">
+                Falhas: {governanceSummary.failed}
+              </Badge>
+            )}
+          </>
+        )}
+
         {props.metaSyncHistoryLoading && <span className="text-xs text-muted-foreground">carregando sync…</span>}
+        {props.metaGovernanceIssuesLoading && <span className="text-xs text-muted-foreground">carregando governança…</span>}
 
         {props.metaLastSuccessfulSync && (
-          <span className="text-xs text-muted-foreground">
-            Sync OK: {new Date(props.metaLastSuccessfulSync).toLocaleString('pt-BR')}
-          </span>
+          <span className="text-xs text-muted-foreground">Sync OK: {new Date(props.metaLastSuccessfulSync).toLocaleString('pt-BR')}</span>
         )}
 
         <div className="flex-1" />
 
-        <Button
-          variant="default"
-          size="sm"
-          className="gap-2"
-          onClick={props.onMetaSync}
-          disabled={props.syncing || !props.metaAdAccountId.trim()}
-        >
+        <Button variant="default" size="sm" className="gap-2" onClick={props.onMetaSync} disabled={props.syncing || !props.metaAdAccountId.trim()}>
           <RefreshCw className={`h-3.5 w-3.5 ${props.syncing ? 'animate-spin' : ''}`} />
           {props.syncing ? 'Sincronizando...' : 'Sync Meta'}
         </Button>
@@ -320,9 +332,81 @@ export const PerformanceDashboardHeader = (props: {
             </div>
             {metaSyncProgress?.stage && (
               <p className="text-xs text-primary/70">
-                {metaSyncProgress.stage} {(metaSyncProgress.stageCompleted ?? 0)}/{(metaSyncProgress.stageTotal ?? 0)}
+                {metaSyncProgress.stage} {(metaSyncProgress.stageCompleted ?? 0)}/{metaSyncProgress.stageTotal ?? 0}
               </p>
             )}
+          </div>
+        </div>
+      )}
+
+      {hasGovernancePanel && (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-slate-900">Governança Meta</p>
+              {governanceSummary ? (
+                <p className="text-sm text-slate-700">
+                  auditados: {governanceSummary.audited} · conformes: {governanceSummary.compliant} · auto-fix: {governanceSummary.autoFixed} · revisão: {governanceSummary.needsReview} · falhas: {governanceSummary.failed}
+                </p>
+              ) : (
+                <p className="text-sm text-slate-700">Sem resumo disponível da última execução.</p>
+              )}
+              {governanceSummary ? (
+                <p className="text-xs text-slate-500">
+                  backfills de data: {governanceSummary.createdTimeBackfilled} · modo: {governanceSummary.dryRun ? 'dry-run' : 'apply'}
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-3 lg:grid-cols-3">
+            <div className="rounded-md border border-amber-200 bg-white p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-amber-900">Revisão manual</p>
+              {props.metaGovernanceNeedsReview.length > 0 ? (
+                <div className="mt-2 space-y-2 text-xs text-slate-700">
+                  {props.metaGovernanceNeedsReview.slice(0, 3).map((issue) => (
+                    <div key={issue.id} className="rounded border border-amber-100 bg-amber-50/60 p-2">
+                      <p className="font-medium">{issue.entityType} · {issue.issueType}</p>
+                      <p className="truncate">{governanceIssueLabel(issue)}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-slate-500">Nenhum item em revisão.</p>
+              )}
+            </div>
+
+            <div className="rounded-md border border-rose-200 bg-white p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-rose-900">Falhas recentes</p>
+              {props.metaGovernanceFailures.length > 0 ? (
+                <div className="mt-2 space-y-2 text-xs text-slate-700">
+                  {props.metaGovernanceFailures.slice(0, 3).map((issue) => (
+                    <div key={issue.id} className="rounded border border-rose-100 bg-rose-50/60 p-2">
+                      <p className="font-medium">{issue.entityType} · {issue.issueType}</p>
+                      <p className="truncate">{governanceIssueLabel(issue)}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-slate-500">Nenhuma falha recente.</p>
+              )}
+            </div>
+
+            <div className="rounded-md border border-emerald-200 bg-white p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-emerald-900">Auto-correções</p>
+              {props.metaGovernanceAutoFixed.length > 0 ? (
+                <div className="mt-2 space-y-2 text-xs text-slate-700">
+                  {props.metaGovernanceAutoFixed.slice(0, 3).map((issue) => (
+                    <div key={issue.id} className="rounded border border-emerald-100 bg-emerald-50/60 p-2">
+                      <p className="font-medium">{issue.entityType} · {issue.issueType}</p>
+                      <p className="truncate">{governanceIssueLabel(issue)}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-slate-500">Nenhuma auto-correção recente.</p>
+              )}
+            </div>
           </div>
         </div>
       )}

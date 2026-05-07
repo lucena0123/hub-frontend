@@ -218,6 +218,11 @@ export const useClientPerformanceDashboard = (clientIdRaw: string | null | undef
     metaCoverage: metaSync.metaCoverage,
     creativeCoverage: metaSync.creativeCoverage,
     creativeCoverageDetails: metaSync.creativeCoverageDetails,
+    metaGovernanceSummary: metaSync.metaGovernanceSummary,
+    metaGovernanceIssuesLoading: metaSync.metaGovernanceIssuesLoading,
+    metaGovernanceNeedsReview: metaSync.metaGovernanceNeedsReview,
+    metaGovernanceFailures: metaSync.metaGovernanceFailures,
+    metaGovernanceAutoFixed: metaSync.metaGovernanceAutoFixed,
     messagingMetrics,
     healthMetrics,
   };
