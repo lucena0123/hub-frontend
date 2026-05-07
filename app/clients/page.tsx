@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Activity,
   Plus,
   Trash2,
   Users,
@@ -226,7 +225,7 @@ export default function ClientsPage() {
               {search ? (
                 <>
                   <p className="text-muted-foreground text-sm">
-                    Nenhum cliente encontrado para <strong>"{search}"</strong>
+                    Nenhum cliente encontrado para <strong>&quot;{search}&quot;</strong>
                   </p>
                   <Button variant="outline" size="sm" onClick={() => setSearch('')}>
                     Limpar busca
