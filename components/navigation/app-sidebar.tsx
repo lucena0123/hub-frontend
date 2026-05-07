@@ -105,7 +105,6 @@ function isItemActive(pathname: string, href: string): boolean {
 }
 
 function NavGroupSection({ group, pathname, collapsed }: { group: NavGroup; pathname: string; collapsed: boolean }) {
-  const hasActive = group.items.some((item) => isItemActive(pathname, item.href));
   const [open, setOpen] = useState(true);
 
   return (

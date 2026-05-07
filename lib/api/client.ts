@@ -100,6 +100,16 @@ export {
 } from './client/meta-sync';
 
 export {
+  listMetaGovernanceIssues,
+  getMetaGovernanceIssue,
+  type MetaGovernanceIssue,
+  type MetaGovernanceIssueStatus,
+  type MetaGovernanceIssueType,
+  type MetaGovernanceIssuesResponse,
+  type MetaGovernanceSummary,
+} from './client/meta-governance';
+
+export {
   listMetaAdAccounts,
   type MetaAdAccount,
   type MetaAdAccountsResponse,
