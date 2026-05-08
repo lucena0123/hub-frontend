@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -24,6 +25,8 @@ import {
   HeartPulse,
   LogOut,
   Menu,
+  Moon,
+  Sun,
   X,
   ChevronDown,
 } from 'lucide-react';
@@ -159,6 +162,7 @@ function NavGroupSection({ group, pathname, collapsed }: { group: NavGroup; path
 export function AppSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -177,7 +181,7 @@ export function AppSidebar() {
       <button
         type="button"
         onClick={() => setMobileOpen(true)}
-        className="fixed top-4 left-4 z-50 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-[#050505]/90 text-gray-400 backdrop-blur-sm transition-colors hover:text-white lg:hidden"
+        className="fixed top-4 left-4 z-50 flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground lg:hidden"
         aria-label="Abrir menu"
       >
         <Menu className="h-4 w-4" />
@@ -207,7 +211,7 @@ export function AppSidebar() {
             <button
               type="button"
               onClick={() => setCollapsed((p) => !p)}
-              className="hidden lg:flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/6 hover:text-white"
+              className="hidden lg:flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
             >
               <Menu className="h-3.5 w-3.5" />
@@ -216,7 +220,7 @@ export function AppSidebar() {
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/6 hover:text-white lg:hidden"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground lg:hidden"
               aria-label="Fechar menu"
             >
               <X className="h-3.5 w-3.5" />
@@ -240,6 +244,15 @@ export function AppSidebar() {
         <div className="sidebar-footer">
           <div className={cn('flex items-center gap-2', collapsed && 'justify-center flex-col')}>
             <NotificationBell />
+            <button
+              type="button"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="sidebar-logout-btn"
+              aria-label="Alternar tema"
+              title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+            >
+              {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            </button>
           </div>
 
           {user && (
@@ -256,12 +269,12 @@ export function AppSidebar() {
                       {user.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border border-[#050505]" />
+                  <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border-2 border-background" />
                 </div>
                 {!collapsed && (
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[9px] uppercase tracking-[0.3em] text-gray-500">Operador</span>
-                    <span className="text-xs font-medium text-gray-200 truncate">{user.name}</span>
+                    <span className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Operador</span>
+                    <span className="text-xs font-medium text-foreground truncate">{user.name}</span>
                   </div>
                 )}
               </Link>

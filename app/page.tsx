@@ -7,7 +7,6 @@ import type { AlertsResponse, DashboardOverview } from '@/types';
 import { Activity, Cpu, Wifi, Zap, AlertTriangle, Server } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { PageShell } from '@/components/layout/page-shell';
@@ -62,12 +61,11 @@ const HudMetric = ({
   unit?: string;
   color?: string;
 }) => (
-  <div className="edge-card hover-lift relative overflow-hidden px-5 py-4">
-    <div className="absolute left-0 top-0 h-full w-[2px] bg-primary/60" />
-    <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">{label}</span>
-    <div className="mt-2 flex items-baseline gap-2">
-      <span className={cn('text-2xl font-semibold', color)}>{value}</span>
-      {unit && <span className="text-xs text-muted-foreground">{unit}</span>}
+  <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-5 py-4 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-default">
+    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</span>
+    <div className="mt-3 flex items-baseline gap-2">
+      <span className={cn('text-2xl font-bold', color)}>{value}</span>
+      {unit && <span className="text-sm text-muted-foreground">{unit}</span>}
     </div>
   </div>
 );
@@ -237,10 +235,16 @@ export default function DashboardPage() {
       title="Radar Operacional"
       description="Resumo executivo do portfolio de campanhas com sinais rápidos para priorizar ação."
       meta={
-        <div className="space-y-2 text-xs text-muted-foreground">
-          <div className="signal-chip">Clientes ativos {overview.clients.active}/{overview.clients.total}</div>
-          <div className="signal-chip">Campanhas ativas {overview.campaigns.active}</div>
-          <div className="signal-chip">CPL médio {overview.performance.avgCpl.toFixed(2)}</div>
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-[11px] font-semibold text-accent-foreground">
+            Clientes {overview.clients.active}/{overview.clients.total}
+          </span>
+          <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-[11px] font-semibold text-accent-foreground">
+            Campanhas {overview.campaigns.active}
+          </span>
+          <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-[11px] font-semibold text-accent-foreground">
+            CPL R${overview.performance.avgCpl.toFixed(2)}
+          </span>
         </div>
       }
     >
@@ -335,7 +339,7 @@ export default function DashboardPage() {
                         axisLine={false}
                       />
                       <Tooltip
-                        contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--primary)', borderRadius: '2px' }}
+                        contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
                         itemStyle={{ color: 'var(--foreground)' }}
                         formatter={(value, name) => {
                           const numeric = typeof value === 'number' ? value : Number(value ?? 0);
@@ -344,8 +348,8 @@ export default function DashboardPage() {
                             : [numeric, 'Volume'];
                         }}
                       />
-                      <Bar yAxisId="left"  dataKey="brl"   fill="var(--signal)"   radius={[2, 2, 0, 0]} name="brl" />
-                      <Bar yAxisId="right" dataKey="count" fill="var(--chart-2)"   radius={[2, 2, 0, 0]} name="count" />
+                      <Bar yAxisId="left"  dataKey="brl"   fill="var(--primary)"  radius={[4, 4, 0, 0]} name="brl" />
+                      <Bar yAxisId="right" dataKey="count" fill="var(--chart-2)"  radius={[4, 4, 0, 0]} name="count" />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -358,9 +362,9 @@ export default function DashboardPage() {
                       <CardTitle className="text-xs uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
                         <Cpu className="h-4 w-4" aria-hidden="true" /> Pipeline de execução
                       </CardTitle>
-                      <Badge variant="outline" className="signal-chip">
+                      <span className="inline-flex items-center rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-semibold text-accent-foreground">
                         {overview.bpmn.avgProgress}%
-                      </Badge>
+                      </span>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -397,7 +401,7 @@ export default function DashboardPage() {
                         name={p.name}
                         value={p.value}
                         total={totalCampaigns}
-                        color={i % 2 === 0 ? 'var(--signal)' : 'var(--chart-2)'}
+                        color={i % 2 === 0 ? 'var(--primary)' : 'var(--chart-2)'}
                       />
                     ))}
                   </CardContent>

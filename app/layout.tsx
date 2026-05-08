@@ -1,25 +1,20 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/auth-context";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { AuthenticatedLayout } from "@/components/auth/authenticated-layout";
 
-const signalSans = Space_Grotesk({
+const signalSans = Plus_Jakarta_Sans({
   variable: "--font-signal-sans",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const signalMono = IBM_Plex_Mono({
-  variable: "--font-signal-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
-  title: "BPMN System - Business Process Management",
-  description: "Monitor and manage your business processes, clients, and campaigns",
+  title: "Hub B2B — Business Automation",
+  description: "Plataforma de automação B2B: campanhas, leads, processos e analytics.",
 };
 
 export default function RootLayout({
@@ -28,17 +23,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${signalSans.variable} ${signalMono.variable} antialiased premium-shell`}
-      >
-        <AuthProvider>
-          <AuthGuard>
-            <AuthenticatedLayout>
-              {children}
-            </AuthenticatedLayout>
-          </AuthGuard>
-        </AuthProvider>
+    <html lang="pt-BR" suppressHydrationWarning>
+      <body className={`${signalSans.variable} antialiased`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <AuthGuard>
+              <AuthenticatedLayout>
+                {children}
+              </AuthenticatedLayout>
+            </AuthGuard>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
