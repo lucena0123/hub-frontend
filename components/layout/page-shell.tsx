@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
-import { Breadcrumb, type BreadcrumbItem } from "@/components/layout/breadcrumb";
+import type { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
+import { Topbar } from '@/components/layout/topbar';
+import { Breadcrumb, type BreadcrumbItem } from '@/components/layout/breadcrumb';
 
 interface PageShellProps {
   eyebrow?: string;
@@ -23,25 +24,21 @@ export function PageShell({
   className,
   children,
 }: PageShellProps) {
+  const resolvedEyebrow = breadcrumb && breadcrumb.length > 0 ? undefined : eyebrow;
+
   return (
-    <div className={cn("page-shell", className)}>
-      <header className="page-header">
-        <div className="space-y-3">
-          {breadcrumb && breadcrumb.length > 0 && (
-            <Breadcrumb items={breadcrumb} />
-          )}
-          {eyebrow && !breadcrumb && <p className="page-eyebrow">{eyebrow}</p>}
-          <h1 className="page-title">{title}</h1>
+    <div className={cn('page-shell', className)}>
+      {breadcrumb && breadcrumb.length > 0 && (
+        <Breadcrumb items={breadcrumb} />
+      )}
+      <Topbar eyebrow={resolvedEyebrow} title={title} actions={actions} />
+      {(description || meta) && (
+        <div className="mb-6 space-y-2">
           {description && <p className="page-description">{description}</p>}
+          {meta && <div className="page-meta">{meta}</div>}
         </div>
-        {(meta || actions) && (
-          <div className="page-meta">
-            {meta}
-            {actions}
-          </div>
-        )}
-      </header>
-      <div className="space-y-10">{children}</div>
+      )}
+      <div className="space-y-8">{children}</div>
     </div>
   );
 }
