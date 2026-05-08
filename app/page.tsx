@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { getDashboardOverview, getAlerts, getDashboardSparklines } from '@/lib/api/client';
 import type { AlertsResponse, DashboardOverview, SparklineData } from '@/types';
 import { Activity, Cpu, Zap, AlertTriangle, Server, TrendingUp, DollarSign, MousePointer, Users } from 'lucide-react';
