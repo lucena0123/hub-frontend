@@ -23,9 +23,10 @@ import { formatDate, cn } from '@/lib/utils';
 import { getApiErrorMessage } from '@/lib/api/client/error';
 import { PageShell } from '@/components/layout/page-shell';
 import { Reveal } from '@/components/layout/reveal';
-import { SectionHeader } from '@/components/performance/section-header';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SkeletonCard } from '@/components/ui/skeleton';
+import { StatusPill } from '@/components/ui/status-pill';
+import { EmptyState } from '@/components/ui/empty-state';
 
 const tierColors: Record<string, string> = {
   basic: 'bg-muted/20 text-muted-foreground border-border/50',
@@ -50,7 +51,7 @@ function ClientActionsMenu({ client, onDelete }: { client: Client; onDelete: (c:
       <button
         type="button"
         onClick={() => setOpen((p) => !p)}
-        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground cursor-pointer"
+        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground cursor-pointer"
         aria-label="Mais ações"
         aria-expanded={open ? 'true' : 'false'}
       >
@@ -67,28 +68,28 @@ function ClientActionsMenu({ client, onDelete }: { client: Client; onDelete: (c:
           <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-border/60 bg-card/95 py-1 shadow-2xl backdrop-blur-sm">
             <Link
               href={`/clients/${client.id}/performance`}
-              className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground cursor-pointer"
+              className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground cursor-pointer"
               onClick={() => setOpen(false)}
             >
               <BarChart3 className="h-3.5 w-3.5" /> Performance
             </Link>
             <Link
               href={`/optimization/board?clientId=${client.id}`}
-              className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground cursor-pointer"
+              className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground cursor-pointer"
               onClick={() => setOpen(false)}
             >
               <Kanban className="h-3.5 w-3.5" /> Kanban Board
             </Link>
             <Link
               href={`/optimization/settings?clientId=${client.id}`}
-              className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground cursor-pointer"
+              className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground cursor-pointer"
               onClick={() => setOpen(false)}
             >
               <Settings2 className="h-3.5 w-3.5" /> Regras
             </Link>
             <Link
               href={`/optimization/effectiveness?clientId=${client.id}`}
-              className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground cursor-pointer"
+              className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground cursor-pointer"
               onClick={() => setOpen(false)}
             >
               <TrendingUp className="h-3.5 w-3.5" /> Efetividade
@@ -164,9 +165,9 @@ export default function ClientsPage() {
       title="Registro de Contas"
       description="Controle o portfólio ativo, contratos e entregas em um mapa único."
       meta={
-        <div className="space-y-2 text-xs text-muted-foreground">
-          <div className="signal-chip">Total {clients.length}</div>
-          <div className="signal-chip">Ativos {activeCount}</div>
+        <div className="flex flex-wrap gap-2">
+          <StatusPill status="healthy" label={`${activeCount} ativos`} />
+          <StatusPill status="pending" label={`${clients.length} total`} />
         </div>
       }
       actions={
@@ -181,23 +182,17 @@ export default function ClientsPage() {
       <div className="space-y-6">
         {error && (
           <Reveal>
-            <div className="edge-card border border-destructive/40 bg-destructive/10 p-4 flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-muted-foreground">{error}</p>
+            <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+                <p className="text-xs text-destructive">{error}</p>
               </div>
-              <Button variant="outline" size="sm" className="h-7 text-xs shrink-0" onClick={() => setError(null)}>
+              <Button variant="ghost" size="sm" className="h-6 text-xs shrink-0" onClick={() => setError(null)}>
                 Fechar
               </Button>
             </div>
           </Reveal>
         )}
-
-        <SectionHeader
-          title="Carteira de Clientes"
-          subtitle="Acesso rápido às contas ativas e contratos."
-          icon={Users}
-        />
 
         {/* Search */}
         <div className="relative max-w-sm">
@@ -220,36 +215,16 @@ export default function ClientsPage() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="edge-card p-12 text-center flex flex-col items-center gap-4">
-              <Users className="h-12 w-12 text-muted-foreground/20" aria-hidden="true" />
-              {search ? (
-                <>
-                  <p className="text-muted-foreground text-sm">
-                    Nenhum cliente encontrado para <strong>&quot;{search}&quot;</strong>
-                  </p>
-                  <Button variant="outline" size="sm" onClick={() => setSearch('')}>
-                    Limpar busca
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <p className="text-muted-foreground text-sm tracking-wide">
-                    Nenhum cliente cadastrado ainda
-                  </p>
-                  <Button asChild size="sm">
-                    <Link href="/clients/new">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar primeiro cliente
-                    </Link>
-                  </Button>
-                </>
-              )}
-            </div>
+            <EmptyState
+              icon={Users}
+              title={search ? `Nenhum resultado para "${search}"` : 'Nenhum cliente cadastrado'}
+              description={search ? 'Tente um termo diferente.' : 'Adicione o primeiro cliente para começar.'}
+              action={search ? { label: 'Limpar busca', onClick: () => setSearch('') } : undefined}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((client) => (
-                <div key={client.id} className="edge-card hover-lift relative p-5 flex flex-col gap-4">
-                  <div className="absolute left-0 top-0 h-full w-[2px] bg-primary/40 rounded-l-sm" />
+                <div key={client.id} className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border-l-[3px] border-l-primary/50">
 
                   <div className="flex justify-between items-start gap-2">
                     <div className="min-w-0">
