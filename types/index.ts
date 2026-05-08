@@ -102,6 +102,18 @@ export interface Task {
   clientName?: string;
 }
 
+export interface KpiDelta {
+  value: number;
+  pct: number;
+}
+
+export interface SparklineData {
+  spend: number[];
+  roas: number[];
+  leads: number[];
+  clients: number[];
+}
+
 export interface DashboardOverview {
   clients: {
     total: number;
@@ -121,6 +133,14 @@ export interface DashboardOverview {
     avgRoas: number;
     avgCtr: number;
     avgCpl: number;
+    delta?: {
+      totalSpend: KpiDelta;
+      avgRoas: KpiDelta;
+      avgCpl: KpiDelta;
+      avgCtr: KpiDelta;
+      totalConversions: KpiDelta;
+      totalLeads: KpiDelta;
+    };
   };
   bpmn: {
     clientsInExecution: number;
