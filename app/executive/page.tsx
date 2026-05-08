@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { ComponentType } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Loader2, TrendingUp, Users, Zap } from 'lucide-react';
-
-import { Badge } from '@/components/ui/badge';
+import { TrendingUp, Users, AlertTriangle, Zap } from 'lucide-react';
 import { apiClient } from '@/lib/api/client/http';
 import { cn } from '@/lib/utils';
 import { PageShell } from '@/components/layout/page-shell';
 import { Reveal } from '@/components/layout/reveal';
-import { SectionHeader } from '@/components/performance/section-header';
+import { KpiCard } from '@/components/dashboard/kpi-card';
+import { StatusPill } from '@/components/ui/status-pill';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
+import { OperationalHealthCard } from '@/components/dashboard/operational-health-card';
 
 type ClientSummary = {
   clientId: string;
@@ -39,43 +40,29 @@ type ExecutiveData = {
   clients: ClientSummary[];
 };
 
-const GRADE_COLORS: Record<string, string> = {
-  A: 'text-emerald-400 border-emerald-500/50',
-  B: 'text-primary border-primary/50',
-  C: 'text-amber-400 border-amber-500/50',
-  D: 'text-orange-400 border-orange-500/50',
-  F: 'text-destructive border-destructive/50',
-};
-
-const TIER_COLORS: Record<string, string> = {
-  premium: 'text-primary border-primary/40 bg-primary/10',
-  basic: 'text-muted-foreground border-border bg-muted/10',
-};
-
-function KpiModule({
-  title,
-  value,
-  icon: Icon,
-  subtitle,
-  color = 'text-primary',
-  className,
+function SeverityGroup({
+  label,
+  clients,
+  labelClass,
 }: {
-  title: string;
-  value: string;
-  icon: ComponentType<{ className?: string }>;
-  subtitle?: string;
-  color?: string;
-  className?: string;
+  label: string;
+  clients: ClientSummary[];
+  labelClass: string;
 }) {
+  if (clients.length === 0) return null;
   return (
-    <div className={cn("edge-card hover-lift relative overflow-hidden p-4 group", className)}>
-      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
-        <Icon className="h-16 w-16" />
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <span className={cn('text-[11px] font-bold uppercase tracking-[0.12em]', labelClass)}>
+          {label}
+        </span>
+        <span className="text-[11px] font-semibold text-muted-foreground">({clients.length})</span>
+        <div className="flex-1 h-px bg-border" />
       </div>
-      <div className="relative z-10">
-        <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-1">{title}</p>
-        <p className={cn("text-2xl font-semibold tracking-tight", color)}>{value}</p>
-        {subtitle && <p className="text-[10px] text-muted-foreground mt-2 border-t border-border/30 pt-2 inline-block">{subtitle}</p>}
+      <div className="space-y-2">
+        {clients.map((c) => (
+          <OperationalHealthCard key={c.clientId} client={c} />
+        ))}
       </div>
     </div>
   );
@@ -90,191 +77,163 @@ export default function ExecutiveDashboardPage() {
     apiClient
       .get<ExecutiveData>('/api/dashboard/executive')
       .then(({ data: res }) => setData(res))
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
+  const filteredClients = useMemo(() => {
+    if (!data) return [];
+    return filterTier === 'all'
+      ? data.clients
+      : data.clients.filter((c) => c.tier === filterTier);
+  }, [data, filterTier]);
+
+  const criticalClients = useMemo(
+    () => filteredClients.filter((c) => c.anomalyCount > 0 || c.healthGrade === 'F' || c.healthGrade === 'D'),
+    [filteredClients]
+  );
+  const warningClients = useMemo(
+    () => filteredClients.filter((c) => c.healthGrade === 'C' && c.anomalyCount === 0),
+    [filteredClients]
+  );
+  const healthyClients = useMemo(
+    () => filteredClients.filter((c) => (c.healthGrade === 'A' || c.healthGrade === 'B') && c.anomalyCount === 0),
+    [filteredClients]
+  );
+
+  const tiers = ['all', 'premium', 'enterprise', 'basic'];
+  const tierLabel: Record<string, string> = { all: 'Todos', premium: 'Premium', enterprise: 'Enterprise', basic: 'Basic' };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <PageShell eyebrow="Agencia / Executivo" title="Panorama Executivo">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+        </div>
+        <div className="space-y-2 mt-6">
+          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+        </div>
+      </PageShell>
     );
   }
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">
-        Falha ao carregar o painel executivo.
-      </div>
+      <PageShell eyebrow="Agencia / Executivo" title="Panorama Executivo">
+        <EmptyState
+          icon={AlertTriangle}
+          title="Falha ao carregar"
+          description="Nao foi possivel carregar o painel executivo."
+          action={{ label: 'Tentar novamente', onClick: () => window.location.reload() }}
+        />
+      </PageShell>
     );
   }
 
-  const filteredClients = filterTier === 'all'
-    ? data.clients
-    : data.clients.filter(c => c.tier === filterTier);
-
   return (
     <PageShell
-      eyebrow="Agência / Executivo"
+      eyebrow="Agencia / Executivo"
       title="Panorama Executivo"
-      description="Consolidação global de performance e saúde das contas para decisão rápida."
-      meta={
-        <div className="space-y-2 text-xs text-muted-foreground">
-          <div className="signal-chip">Clientes {data.kpi.totalClients}</div>
-          <div className="signal-chip">Atenção {data.kpi.clientsNeedingAttention}</div>
-          <div className="signal-chip">Anomalias {data.kpi.totalAnomalies}</div>
-        </div>
-      }
       actions={
-        <div className="flex flex-wrap gap-2">
-          {['all', 'premium', 'basic'].map(tier => (
+        <div className="flex gap-1.5">
+          {tiers.map((tier) => (
             <button
               key={tier}
+              type="button"
               onClick={() => setFilterTier(tier)}
               className={cn(
-                "px-3 py-2 rounded-[2px] text-[10px] font-semibold uppercase tracking-[0.3em] transition-all border hover-lift",
+                'px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all border cursor-pointer',
                 filterTier === tier
-                  ? 'bg-primary/10 border-primary text-primary'
-                  : 'border-border/50 text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card border-border text-muted-foreground hover:text-foreground'
               )}
             >
-              {tier}
+              {tierLabel[tier]}
             </button>
           ))}
         </div>
       }
+      meta={
+        <div className="flex flex-wrap gap-2">
+          {data.kpi.clientsNeedingAttention > 0 && (
+            <StatusPill status="warning" label={`${data.kpi.clientsNeedingAttention} em atencao`} />
+          )}
+          {data.kpi.totalAnomalies > 0 && (
+            <StatusPill status="critical" label={`${data.kpi.totalAnomalies} anomalias`} />
+          )}
+          <StatusPill status="pending" label={`${data.kpi.totalClients} clientes`} />
+        </div>
+      }
     >
-      <div className="space-y-8">
-        <SectionHeader
-          title="KPIs Executivos"
-          subtitle="Sinais principais de investimento e risco."
-          icon={TrendingUp}
-        />
+      {/* KPI Strip */}
+      <Reveal>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard
+            label="Investimento 7d"
+            value={`R$${data.kpi.totalSpend7d.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`}
+            valueColor="text-emerald-600"
+          />
+          <KpiCard
+            label="Conversas 7d"
+            value={data.kpi.totalConversations7d}
+            unit={data.kpi.avgCpl != null ? `CPL R$${data.kpi.avgCpl.toFixed(0)}` : undefined}
+          />
+          <KpiCard
+            label="Em Atencao"
+            value={`${data.kpi.clientsNeedingAttention}/${data.kpi.totalClients}`}
+            valueColor={data.kpi.clientsNeedingAttention > 0 ? 'text-amber-600' : 'text-emerald-600'}
+          />
+          <KpiCard
+            label="Anomalias"
+            value={data.kpi.totalAnomalies}
+            valueColor={data.kpi.totalAnomalies > 0 ? 'text-destructive' : 'text-emerald-600'}
+          />
+        </div>
+      </Reveal>
 
-        <Reveal>
-          <div className="flex flex-wrap gap-4">
-            <KpiModule
-              title="Total Spend (7d)"
-              value={`R$ ${data.kpi.totalSpend7d.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-              icon={TrendingUp}
-              color="text-emerald-400"
-              className="flex-[1.4_1_260px]"
+      {/* Quick links */}
+      <Reveal delayMs={40}>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/alerts" className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors">
+            <AlertTriangle className="h-3 w-3" /> Ver alertas
+          </Link>
+          <Link href="/tasks" className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors">
+            <Zap className="h-3 w-3" /> Ver tarefas
+          </Link>
+          <Link href="/optimization/effectiveness" className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors">
+            <TrendingUp className="h-3 w-3" /> Efetividade
+          </Link>
+        </div>
+      </Reveal>
+
+      {/* Client queue */}
+      <Reveal delayMs={80}>
+        {filteredClients.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="Nenhum cliente"
+            description="Nenhum cliente encontrado para este filtro."
+          />
+        ) : (
+          <div className="space-y-6">
+            <SeverityGroup
+              label="Critico"
+              clients={criticalClients}
+              labelClass="text-destructive"
             />
-            <KpiModule
-              title="Conversas (7d)"
-              value={String(data.kpi.totalConversations7d)}
-              icon={Users}
-              subtitle={data.kpi.avgCpl != null ? `CPL médio: R$ ${data.kpi.avgCpl.toFixed(2)}` : undefined}
-              color="text-primary"
-              className="flex-[1_1_220px]"
+            <SeverityGroup
+              label="Atencao"
+              clients={warningClients}
+              labelClass="text-amber-500 dark:text-amber-400"
             />
-            <KpiModule
-              title="Atenção"
-              value={`${data.kpi.clientsNeedingAttention}/${data.kpi.totalClients}`}
-              icon={AlertTriangle}
-              subtitle="Health < 50"
-              color="text-amber-400"
-              className="flex-[1_1_200px]"
-            />
-            <KpiModule
-              title="Anomalias"
-              value={String(data.kpi.totalAnomalies)}
-              icon={Zap}
-              color="text-destructive"
-              className="flex-[0.9_1_180px]"
+            <SeverityGroup
+              label="Saudavel"
+              clients={healthyClients}
+              labelClass="text-emerald-600 dark:text-emerald-400"
             />
           </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Badge variant="outline" className="text-xs">Atalhos executivos</Badge>
-            <Link href="/alerts" className="inline-flex items-center rounded-[2px] border border-border/50 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground">
-              Ver alertas
-            </Link>
-            <Link href="/tasks" className="inline-flex items-center rounded-[2px] border border-border/50 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground">
-              Ver tarefas
-            </Link>
-            <Link href="/optimization/effectiveness" className="inline-flex items-center rounded-[2px] border border-border/50 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground">
-              Efetividade
-            </Link>
-          </div>
-        </Reveal>
-
-        <SectionHeader
-          title="Carteira Monitorada"
-          subtitle="Clientes com indicadores críticos ou oportunidades."
-          icon={Users}
-        />
-
-        <Reveal delayMs={120}>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-[0.3em] px-2">
-              <span>Cliente</span>
-              <span className="hidden md:inline">Operação 7d</span>
-            </div>
-
-            {filteredClients.map((client, index) => {
-              const offset =
-                index % 3 === 0 ? "lg:translate-x-6" : index % 3 === 1 ? "lg:-translate-x-4" : "";
-
-              return (
-                <div
-                  key={client.clientId}
-                  className={cn(
-                    "group relative edge-card hover-lift p-4 flex flex-col lg:flex-row items-start lg:items-center gap-4",
-                    offset
-                  )}
-                >
-                  <div className={cn(
-                    "absolute left-0 top-0 bottom-0 w-[2px] transition-all",
-                    client.anomalyCount > 0 ? "bg-destructive" : "bg-primary/40"
-                  )} />
-
-                  <div className="flex items-center gap-4 flex-1 w-full">
-                    <div className="flex items-center justify-center w-10 h-10">
-                      {client.healthGrade ? (
-                        <div className={cn("flex items-center justify-center w-9 h-9 rounded-full border text-xs font-semibold", GRADE_COLORS[client.healthGrade] || "border-border text-muted-foreground")}>
-                          {client.healthGrade}
-                        </div>
-                      ) : <span className="text-muted-foreground">-</span>}
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Link href={`/clients/${client.clientId}/performance`} className="font-semibold text-lg hover:text-primary transition-colors">
-                          {client.clientName}
-                        </Link>
-                        <Badge variant="outline" className={cn("text-[9px] uppercase tracking-[0.25em] px-2 py-0.5 border", TIER_COLORS[client.tier])}>
-                          {client.tier}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mt-1">
-                        <span>Anomalias: <span className={cn(client.anomalyCount > 0 ? "text-destructive font-semibold" : "")}>{client.anomalyCount}</span></span>
-                        <span>Propostas: <span className={cn(client.pendingProposals > 0 ? "text-amber-400 font-semibold" : "")}>{client.pendingProposals}</span></span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-6 w-full lg:w-auto text-right">
-                    <div>
-                      <p className="text-[9px] text-muted-foreground uppercase">Spend 7d</p>
-                      <p className="text-sm">R$ {client.spend7d.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-muted-foreground uppercase">CPL</p>
-                      <p className="text-sm">{client.cpl7d != null ? `R$ ${client.cpl7d.toFixed(2)}` : '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-muted-foreground uppercase">Conv.</p>
-                      <p className="text-sm">{client.conversations7d}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Reveal>
-      </div>
+        )}
+      </Reveal>
     </PageShell>
   );
 }
