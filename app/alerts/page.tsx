@@ -97,24 +97,26 @@ export default function AlertsPage() {
 
   if (loading && !data) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-center space-y-3">
-          <Activity className="h-6 w-6 animate-spin mx-auto text-primary" />
-          <p className="text-muted-foreground text-sm">Carregando alertas...</p>
+      <PageShell eyebrow="Monitoramento" title="Central de Alertas">
+        <div className="flex items-center justify-center py-24">
+          <div className="text-center space-y-3">
+            <Activity className="h-6 w-6 animate-spin mx-auto text-primary" />
+            <p className="text-muted-foreground text-sm">Carregando alertas...</p>
+          </div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <PageShell eyebrow="Monitoramento" title="Central de Alertas">
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center space-y-2 max-w-sm">
           <AlertOctagon className="h-6 w-6 text-destructive mx-auto" />
           <p className="text-sm font-semibold text-destructive">Falha ao carregar</p>
           <p className="text-xs text-muted-foreground">{error}</p>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
