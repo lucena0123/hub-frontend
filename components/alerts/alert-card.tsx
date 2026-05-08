@@ -1,30 +1,29 @@
 import type { LucideIcon } from 'lucide-react';
 import { AlertOctagon, AlertTriangle, Info } from 'lucide-react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { PerformanceAlert } from '@/types';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const typeConfig: Record<
   PerformanceAlert['type'],
-  { label: string; className: string; icon: LucideIcon }
+  { icon: LucideIcon; borderClass: string; iconClass: string }
 > = {
   critical: {
-    label: 'Crítico',
-    className: 'border border-destructive/50 bg-destructive/10 text-destructive',
     icon: AlertOctagon,
+    borderClass: 'border-l-destructive',
+    iconClass: 'text-destructive',
   },
   warning: {
-    label: 'Alerta',
-    className: 'border border-amber-400/50 bg-amber-400/10 text-amber-300',
     icon: AlertTriangle,
+    borderClass: 'border-l-amber-500',
+    iconClass: 'text-amber-500 dark:text-amber-400',
   },
   info: {
-    label: 'Info',
-    className: 'border border-primary/50 bg-primary/10 text-primary',
     icon: Info,
+    borderClass: 'border-l-primary',
+    iconClass: 'text-primary',
   },
 };
 
@@ -33,28 +32,25 @@ const categoryLabels: Record<string, string> = {
   ctr: 'CTR',
   budget: 'Budget',
   cpl: 'CPL',
-  conversions: 'Conversoes',
+  conversions: 'Conversões',
   bpmn: 'BPMN',
+  contacts: 'Contatos',
+  qualification: 'Qualificação',
+  trend: 'Tendência',
+  stalled: 'Sem entrega',
+  sync: 'Sincronização',
 };
 
 const formatValue = (category: string, value: number) => {
   if (!Number.isFinite(value)) return '-';
-
   switch (category) {
-    case 'roas':
-      return `${value.toFixed(2)}x`;
-    case 'ctr':
-      return `${value.toFixed(2)}%`;
-    case 'budget':
-      return `${value.toFixed(1)}%`;
-    case 'cpl':
-      return `R$ ${value.toFixed(2)}`;
-    case 'conversions':
-      return Math.round(value).toString();
-    case 'bpmn':
-      return value === 0 ? '-' : value.toString();
-    default:
-      return value.toString();
+    case 'roas':        return `${value.toFixed(2)}x`;
+    case 'ctr':         return `${value.toFixed(2)}%`;
+    case 'budget':      return `${value.toFixed(1)}%`;
+    case 'cpl':         return `R$${value.toFixed(2)}`;
+    case 'conversions': return Math.round(value).toString();
+    case 'bpmn':        return value === 0 ? '-' : value.toString();
+    default:            return value.toString();
   }
 };
 
@@ -67,53 +63,65 @@ export function AlertCard({ alert }: { alert: PerformanceAlert }) {
   const parsedDate = alert.createdAt ? new Date(alert.createdAt) : null;
   const timestamp =
     parsedDate && !Number.isNaN(parsedDate.getTime())
-      ? format(parsedDate, 'MMM dd, HH:mm')
+      ? format(parsedDate, 'dd/MM HH:mm')
       : '-';
 
   return (
-    <Card className="edge-card hover-lift">
-      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-        <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-muted-foreground" />
-          <CardTitle className="text-base">{alert.clientName}</CardTitle>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge className={config.className}>{config.label}</Badge>
-          <Badge variant="outline">{categoryLabel}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">
-            {alert.campaignName ?? 'Nível cliente'}
+    <div
+      className={cn(
+        'flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3 border-l-[3px] transition-colors hover:bg-muted/30',
+        config.borderClass
+      )}
+    >
+      {/* Severity icon */}
+      <Icon className={cn('h-4 w-4 mt-0.5 flex-shrink-0', config.iconClass)} aria-hidden="true" />
+
+      {/* Content */}
+      <div className="flex-1 min-w-0 space-y-1">
+        {/* Row 1: client + category + timestamp */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-semibold text-foreground">{alert.clientName}</span>
+          <span className="inline-flex items-center rounded border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {categoryLabel}
           </span>
           {alert.campaignName && (
-            <span className="ml-2 text-xs text-muted-foreground">
-              ({alert.metric})
+            <span className="text-xs text-muted-foreground truncate max-w-[180px]">
+              {alert.campaignName}
             </span>
           )}
-        </div>
-        <p className="text-sm text-foreground">{alert.message}</p>
-        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-          <span>
-            <span className="font-medium text-foreground">{alert.metric}</span>{' '}
-            {currentValue} vs {thresholdValue}
-          </span>
-          <span>{timestamp}</span>
+          <span className="ml-auto text-[11px] text-muted-foreground flex-shrink-0">{timestamp}</span>
         </div>
 
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button size="sm" variant="outline" asChild className="h-7 text-[10px]">
-            <Link href={`/clients/${alert.clientId}/performance`}>Performance</Link>
-          </Button>
-          <Button size="sm" variant="outline" asChild className="h-7 text-[10px]">
-            <Link href={`/optimization/board?clientId=${alert.clientId}`}>Board</Link>
-          </Button>
-          <Button size="sm" variant="outline" asChild className="h-7 text-[10px]">
-            <Link href={`/optimization/settings?clientId=${alert.clientId}`}>Regras</Link>
-          </Button>
+        {/* Row 2: message */}
+        <p className="text-xs text-foreground/80 line-clamp-2 leading-relaxed">{alert.message}</p>
+
+        {/* Row 3: metric values + actions */}
+        <div className="flex items-center justify-between gap-3 pt-0.5">
+          <span className="text-[11px] text-muted-foreground">
+            <span className="font-medium text-foreground">{alert.metric}</span>
+            {' '}{currentValue}
+            {' vs '}{thresholdValue}
+          </span>
+
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <Button size="sm" variant="default" asChild className="h-6 px-2.5 text-[11px]">
+              <Link href={`/clients/${alert.clientId}/performance`}>Performance</Link>
+            </Button>
+            <Link
+              href={`/optimization/board?clientId=${alert.clientId}`}
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Board
+            </Link>
+            <Link
+              href={`/optimization/settings?clientId=${alert.clientId}`}
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Regras
+            </Link>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
