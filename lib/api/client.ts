@@ -37,7 +37,7 @@ export { getProcesses, getProcessById } from './client/processes';
 
 export { getTasks } from './client/tasks';
 
-export { getDashboardStats, getDashboardOverview } from './client/dashboard';
+export { getDashboardStats, getDashboardOverview, getDashboardSparklines } from './client/dashboard';
 
 export { getAlerts } from './client/alerts';
 
