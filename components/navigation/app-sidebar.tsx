@@ -198,11 +198,17 @@ export function AppSidebar() {
       >
         {/* Header */}
         <div className="sidebar-header">
-          <Link href="/" className="sidebar-brand" onClick={() => setMobileOpen(false)}>
-            <span className="sidebar-brand-kicker">Agency Console</span>
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 min-w-0"
+            onClick={() => setMobileOpen(false)}
+          >
+            <div className="flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-lg bg-primary text-white text-[13px] font-extrabold">
+              H
+            </div>
             {!collapsed && (
-              <span className="sidebar-brand-title">
-                Hub<span className="text-primary">.</span>
+              <span className="text-[15px] font-bold text-sidebar-foreground truncate">
+                Hub B2B
               </span>
             )}
           </Link>
