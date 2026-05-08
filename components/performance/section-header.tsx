@@ -16,16 +16,16 @@ interface SectionHeaderProps {
 
 export function SectionHeader({ title, subtitle, icon: Icon, badge, action, className }: SectionHeaderProps) {
   return (
-    <div className={cn('premium-section-header', className)}>
+    <div className={cn('flex items-center justify-between gap-4 border-b border-border pb-3', className)}>
       <div className="flex items-center gap-3">
         {Icon && (
-          <span className="premium-icon-chip">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-accent text-accent-foreground">
             <Icon className="h-4 w-4" />
           </span>
         )}
         <div>
-          <h3 className="premium-section-title">{title}</h3>
-          {subtitle && <p className="premium-section-subtitle">{subtitle}</p>}
+          <h3 className="text-base font-semibold text-foreground">{title}</h3>
+          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
         </div>
       </div>
       <div className="flex items-center gap-2">

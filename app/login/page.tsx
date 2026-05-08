@@ -41,8 +41,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="premium-auth">
-      <Card className="premium-auth-card">
+    <div className="flex min-h-screen items-center justify-center bg-background p-6">
+      <Card className="w-full max-w-md rounded-2xl border border-border bg-card shadow-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Hub</CardTitle>
           <CardDescription>Entre com suas credenciais para acessar o sistema</CardDescription>
