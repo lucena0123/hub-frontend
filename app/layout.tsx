@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${signalSans.variable} antialiased`}>
+      <body className={`${signalSans.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
